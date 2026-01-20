@@ -98,12 +98,12 @@ This task list provides **what** to build. The following documents explain **how
 
 ## Phase 4: Feature 3 - Volatility-Adaptive Smoothing
 
-- [ ] Implement backend/computation/volatility.py with 14-period ATR baseline calculation
-- [ ] Create volatility state classifier (low/normal/high based on ATR vs ATR_MA(50))
-- [ ] Implement dynamic period adjustment logic (shorten in high vol, lengthen in low vol)
-- [ ] Add multi-timeframe volatility checker (5-min vs 1-hour ATR comparison)
-- [ ] Implement volatility-alpha linkage using regression (α = f(ATR))
-- [ ] Write unit tests for volatility spike detection and period adjustments
+- [x] Implement backend/computation/volatility.py with 14-period ATR baseline calculation
+- [x] Create volatility state classifier (low/normal/high based on ATR vs ATR_MA(50))
+- [x] Implement dynamic period adjustment logic (shorten in high vol, lengthen in low vol)
+- [x] Add multi-timeframe volatility checker (5-min vs 1-hour ATR comparison)
+- [x] Implement volatility-alpha linkage using regression (α = f(ATR))
+- [x] Write unit tests for volatility spike detection and period adjustments
 
 ---
 
