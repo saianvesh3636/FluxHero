@@ -74,7 +74,7 @@ This task list provides **what** to build. The following documents explain **how
 
 ## Phase 2: Feature 1 - JIT Computation Engine
 
-- [ ] Implement backend/computation/indicators.py with Numba @njit decorator for basic indicator calculations
+- [x] Implement backend/computation/indicators.py with Numba @njit decorator for basic indicator calculations
 - [ ] Create Numba-optimized EMA calculation function with type annotations (float64 arrays)
 - [ ] Create Numba-optimized RSI calculation function
 - [ ] Create Numba-optimized ATR (Average True Range) calculation function
