@@ -386,9 +386,6 @@ class BacktestEngine:
                     state.position.entry_price = total_cost_basis / total_shares
 
             else:  # SELL
-                # Calculate proceeds
-                proceeds = (fill_price * order.shares) - commission
-
                 # Check if this is closing a position
                 if state.position is not None and state.position.side == PositionSide.LONG:
                     # Close long position

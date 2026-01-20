@@ -16,7 +16,7 @@ Reference:
 - algorithmic-trading-guide.md → Key Metrics to Track
 """
 
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any
 import numpy as np
 from numpy.typing import NDArray
 from numba import njit
@@ -142,7 +142,6 @@ def calculate_max_drawdown(equity_curve: np.ndarray) -> tuple:
     max_dd = 0.0
     peak = equity_curve[0]
     peak_idx = 0
-    trough_idx = 0
     max_dd_peak_idx = 0
     max_dd_trough_idx = 0
 
@@ -244,8 +243,8 @@ def calculate_avg_win_loss_ratio(pnls: np.ndarray) -> float:
     avg_win /= len(wins)
 
     avg_loss = 0.0
-    for l in losses:
-        avg_loss += l
+    for loss_val in losses:
+        avg_loss += loss_val
     avg_loss /= len(losses)
 
     if avg_loss == 0:

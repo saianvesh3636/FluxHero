@@ -9,22 +9,24 @@ PROJECT_DIR="/Users/anvesh/Developer/QuantTrading/project"
 
 # Execution settings (based on user preferences)
 # - Sequential execution (no --parallel flag)
-# - Branch per task (--branch-per-task)
+# - NO branch per task (continue on main branch to avoid conflicts)
 # - No auto PRs (no --create-pr flag)
 # - Using Claude Code (default AI engine)
 
 cd "$PROJECT_DIR" || exit 1
 
+# Ensure we're on main branch
+git checkout main 2>/dev/null || true
+
 echo "🚀 Starting FluxHero implementation with Ralphy"
 echo "📋 Task file: $TASK_FILE"
-echo "🌳 Branch strategy: Separate branch per task"
+echo "🌳 Branch strategy: Single main branch (simpler workflow)"
 echo "⚙️  Execution mode: Sequential (one task at a time)"
 echo ""
 
-# Run Ralphy with FluxHero configuration
+# Run Ralphy WITHOUT branch-per-task to avoid branch confusion
 "$RALPHY_PATH" \
   --prd "$TASK_FILE" \
-  --branch-per-task \
   --base-branch main
 
 echo ""
