@@ -159,14 +159,14 @@ This task list provides **what** to build. The following documents explain **how
 
 ## Phase 9: Feature 8 - Async API Wrapper
 
-- [ ] Implement backend/data/fetcher.py with httpx async REST client for OHLCV data
-- [ ] Add retry logic with exponential backoff (3 attempts: 1s, 2s, 4s delays)
-- [ ] Implement rate limiting to respect broker API limits (200 req/min for Alpaca)
-- [ ] Add connection pooling for HTTP efficiency
-- [ ] Create WebSocket live feed handler with auto-reconnect (max 5 retries)
-- [ ] Implement heartbeat monitor (alert if no data for >60 seconds)
-- [ ] Create data pipeline startup sequence (fetch 500 candles → open WebSocket → process ticks)
-- [ ] Write unit tests for API wrapper with mock responses and error scenarios
+- [x] Implement backend/data/fetcher.py with httpx async REST client for OHLCV data
+- [x] Add retry logic with exponential backoff (3 attempts: 1s, 2s, 4s delays)
+- [x] Implement rate limiting to respect broker API limits (200 req/min for Alpaca)
+- [x] Add connection pooling for HTTP efficiency
+- [x] Create WebSocket live feed handler with auto-reconnect (max 5 retries)
+- [x] Implement heartbeat monitor (alert if no data for >60 seconds)
+- [x] Create data pipeline startup sequence (fetch 500 candles → open WebSocket → process ticks)
+- [x] Write unit tests for API wrapper with mock responses and error scenarios
 
 ---
 

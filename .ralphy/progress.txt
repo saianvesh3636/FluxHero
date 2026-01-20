@@ -1693,3 +1693,200 @@ print(f"Memory: {buffer.get_memory_usage_bytes() / 1024:.1f} KB")
 - Implement backend/data/fetcher.py with httpx async REST client for OHLCV data
 
 
+## Task 13: Implement Async API Wrapper (Feature 8)
+**Date**: 2026-01-20
+**Branch**: ralphy/create-project-folder-structure-fluxhero-backend
+**Status**: Completed
+
+### What was implemented:
+- Created fluxhero/backend/data/fetcher.py with complete async API wrapper
+- Implemented 3 main classes and multiple supporting data classes:
+  - RateLimiter: Sliding window rate limiting (200 req/min configurable)
+  - AsyncAPIClient: httpx-based REST API client with retry logic
+  - WebSocketFeed: Live price feed with auto-reconnect
+  - DataPipeline: Complete startup sequence integrating REST + WebSocket
+
+### Files created:
+- fluxhero/backend/data/fetcher.py (693 lines, 3 main classes + data classes)
+- tests/unit/test_fetcher.py (667 lines, 30 comprehensive tests)
+
+### Implementation details:
+
+#### RateLimiter (R8.1.3):
+- Sliding window algorithm to track requests over time
+- Configurable: max_requests and window_seconds
+- Async lock-based implementation for thread safety
+- Automatic blocking when limit exceeded
+- Calculates wait time until oldest request expires
+- Reset method for testing
+
+#### AsyncAPIClient (R8.1.1-R8.1.4):
+- Built on httpx.AsyncClient for async HTTP operations
+- Context manager support (async with)
+- Retry logic with exponential backoff: 1s, 2s, 4s (R8.1.2)
+- Rate limiting integration (R8.1.3)
+- Connection pooling with configurable limits (R8.1.4):
+  - max_connections: 100
+  - max_keepalive_connections: 20
+- Core methods:
+  - fetch_candles(): Get OHLCV data with timeframe and limit
+  - get_account_info(): Retrieve balance, buying power, equity
+  - place_order(): Submit market/limit/stop orders
+- Authentication headers (Alpaca format, easily customizable)
+- No retry on 4xx errors (client errors shouldn't be retried)
+
+#### WebSocketFeed (R8.2.1-R8.2.4):
+- Real-time price subscriptions (R8.2.1)
+- Auto-reconnect with max attempts (R8.2.2):
+  - Default: 5 retry attempts
+  - Exponential backoff between retries
+  - Reconnection preserves subscriptions
+- Heartbeat monitor (R8.2.4):
+  - Tracks last message time
+  - Alerts if no data for >60 seconds (configurable)
+  - is_stale() method to check connection health
+- Async tick processing (R8.2.3):
+  - set_tick_callback() for custom handlers
+  - Non-blocking message processing
+  - Generator-based stream() method
+- Authentication on connect
+- Subscribe to multiple symbols
+- Connection state tracking
+
+#### DataPipeline (R8.3.1-R8.3.3):
+- Complete startup sequence (R8.3.1):
+  1. Fetch last 500 candles via REST
+  2. Open WebSocket connection
+  3. Subscribe to symbols
+  4. Start processing live ticks
+- Signal callback support (R8.3.2):
+  - set_signal_callback() for strategy signals
+  - Runs signal checks on candle close
+- Async signal processing (R8.3.3):
+  - Signal checks run in separate asyncio tasks
+  - Non-blocking (doesn't block data feed)
+- Graceful stop() method
+
+#### Data Classes:
+- Candle: OHLCV + timestamp + symbol/timeframe
+- AccountInfo: balance, buying_power, equity, cash
+- OrderResponse: order_id, symbol, qty, side, status, fills
+- OrderSide enum: BUY (1), SELL (-1)
+- OrderType enum: MARKET (0), LIMIT (1), STOP (2), STOP_LIMIT (3)
+
+### Tests (30 total, all passed):
+
+#### Rate Limiter Tests (4 tests):
+- Basic rate limiting (allows within limit)
+- Blocks excess requests
+- Sliding window expiration
+- Reset method
+
+#### REST API Client Tests (9 tests):
+- Initialization with context manager
+- Authentication headers
+- fetch_candles() success
+- get_account_info() success
+- place_order() market order success
+- place_order() requires limit_price for LIMIT orders
+- Retry logic with exponential backoff (1s, 2s delays verified)
+- No retry on 4xx errors
+- Rate limiting integration
+
+#### WebSocket Feed Tests (8 tests):
+- Initialization
+- Connect success
+- Auto-reconnect on failure (retries verified)
+- Max reconnect attempts exceeded
+- Subscribe to symbols
+- Heartbeat monitor timeout
+- Tick callback invocation
+- Stale connection detection
+
+#### Data Pipeline Tests (3 tests):
+- Startup sequence (fetch → connect → subscribe)
+- Stop method
+- Signal callback registration
+
+#### Success Criteria Tests (3 tests):
+- Fetch 500 candles: <2 seconds (mocked, very fast)
+- Rate limit enforces 200 req/min
+- WebSocket reconnects within 5s
+
+#### Edge Case Tests (3 tests):
+- Empty candles response
+- Client not initialized (context manager required)
+- WebSocket subscribe before connect (error)
+
+### Performance results:
+All tests completed in ~9.4 seconds
+- Rate limiter tests: Fast with reduced timeouts (0.5s window)
+- Retry logic: Exponential backoff verified (relative timing)
+- WebSocket mocks: Proper async/await handling
+- All edge cases handled correctly
+
+### Linting:
+- All files pass ruff linting with zero errors
+- Fixed F401 (unused imports): timedelta, MagicMock, AccountInfo, OrderResponse
+- Fixed F841 (unused variables): response, elapsed
+- Clean code structure with comprehensive documentation
+
+### Success criteria validation (from FLUXHERO_REQUIREMENTS.md):
+✓ R8.1.1: Async methods (fetch_candles, get_account_info, place_order)
+✓ R8.1.2: Retry logic with exponential backoff (1s, 2s, 4s)
+✓ R8.1.3: Rate limiting (200 req/min, configurable)
+✓ R8.1.4: Connection pooling (httpx.Limits configured)
+✓ R8.2.1: Real-time price subscriptions (subscribe method)
+✓ R8.2.2: Auto-reconnect (max 5 retries with exponential backoff)
+✓ R8.2.3: Async tick processing (callbacks don't block)
+✓ R8.2.4: Heartbeat monitor (>60s alert, configurable)
+✓ R8.3.1: Startup sequence (fetch 500 → connect → subscribe → stream)
+✓ R8.3.2: Signal checks on candle close (callback support)
+✓ R8.3.3: Async signal processing (separate tasks)
+
+### Test summary:
+- 30 tests created
+- 30 tests passed (100% pass rate)
+- 0 tests failed
+- Test coverage: rate limiting, REST API, WebSocket, data pipeline, success criteria, edge cases
+- All requirements validated
+
+### Key features:
+- Async/await throughout for non-blocking I/O
+- Retry logic with exponential backoff (no infinite loops)
+- Rate limiting with sliding window algorithm
+- Connection pooling for HTTP efficiency
+- WebSocket auto-reconnect with subscription preservation
+- Heartbeat monitoring for stale connection detection
+- Tick callbacks for custom processing
+- Complete data pipeline from historical fetch to live streaming
+- Signal callback support for strategy integration
+- Comprehensive error handling and edge cases
+- Type-safe data classes with enums
+- Well-documented with docstrings and examples
+- Broker-agnostic design (easy to customize for different brokers)
+
+### Notable design decisions:
+1. Used httpx for async HTTP (modern, well-maintained)
+2. Rate limiter uses sliding window (more accurate than token bucket)
+3. Retry logic sleeps outside the lock (prevents deadlock)
+4. WebSocket reconnect preserves subscriptions automatically
+5. DataPipeline coordinates REST + WebSocket seamlessly
+6. Context manager for AsyncAPIClient ensures proper cleanup
+7. Callbacks for tick processing (extensible design)
+8. Broker-specific auth in _get_headers() (override for other brokers)
+9. No retry on 4xx errors (client errors are permanent)
+10. Generator-based stream() for memory-efficient processing
+
+### Integration notes:
+- Works with CandleBuffer for data storage (Task 12)
+- Compatible with all JIT-compiled indicators (Task 4-5)
+- Signal callbacks can trigger strategy engine (Task 9)
+- Ready for backtesting integration (Task 10)
+- Supports paper trading and live trading modes
+- Easy to extend for multiple symbols (multi-asset portfolio)
+
+### Next task:
+- Phase 10: Feature 9 - Backtesting Module
+- Implement backend/backtesting/engine.py with backtest orchestrator
+
