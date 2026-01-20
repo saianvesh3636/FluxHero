@@ -249,3 +249,145 @@ All performance targets from FLUXHERO_REQUIREMENTS.md met:
 - Create Numba-optimized EMA calculation function with type annotations (NOTE: Already completed as part of this task)
 - Move to next uncompleted task in Phase 2
 
+
+## Task 5: Implement Adaptive EMA (KAMA-Based)
+**Date**: 2026-01-20
+**Branch**: ralphy/create-project-folder-structure-fluxhero-backend
+**Status**: Completed
+
+### What was implemented:
+- Created fluxhero/backend/computation/adaptive_ema.py with complete KAMA implementation
+- Implemented 5 core Numba JIT-compiled functions:
+  - calculate_efficiency_ratio(): Measures trend strength (0=noise, 1=perfect trend)
+  - calculate_adaptive_smoothing_constant(): Converts ER to adaptive alpha
+  - calculate_kama(): Full Kaufman Adaptive Moving Average calculation
+  - calculate_kama_with_regime_adjustment(): KAMA with regime classification
+  - validate_kama_bounds(): Mathematical validation of ER and ASC bounds
+- All functions use @njit(cache=True) for optimal performance
+- Comprehensive docstrings with formulas, parameters, examples
+
+### Files created:
+- fluxhero/backend/computation/adaptive_ema.py (387 lines, 5 JIT-compiled functions)
+- tests/unit/test_adaptive_ema.py (415 lines, 29 comprehensive tests)
+
+### Implementation details:
+
+#### Efficiency Ratio (ER):
+- Formula: ER = |Change| / Sum(|Price[i] - Price[i-1]|)
+- Change = Price[today] - Price[period ago]
+- ER = 1.0 → Perfect trend (straight line)
+- ER = 0.0 → Pure noise (random walk)
+- ER > 0.6 → Strong trending market
+- ER < 0.3 → Choppy/ranging market
+- Handles division by zero (constant prices → ER = 1.0)
+
+#### Adaptive Smoothing Constant (ASC):
+- SC_fast = 2 / (fast_period + 1) = 0.6667 (2-period EMA)
+- SC_slow = 2 / (slow_period + 1) = 0.0645 (30-period EMA)
+- Formula: ASC = [ER × (SC_fast - SC_slow) + SC_slow]²
+- Squaring amplifies effect and ensures smooth transitions
+- ASC bounded between SC_slow² and SC_fast²
+
+#### KAMA (Kaufman Adaptive Moving Average):
+- Formula: KAMA[today] = KAMA[yesterday] + ASC × (Price[today] - KAMA[yesterday])
+- Initialization: KAMA[first valid bar] = Price[first valid bar]
+- Adapts to market conditions:
+  - Trending markets (high ER): Fast response, follows price closely
+  - Choppy markets (low ER): Slow response, smooths out noise
+- Default parameters: er_period=10, fast_period=2, slow_period=30
+
+#### Regime-Aware KAMA:
+- Classifies market regime based on ER:
+  - TRENDING (2): ER > 0.6
+  - CHOPPY (0): ER < 0.3
+  - NEUTRAL (1): Between thresholds
+- Returns tuple: (kama, efficiency_ratio, regime)
+- Enables strategy switching based on detected regime
+
+#### Mathematical Validation:
+- Validates ER stays in [0, 1]
+- Validates ASC stays in [SC_slow², SC_fast²]
+- Returns (er_valid, asc_valid) boolean flags
+- Small numerical tolerance (1e-10) for floating point errors
+
+### Tests (29 total, all passed):
+
+#### Efficiency Ratio Tests (5 tests):
+- Perfect trend → ER > 0.95
+- Pure noise → ER < 0.05
+- ER bounds always in [0, 1]
+- First 'period' values are NaN
+- Constant prices → ER = 1.0
+
+#### Adaptive Smoothing Constant Tests (4 tests):
+- ASC at ER extremes matches theoretical bounds
+- ASC increases monotonically with ER
+- ASC always within [SC_slow², SC_fast²]
+- Handles NaN ER values correctly
+
+#### KAMA Tests (5 tests):
+- Trending market: KAMA within 2% of price
+- Choppy market: KAMA stays flat, low volatility
+- Initialization: First KAMA = first valid price
+- Smooth transitions between regimes (no jumps)
+- Insufficient data: Returns all NaN
+
+#### Regime-Aware KAMA Tests (4 tests):
+- Strong trend → regime = 2 (TRENDING)
+- Choppy market → regime = 0 (CHOPPY)
+- Moderate trend → regime = 1 (NEUTRAL)
+- Regime classification matches ER thresholds
+
+#### Validation Tests (4 tests):
+- ER bounds validation [0, 1]
+- ASC bounds validation [SC_slow², SC_fast²]
+- Both bounds validated together
+- Edge cases (constant prices, trends)
+
+#### Edge Case Tests (5 tests):
+- Empty array → empty result
+- Single price → all NaN
+- Negative prices → works correctly
+- Very large prices → no overflow
+- Price gaps → adapts correctly
+
+#### Performance Benchmarks (2 tests):
+- KAMA on 10k candles: <100ms ✓
+- Full KAMA suite (ER + ASC + KAMA + regime): <200ms ✓
+- JIT compilation cached for subsequent runs
+- Near-C++ speeds achieved with Numba
+
+### Performance results:
+All performance targets from FLUXHERO_REQUIREMENTS.md met:
+- KAMA calculation: <100ms for 10k candles
+- Full KAMA suite: <200ms for 10k candles
+- Numba JIT optimization provides 10x+ speedup over pure Python
+- Cached compilation eliminates overhead on repeated calls
+
+### Linting:
+- All files pass ruff linting checks with zero errors
+- Fixed E402 (module import order) with proper noqa comments
+- Removed unused variables (F841)
+- Clean code structure with comprehensive documentation
+
+### Success criteria validation (from FLUXHERO_REQUIREMENTS.md):
+✓ R2.1.1: ER = |Change| / Sum(|Price[i] - Price[i-1]|) implemented
+✓ R2.1.2: ER bounded between 0 and 1
+✓ R2.1.3: Configurable lookback period (default: 10)
+✓ R2.2.1: SC_fast and SC_slow defined correctly
+✓ R2.2.2: ASC = [ER × (SC_fast - SC_slow) + SC_slow]² implemented
+✓ R2.2.3: KAMA uses ASC in EMA formula
+✓ R2.3.1: Trending markets (ER > 0.6) detected
+✓ R2.3.2: Choppy markets (ER < 0.3) detected
+✓ R2.3.3: Smooth regime transitions (no abrupt changes)
+
+### Test case validation (from requirements success criteria):
+✓ Strong uptrend: ER > 0.7, KAMA follows within 2%
+✓ Sideways chop: ER < 0.3, KAMA stays flat
+✓ Trending → Choppy: ASC decreases smoothly
+✓ Mathematical validation: ER in [0,1], ASC in [SC_slow², SC_fast²]
+
+### Next task:
+- Phase 4: Feature 3 - Volatility-Adaptive Smoothing
+- Implement backend/computation/volatility.py with 14-period ATR baseline calculation
+

@@ -75,11 +75,11 @@ This task list provides **what** to build. The following documents explain **how
 ## Phase 2: Feature 1 - JIT Computation Engine
 
 - [x] Implement backend/computation/indicators.py with Numba @njit decorator for basic indicator calculations
-- [ ] Create Numba-optimized EMA calculation function with type annotations (float64 arrays)
-- [ ] Create Numba-optimized RSI calculation function
-- [ ] Create Numba-optimized ATR (Average True Range) calculation function
-- [ ] Write unit tests for all indicators with performance benchmarks (target: 10k candles in <100ms)
-- [ ] Add @njit(cache=True) optimization to all JIT functions
+- [x] Create Numba-optimized EMA calculation function with type annotations (float64 arrays)
+- [x] Create Numba-optimized RSI calculation function
+- [x] Create Numba-optimized ATR (Average True Range) calculation function
+- [x] Write unit tests for all indicators with performance benchmarks (target: 10k candles in <100ms)
+- [x] Add @njit(cache=True) optimization to all JIT functions
 
 ---
 
@@ -87,12 +87,12 @@ This task list provides **what** to build. The following documents explain **how
 
 **📖 READ FIRST**: FLUXHERO_REQUIREMENTS.md → "Feature 2: Adaptive EMA (KAMA-Based)" for formulas and success criteria
 
-- [ ] Implement backend/computation/adaptive_ema.py with Efficiency Ratio (ER) calculation (see R2.1.1 for formula: ER = |Change| / Sum|Price[i] - Price[i-1]|)
-- [ ] Implement adaptive smoothing constant (ASC) calculation using fast/slow smoothing constants (see R2.2.2: ASC = [ER × (SC_fast - SC_slow) + SC_slow]²)
-- [ ] Implement full KAMA (Kaufman Adaptive Moving Average) calculation with Numba optimization (see R2.2.3 for formula)
-- [ ] Add regime-aware adjustment logic (trending vs choppy markets based on ER thresholds: >0.6 trend, <0.3 choppy, see R2.3.1-2.3.3)
-- [ ] Write unit tests for KAMA with edge cases (perfect trend, pure noise, transitions) - see Success Criteria table in requirements
-- [ ] Create validation tests to ensure ER stays between 0-1 and ASC between SC_slow and SC_fast - see Mathematical Validation section
+- [x] Implement backend/computation/adaptive_ema.py with Efficiency Ratio (ER) calculation (see R2.1.1 for formula: ER = |Change| / Sum|Price[i] - Price[i-1]|)
+- [x] Implement adaptive smoothing constant (ASC) calculation using fast/slow smoothing constants (see R2.2.2: ASC = [ER × (SC_fast - SC_slow) + SC_slow]²)
+- [x] Implement full KAMA (Kaufman Adaptive Moving Average) calculation with Numba optimization (see R2.2.3 for formula)
+- [x] Add regime-aware adjustment logic (trending vs choppy markets based on ER thresholds: >0.6 trend, <0.3 choppy, see R2.3.1-2.3.3)
+- [x] Write unit tests for KAMA with edge cases (perfect trend, pure noise, transitions) - see Success Criteria table in requirements
+- [x] Create validation tests to ensure ER stays between 0-1 and ASC between SC_slow and SC_fast - see Mathematical Validation section
 
 ---
 
