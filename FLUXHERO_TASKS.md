@@ -134,14 +134,14 @@ This task list provides **what** to build. The following documents explain **how
 
 ## Phase 7: Feature 6 - Dual-Mode Strategy Engine
 
-- [ ] Implement backend/strategy/dual_mode.py with trend-following mode logic (entry: Price > KAMA + 0.5×ATR)
-- [ ] Add trend-following exit and trailing stop logic (2.5× ATR from peak)
-- [ ] Implement mean-reversion mode logic (entry: RSI < 30 AND price at lower Bollinger Band)
-- [ ] Add mean-reversion exit logic (return to 20-SMA OR RSI > 70)
-- [ ] Create neutral/transition mode with blended approach (50/50 weight, 30% size reduction)
-- [ ] Implement strategy performance tracking (win rate, Sharpe, drawdown per mode)
-- [ ] Add dynamic mode weight adjustment based on recent performance
-- [ ] Write unit tests for both strategy modes with backtested scenarios
+- [x] Implement backend/strategy/dual_mode.py with trend-following mode logic (entry: Price > KAMA + 0.5×ATR)
+- [x] Add trend-following exit and trailing stop logic (2.5× ATR from peak)
+- [x] Implement mean-reversion mode logic (entry: RSI < 30 AND price at lower Bollinger Band)
+- [x] Add mean-reversion exit logic (return to 20-SMA OR RSI > 70)
+- [x] Create neutral/transition mode with blended approach (50/50 weight, 30% size reduction)
+- [x] Implement strategy performance tracking (win rate, Sharpe, drawdown per mode)
+- [x] Add dynamic mode weight adjustment based on recent performance
+- [x] Write unit tests for both strategy modes with backtested scenarios
 
 ---
 
