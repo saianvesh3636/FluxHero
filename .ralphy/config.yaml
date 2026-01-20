@@ -1,0 +1,50 @@
+# Ralphy Configuration
+# https://github.com/michaelshimeles/ralphy
+
+# Project info (auto-detected, edit if needed)
+project:
+  name: "FluxHero"
+  language: "Python, TypeScript"
+  framework: "Backend: Numba/FastAPI, Frontend: React/Next.js"
+  description: "Adaptive retail quant trading system with JIT-optimized strategies and dual-mode trading (trend-following + mean-reversion)"
+
+# Commands (auto-detected from package.json/pyproject.toml)
+commands:
+  test: ""
+  lint: ""
+  build: ""
+
+# Rules - instructions the AI MUST follow
+# These are injected into every prompt
+rules:
+  - "Always use Numba @njit decorator for performance-critical loops involving price calculations"
+  - "Use explicit type annotations for Numba compatibility (float64, int32 arrays)"
+  - "All indicator calculations must complete in <100ms for 10k candles (benchmark required)"
+  - "Implement async operations for API calls and I/O (use httpx, aiohttp, asyncio)"
+  - "Follow modular architecture: separate computation/, strategy/, execution/, risk/ folders"
+  - "Every feature must include unit tests with edge cases and performance benchmarks"
+  - "Backend uses Python 3.10+, Frontend uses TypeScript with strict mode"
+  - "No heavy databases: use SQLite for operational data, Parquet for cache"
+  - "All trading signals must include explanation logging (why signal fired)"
+  - "Risk management is mandatory: 1% max risk per trade, stop-loss on all positions"
+  - "Follow next-bar fill logic in backtesting (signal on bar N, fill at bar N+1 open)"
+  - "Frontend must have real-time updates via WebSocket, 5-second polling fallback"
+
+# Boundaries - files/folders the AI should not modify
+boundaries:
+  never_touch:
+    - "FLUXHERO_REQUIREMENTS.md"
+    - "FLUXHERO_TASKS.md"
+    - "README.md"
+    - "algorithmic-trading-guide.md"
+    - "quant_trading_guide.md"
+    - "*.lock"
+    - ".ralphy/**"
+    - "data/**/*.db"
+    - "data/**/*.parquet"
+
+# Capabilities - optional tool integrations
+capabilities:
+  # Browser automation via agent-browser (https://agent-browser.dev)
+  # Values: "auto" (detect), "true" (force enable), "false" (disable)
+  browser: "auto"
