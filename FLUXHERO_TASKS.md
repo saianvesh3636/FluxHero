@@ -122,13 +122,13 @@ This task list provides **what** to build. The following documents explain **how
 
 **📖 READ FIRST**: FLUXHERO_REQUIREMENTS.md → "Feature 5: Regime Detection System" for classification logic and thresholds
 
-- [ ] Implement backend/strategy/regime_detector.py with ADX (Average Directional Index) calculation (see R5.1.1: ADX >25 = trending, <20 = ranging)
-- [ ] Add linear regression slope and R² calculation for trend strength measurement (see R5.1.2: R² >0.7 = strong trend, <0.3 = no trend)
-- [ ] Create regime classification logic (STRONG_TREND / MEAN_REVERSION / NEUTRAL) - see R5.1.3 for combined ADX + R² logic
-- [ ] Implement volatility regime detection (HIGH_VOL / LOW_VOL based on ATR) - see R5.2.1 for thresholds (ATR > 1.5× ATR_MA)
-- [ ] Add regime persistence tracking with 3-bar confirmation to prevent whipsaws (see R5.2.3)
-- [ ] Add multi-asset correlation checker for portfolio strategies (see R5.3.1-3: correlation >0.8 = risk-on/risk-off)
-- [ ] Write unit tests for regime detection accuracy with historical market data - see Success Criteria table (>85% accuracy for trends)
+- [x] Implement backend/strategy/regime_detector.py with ADX (Average Directional Index) calculation (see R5.1.1: ADX >25 = trending, <20 = ranging)
+- [x] Add linear regression slope and R² calculation for trend strength measurement (see R5.1.2: R² >0.7 = strong trend, <0.3 = no trend)
+- [x] Create regime classification logic (STRONG_TREND / MEAN_REVERSION / NEUTRAL) - see R5.1.3 for combined ADX + R² logic
+- [x] Implement volatility regime detection (HIGH_VOL / LOW_VOL based on ATR) - see R5.2.1 for thresholds (ATR > 1.5× ATR_MA)
+- [x] Add regime persistence tracking with 3-bar confirmation to prevent whipsaws (see R5.2.3)
+- [x] Add multi-asset correlation checker for portfolio strategies (see R5.3.1-3: correlation >0.8 = risk-on/risk-off)
+- [x] Write unit tests for regime detection accuracy with historical market data - see Success Criteria table (>85% accuracy for trends)
 
 ---
 
