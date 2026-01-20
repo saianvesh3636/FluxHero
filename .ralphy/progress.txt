@@ -75,3 +75,79 @@
 ### Next task:
 - Set up React + Next.js frontend project with TypeScript and configure API integration
 
+
+## Task 3: Set up React + Next.js Frontend with TypeScript and API Integration
+**Date**: 2026-01-19
+**Branch**: ralphy/create-project-folder-structure-fluxhero-backend
+**Status**: Completed
+
+### What was implemented:
+- Set up complete Next.js 16 project with TypeScript and App Router
+- Configured API integration with backend proxy for REST and WebSocket
+- Created comprehensive API client utility with TypeScript types
+- Set up project structure for future dashboard implementation
+- Created configuration files for TypeScript and Next.js
+
+### Files created:
+- fluxhero/frontend/package.json (npm configuration with Next.js, React, TypeScript)
+- fluxhero/frontend/tsconfig.json (TypeScript configuration with strict mode)
+- fluxhero/frontend/next.config.ts (Next.js config with API/WebSocket rewrites)
+- fluxhero/frontend/utils/api.ts (API client with full TypeScript types and methods)
+- fluxhero/frontend/app/layout.tsx (Root layout component)
+- fluxhero/frontend/app/page.tsx (Home page placeholder)
+- fluxhero/frontend/app/globals.css (Global styles)
+- fluxhero/frontend/.env.local.example (Environment configuration template)
+- fluxhero/frontend/README.md (Frontend documentation)
+- tests/unit/test_frontend_setup.py (validation tests)
+
+### API Client Features:
+- TypeScript interfaces for all API responses (Position, Trade, AccountInfo, SystemStatus, BacktestConfig, BacktestResult)
+- REST API methods:
+  - getPositions(): Fetch current positions
+  - getTrades(page, limit): Fetch trade history with pagination
+  - getAccountInfo(): Get account equity and P&L
+  - getSystemStatus(): Check system health
+  - runBacktest(config): Execute backtests
+- WebSocket support: connectPriceWebSocket() for real-time price updates
+- Error handling and JSON parsing
+- Configured proxy in next.config.ts to route /api/* and /ws/* to backend
+
+### Dependencies Installed:
+- next@16.1.4 (React framework)
+- react@19.2.3 (UI library)
+- react-dom@19.2.3 (React DOM)
+- typescript@5.9.3 (TypeScript compiler)
+- @types/react, @types/node, @types/react-dom (TypeScript type definitions)
+
+### Configuration:
+- TypeScript strict mode enabled
+- JSX preserve mode for Next.js
+- Path aliases configured (@/*)
+- API rewrites: /api/:path* → http://localhost:8000/api/:path*
+- WebSocket rewrites: /ws/:path* → http://localhost:8000/ws/:path*
+- React strict mode enabled
+
+### Tests:
+- Created 14 comprehensive unit tests:
+  - Frontend directory exists
+  - package.json exists with correct configuration
+  - Next.js dependencies installed
+  - TypeScript dependencies installed
+  - npm scripts configured (dev, build, start, lint)
+  - tsconfig.json exists with correct settings
+  - next.config.ts exists with API rewrites
+  - API utility exists with all methods
+  - TypeScript types defined for all API responses
+  - App directory structure correct
+  - Pages/components directories exist
+  - Environment example file exists
+  - README documentation exists
+- All tests passed (14/14)
+
+### Linting:
+- Fixed unused import in test file
+- All Python files pass ruff linting checks
+
+### Next task:
+- Create .gitignore for Python and Node.js with data/ and .env exclusions
+
