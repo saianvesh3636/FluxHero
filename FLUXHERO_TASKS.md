@@ -175,15 +175,15 @@ This task list provides **what** to build. The following documents explain **how
 **📖 READ FIRST**: FLUXHERO_REQUIREMENTS.md → "Feature 9: Backtesting Module" for fill logic, slippage model, and success criteria
 **📖 ALSO READ**: algorithmic-trading-guide.md → "Backtesting & Transaction Costs" for realistic modeling
 
-- [ ] Implement backend/backtesting/engine.py with backtest orchestrator
-- [ ] Create backend/backtesting/fills.py with next-bar fill logic (signal on bar N → fill at bar N+1 open, see R9.1.1 - simulates 60s delay)
-- [ ] Add slippage and commission model (0.01% slippage, $0.005/share commission, see R9.2.1-2.2.2)
-- [ ] Implement order size impact model (extra 0.05% slippage if >10% avg volume, see R9.2.3)
-- [ ] Create backend/backtesting/metrics.py with Sharpe ratio, max drawdown, win rate calculations (see R9.3.1 for formulas, risk-free rate = 4%)
-- [ ] Integrate quantstats library for detailed tearsheet and PDF export (see R9.3.3)
-- [ ] Implement walk-forward testing (3-month train, 1-month test, rolling windows, see R9.4.1-4.4 - must pass >60% of test periods)
-- [ ] Add validation tests (buy-and-hold SPY should match actual returns ±2%, see Validation Tests section)
-- [ ] Write comprehensive backtest unit tests with multiple scenarios - see Success Criteria table (Sharpe >0.8, Max DD <25%, Win Rate >45%)
+- [x] Implement backend/backtesting/engine.py with backtest orchestrator
+- [x] Create backend/backtesting/fills.py with next-bar fill logic (signal on bar N → fill at bar N+1 open, see R9.1.1 - simulates 60s delay)
+- [x] Add slippage and commission model (0.01% slippage, $0.005/share commission, see R9.2.1-2.2.2)
+- [x] Implement order size impact model (extra 0.05% slippage if >10% avg volume, see R9.2.3)
+- [x] Create backend/backtesting/metrics.py with Sharpe ratio, max drawdown, win rate calculations (see R9.3.1 for formulas, risk-free rate = 4%)
+- [x] Integrate quantstats library for detailed tearsheet and PDF export (see R9.3.3)
+- [x] Implement walk-forward testing (3-month train, 1-month test, rolling windows, see R9.4.1-4.4 - must pass >60% of test periods)
+- [x] Add validation tests (buy-and-hold SPY should match actual returns ±2%, see Validation Tests section)
+- [x] Write comprehensive backtest unit tests with multiple scenarios - see Success Criteria table (Sharpe >0.8, Max DD <25%, Win Rate >45%)
 
 ---
 
