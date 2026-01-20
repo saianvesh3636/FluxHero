@@ -68,7 +68,7 @@ This task list provides **what** to build. The following documents explain **how
 - [x] Create project folder structure (fluxhero/backend/, fluxhero/frontend/, tests/, etc.)
 - [x] Set up Python virtual environment and create requirements.txt with core dependencies (numba, numpy, pandas, httpx, websockets, fastapi, sqlite3, pyarrow)
 - [x] Set up React + Next.js frontend project with TypeScript and configure API integration
-- [ ] Create .gitignore for Python and Node.js with data/ and .env exclusions
+- [x] Create .gitignore for Python and Node.js with data/ and .env exclusions
 
 ---
 
