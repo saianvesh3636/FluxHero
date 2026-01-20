@@ -189,8 +189,8 @@ This task list provides **what** to build. The following documents explain **how
 
 ## Phase 11: Feature 10 - Order Execution Engine
 
-- [ ] Create backend/execution/broker_interface.py with abstract broker methods (place_order, cancel_order, get_positions, etc.)
-- [ ] Implement PaperBroker class for testing (simulated fills)
+- [x] Create backend/execution/broker_interface.py with abstract broker methods (place_order, cancel_order, get_positions, etc.)
+- [x] Implement PaperBroker class for testing (simulated fills)
 - [ ] Create backend/execution/order_manager.py with order heartbeat monitor (poll every 5s, cancel/rechase after 60s)
 - [ ] Implement backend/execution/position_sizer.py with 1% risk rule calculation
 - [ ] Add max position size limits (20% per position, 50% total deployment)
