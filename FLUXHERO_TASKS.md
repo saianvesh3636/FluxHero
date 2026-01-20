@@ -195,8 +195,8 @@ This task list provides **what** to build. The following documents explain **how
 - [x] Implement backend/execution/position_sizer.py with 1% risk rule calculation
 - [x] Add max position size limits (20% per position, 50% total deployment)
 - [x] Implement safety kill-switch (close all positions if daily loss >3%)
-- [ ] Add order chasing logic (max 3 chase attempts, recalculate mid-price each time)
-- [ ] Write unit tests for order lifecycle and position sizing edge cases
+- [x] Add order chasing logic (max 3 chase attempts, recalculate mid-price each time)
+- [x] Write unit tests for order lifecycle and position sizing edge cases
 
 ---
 

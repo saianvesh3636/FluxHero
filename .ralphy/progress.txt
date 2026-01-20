@@ -2634,3 +2634,156 @@ All tests completed in ~0.07 seconds
 - Add order chasing logic (max 3 chase attempts, recalculate mid-price each time)
 - This is a continuation of Phase 11: Feature 10 - Order Execution Engine
 
+
+
+## Task 15: Order Chasing Logic and Unit Tests (Feature 10 - Part 4)
+**Date**: 2026-01-20
+**Branch**: main
+**Status**: Completed (Verified existing implementation)
+
+### What was verified:
+- Verified complete implementation of order chasing logic in backend/execution/order_manager.py
+- Verified comprehensive unit tests for order lifecycle and position sizing edge cases
+- All functionality from Phase 11, Feature 10 tasks was already implemented:
+  - Order chasing logic with max 3 chase attempts (R10.2.3)
+  - Mid-price recalculation on each chase (R10.2.2)
+  - Comprehensive unit tests (27 tests for order manager, 32 tests for position sizer)
+
+### Implementation details verified:
+
+#### Order Manager (_chase_order method):
+- Automatic order chasing after 60 seconds if unfilled (R10.2.2)
+- Maximum 3 chase attempts before abandoning (R10.2.3)
+- Recalculates mid-price on each chase attempt using get_mid_price_func
+- Cancels old order and places new order with updated price
+- Updates chase_count and placed_at timestamp
+- Handles chase failures gracefully (marks order as abandoned)
+- Preserves order context (symbol, qty, side) across chases
+- Background monitoring loop polls every 5 seconds (R10.2.1)
+
+#### Chase Logic Flow:
+1. Order placed → Added to monitoring (place_order_with_monitoring)
+2. Background loop polls status every 5 seconds
+3. After 60 seconds if still PENDING → Chase triggered
+4. Cancel existing order
+5. Get new mid-price (if function provided)
+6. Place new order with updated price
+7. Increment chase_count
+8. If chase_count >= 3 → Abandon order
+9. Remove from monitoring when filled/cancelled/rejected
+
+### Tests verified (27 tests for order_manager.py):
+
+#### Initialization Tests (3 tests):
+- OrderManager initialization with default config
+- Custom configuration (chase timing, poll interval)
+- ManagedOrder dataclass initialization
+
+#### Start/Stop Tests (3 tests):
+- Start monitoring loop
+- Stop monitoring loop
+- Double start handling (warning, no crash)
+
+#### Order Placement Tests (3 tests):
+- Market order (fills immediately, not monitored)
+- Limit order (pending, added to monitoring)
+- Multiple orders tracking
+
+#### Monitoring Loop Tests (3 tests):
+- Status polling every 5 seconds (R10.2.1)
+- Automatic removal of filled orders
+- Automatic removal of cancelled orders
+
+#### Order Chasing Tests (4 tests):
+- Chase after timeout (60s in production, 0.5s in tests)
+- Max chase attempts enforcement (R10.2.3)
+- Mid-price recalculation on chase (R10.2.2)
+- Chase without mid-price function (uses original price)
+
+#### Query Methods Tests (4 tests):
+- get_managed_order by ID
+- get_managed_order not found (returns None)
+- get_all_managed_orders
+- get_active_order_count (excludes abandoned)
+
+#### Edge Case Tests (3 tests):
+- Order fills during chase attempt
+- Order not found in broker (removed from monitoring)
+- Failed rechase (insufficient capital, marks abandoned)
+
+#### Success Criteria Tests (4 tests):
+- R10.2.1: Poll every 5 seconds
+- R10.2.2: Chase after 60 seconds
+- R10.2.3: Max 3 chase attempts
+- Complete order lifecycle (place → monitor → chase → abandon)
+
+### Tests verified (32 tests for position_sizer.py):
+
+#### Covered in previous Task 14 log entry - all 32 tests passing
+
+### Test execution results:
+```
+test_order_manager.py: 27 passed in 5.83s
+test_position_sizer.py: 32 passed in 0.03s
+Total: 59 tests passed (100% pass rate)
+```
+
+### Linting:
+- All files pass ruff linting with zero errors
+- backend/execution/ module: All checks passed!
+- Clean code structure, comprehensive documentation
+- Type hints for all parameters
+
+### Success criteria validation (from FLUXHERO_REQUIREMENTS.md):
+✓ R10.2.1: Poll order status every 5 seconds
+✓ R10.2.2: Cancel and rechase after 60 seconds if unfilled
+✓ R10.2.3: Maximum 3 chase attempts, then abandon
+✓ R10.2.2: Recalculate mid-price on each chase attempt
+✓ Order lifecycle fully tested with edge cases
+✓ Position sizing edge cases fully tested
+
+### Key features verified:
+- Asynchronous order monitoring with background loop
+- Configurable chase timing (production: 60s, tests: faster)
+- Configurable poll interval (production: 5s, tests: faster)
+- Optional mid-price function for dynamic pricing
+- Chase count tracking per order
+- Abandoned order handling
+- Terminal status detection (filled, cancelled, rejected)
+- Concurrent order management (multiple orders tracked)
+- Clean shutdown with task cancellation
+- Comprehensive error handling and edge cases
+
+### Notable design decisions:
+1. Used asyncio for non-blocking monitoring loop
+2. ChaseConfig dataclass for easy configuration
+3. ManagedOrder dataclass to track chase state
+4. get_mid_price_func as optional callback (extensible)
+5. Chase count persists across order replacements
+6. Dictionary-based order tracking (fast lookup by ID)
+7. is_abandoned flag instead of removing immediately (audit trail)
+8. Fast test configuration (0.1s poll, 0.5s chase) for CI/CD
+9. Background task creation with asyncio.create_task
+10. Proper cleanup with task cancellation on shutdown
+
+### Integration notes:
+- Works with any BrokerInterface implementation (PaperBroker, AlpacaBroker, etc.)
+- Compatible with position_sizer for risk-managed order sizing
+- get_mid_price_func can be connected to live market data feed
+- Monitoring loop is non-blocking (won't interfere with other tasks)
+- Ready for production use with proper logging
+
+### Phase 11 completion status:
+✅ All tasks in Phase 11 (Feature 10 - Order Execution Engine) are now complete:
+1. ✅ broker_interface.py with abstract broker methods
+2. ✅ PaperBroker class for testing
+3. ✅ order_manager.py with heartbeat monitor
+4. ✅ position_sizer.py with 1% risk rule
+5. ✅ Max position size limits (20% per position, 50% total)
+6. ✅ Safety kill-switch (3% daily loss)
+7. ✅ Order chasing logic (max 3 chases, recalculate mid-price)
+8. ✅ Unit tests for order lifecycle and position sizing edge cases
+
+### Next task:
+- Phase 12: Feature 11 - Risk Management System
+- Implement backend/risk/position_limits.py with position-level risk checks
