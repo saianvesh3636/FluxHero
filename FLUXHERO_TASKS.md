@@ -152,7 +152,7 @@ This task list provides **what** to build. The following documents explain **how
 - [x] Create daily rollover logic to archive old trades (keep last 30 days in SQLite)
 - [x] Implement backend/storage/parquet_store.py for market data caching with snappy compression
 - [x] Add cache validation logic (check if cached data <24 hours old on startup)
-- [ ] Create rolling 500-candle buffer in memory (discard older data)
+- [x] Create rolling 500-candle buffer in memory (discard older data)
 - [x] Write unit tests for storage operations and cache hit/miss scenarios
 
 ---
