@@ -109,12 +109,12 @@ This task list provides **what** to build. The following documents explain **how
 
 ## Phase 5: Feature 4 - Market Microstructure Noise Filter
 
-- [ ] Implement backend/strategy/noise_filter.py with spread-to-volatility ratio calculation
-- [ ] Create signal validation logic (reject if SV_Ratio > 0.05)
-- [ ] Add volume validation (require volume > 0.5× avg for signals, >1.5× for breakouts)
-- [ ] Implement time-of-day filter for illiquid hours (pre-market, lunch, after-hours)
-- [ ] Add special handling for illiquid periods (2× stricter SV_Ratio threshold)
-- [ ] Write unit tests for noise filter with various spread/volume scenarios
+- [x] Implement backend/strategy/noise_filter.py with spread-to-volatility ratio calculation
+- [x] Create signal validation logic (reject if SV_Ratio > 0.05)
+- [x] Add volume validation (require volume > 0.5× avg for signals, >1.5× for breakouts)
+- [x] Implement time-of-day filter for illiquid hours (pre-market, lunch, after-hours)
+- [x] Add special handling for illiquid periods (2× stricter SV_Ratio threshold)
+- [x] Write unit tests for noise filter with various spread/volume scenarios
 
 ---
 

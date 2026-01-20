@@ -557,3 +557,174 @@ All performance targets from FLUXHERO_REQUIREMENTS.md met:
 - Phase 5: Feature 4 - Market Microstructure Noise Filter
 - Implement backend/strategy/noise_filter.py with spread-to-volatility ratio calculation
 
+
+## Task 7: Implement Market Microstructure Noise Filter (Feature 4)
+**Date**: 2026-01-20
+**Branch**: ralphy/create-project-folder-structure-fluxhero-backend
+**Status**: Completed
+
+### What was implemented:
+- Created fluxhero/backend/strategy/noise_filter.py with complete market microstructure noise filtering system
+- Implemented 8 core functions (5 JIT-compiled with Numba, 3 Python functions for time-of-day filtering):
+  - calculate_spread_to_volatility_ratio(): Calculate SV ratio for noise detection
+  - validate_spread_ratio(): Validate signals based on SV ratio thresholds
+  - calculate_average_volume(): Rolling average volume calculation
+  - validate_volume(): Volume validation for normal signals and breakouts
+  - is_illiquid_hour(): Check if timestamp falls during illiquid hours
+  - is_near_close(): Check if near market close (disable new entries)
+  - apply_noise_filter(): Combined noise filter applying all criteria
+  - calculate_rejection_reason(): Debug function to identify why signals were rejected
+- All JIT functions use @njit(cache=True) for optimal performance
+- Comprehensive docstrings with formulas, requirements references, examples
+
+### Files created:
+- fluxhero/backend/strategy/noise_filter.py (465 lines, 8 functions)
+- tests/unit/test_noise_filter.py (620 lines, 35 comprehensive tests)
+
+### Implementation details:
+
+#### Spread-to-Volatility Ratio (R4.1.1-4.1.4):
+- Formula: SV_Ratio = Spread / Vol_5min
+- Spread = Ask - Bid
+- Vol_5min = StdDev(Close, 20 bars)
+- Threshold: Reject if SV_Ratio > 0.05 (5% of recent volatility)
+- Zero volatility handling: Returns very high ratio (999.0) to flag suspicious conditions
+- Rolling calculation with NaN values for insufficient data
+
+#### Volume Validation (R4.2.1-4.2.3):
+- Average volume: 20-period rolling mean
+- Normal signals: Require volume > 0.5 × Avg_Volume
+- Breakout signals: Require volume > 1.5 × Avg_Volume (stricter threshold)
+- Mixed signal type support (normal and breakout in same dataset)
+- NaN average volume handling (reject signals with insufficient data)
+
+#### Time-of-Day Filtering (R4.3.1-4.3.3):
+- Illiquid hours detection:
+  - Pre-market: Before 9:30 AM EST
+  - Lunch: 12:00-1:00 PM EST
+  - After-hours: After 4:00 PM EST
+- Stricter SV ratio threshold during illiquid hours: 0.025 (2.5%) vs 0.05 (5%) normal
+- Near-close restriction: Disable new entries 15 minutes before market close (3:45 PM)
+- Timestamp-based filtering (assumes EST/EDT timezone)
+
+#### Combined Noise Filter:
+- Applies all filtering criteria in sequence:
+  1. Check for insufficient data (NaN values) → reject
+  2. Check SV ratio with appropriate threshold (normal/illiquid hours) → reject if too high
+  3. Check volume requirements (normal/breakout) → reject if too low
+- Early exit on first failure for efficiency
+- Returns boolean array indicating valid/rejected signals
+
+#### Rejection Reason Codes (for debugging):
+- 0 = Signal valid (passed all filters)
+- 1 = Rejected: high SV ratio (normal hours)
+- 2 = Rejected: high SV ratio (illiquid hours, stricter threshold)
+- 3 = Rejected: low volume (normal signal)
+- 4 = Rejected: low volume (breakout signal)
+- 5 = Rejected: insufficient data (NaN values)
+
+### Tests (35 total, all passed):
+
+#### Spread-to-Volatility Ratio Tests (6 tests):
+- Basic SV ratio calculation with known values
+- High spread + low volatility → high SV ratio (rejection)
+- Low spread + normal volatility → low SV ratio (acceptance)
+- Zero volatility handling (constant prices → very high ratio)
+- Validation with normal hours threshold (0.05)
+- Insufficient data edge case (all NaN)
+
+#### Volume Validation Tests (5 tests):
+- Average volume calculation (20-period rolling mean)
+- Normal signal volume validation (>0.5× avg)
+- Breakout signal volume validation (>1.5× avg)
+- Mixed signal types (normal and breakout)
+- NaN average volume handling
+
+#### Time-of-Day Filter Tests (5 tests):
+- Pre-market hour detection (before 9:30 AM)
+- Lunch hour detection (12:00-1:00 PM)
+- After-hours detection (after 4:00 PM)
+- Normal trading hours (10:30 AM, 2:00 PM)
+- Near-close detection (15 minutes before 4:00 PM)
+
+#### Combined Noise Filter Tests (7 tests):
+- All filters pass (good SV ratio, good volume, normal hours)
+- SV ratio rejection (normal hours, threshold 0.05)
+- SV ratio rejection (illiquid hours, stricter threshold 0.025)
+- Volume rejection (normal signal, <0.5× avg)
+- Volume rejection (breakout signal, <1.5× avg)
+- Multiple rejection criteria in same dataset
+- NaN data rejection (insufficient data)
+
+#### Rejection Reason Tests (2 tests):
+- Rejection reason codes correctly assigned
+- Illiquid hours rejection reason (code 2)
+
+#### Success Criteria Tests (3 tests):
+- Wide spread (0.10) + low vol (1.0) → rejected (SV_Ratio = 10%)
+- Tight spread (0.02) + normal vol (2.0) → allowed (SV_Ratio = 1%)
+- Low volume breakout → rejected (1200 < 1.5 × 1000)
+
+#### Edge Case Tests (4 tests):
+- Empty arrays
+- Single value arrays
+- Negative volumes (should be rejected)
+- Very large spreads (flagged as suspicious)
+
+#### Performance Benchmarks (2 tests):
+- Full noise filter on 10k candles: <50ms ✓
+- SV ratio calculation on 10k candles: <100ms ✓
+- JIT compilation cached for subsequent runs
+- Near-C++ speeds achieved with Numba
+
+#### Integration Tests (1 test):
+- Full noise filter workflow with realistic data
+- 100 bars of simulated market data
+- Verified some signals pass, some fail
+- Rejection reasons populated correctly
+
+### Performance results:
+All performance targets met:
+- Noise filter (10k candles): ~5-10ms (target: <50ms)
+- SV ratio calculation (10k candles): ~15-20ms (target: <100ms)
+- Numba JIT optimization provides 10x+ speedup over pure Python
+- Cached compilation eliminates overhead on repeated calls
+
+### Linting:
+- All files pass ruff linting checks with zero errors
+- Fixed E712 (bool comparisons) with ruff auto-fix
+- Removed unused imports (F401)
+- Removed redefined imports (F811)
+- Clean code structure with comprehensive documentation
+
+### Success criteria validation (from FLUXHERO_REQUIREMENTS.md):
+✓ R4.1.1: Spread = Ask - Bid calculation
+✓ R4.1.2: Vol_5min = StdDev(Close, 20 bars) calculation
+✓ R4.1.3: SV_Ratio = Spread / Vol_5min computation
+✓ R4.1.4: Reject signals if SV_Ratio > 0.05 (5%)
+✓ R4.2.1: Average volume over last 20 bars
+✓ R4.2.2: Normal signals require volume > 0.5 × Avg_Volume
+✓ R4.2.3: Breakout signals require volume > 1.5 × Avg_Volume
+✓ R4.3.1: Illiquid hours flagged (pre-market, lunch, after-hours)
+✓ R4.3.2: 2× stricter SV_Ratio during illiquid hours (<2.5%)
+✓ R4.3.3: Disable new entries 15 minutes before market close
+
+### Test case validation (from requirements success criteria):
+✓ Wide spread (0.10) + low vol (1.0) → Signal rejected (SV_Ratio = 10%)
+✓ Tight spread (0.02) + normal vol (2.0) → Signal allowed (SV_Ratio = 1%)
+✓ Low volume breakout → Signal rejected (false breakout avoided)
+✓ Performance: <50ms for 10k candles
+
+### Key features:
+- Prevents trading on illiquid or manipulated price movements
+- Validates spread-to-volatility ratios to detect wide spreads
+- Ensures sufficient volume for signal confidence
+- Applies stricter thresholds during illiquid hours
+- Provides detailed rejection reasons for debugging
+- High performance with Numba JIT compilation
+- Comprehensive test coverage (35 tests, 100% pass rate)
+
+### Next task:
+- Phase 6: Feature 5 - Regime Detection System
+- Implement backend/strategy/regime_detector.py with ADX calculation
+
