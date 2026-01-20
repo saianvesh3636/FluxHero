@@ -2257,3 +2257,182 @@ All tests completed in ~0.07 seconds
 - Phase 11: Feature 10 - Order Execution Engine (Part 2)
 - Create backend/execution/order_manager.py with order heartbeat monitor
 
+
+## Task 15: Implement Order Manager with Heartbeat Monitor (Feature 10 - Part 2)
+**Date**: 2026-01-20
+**Branch**: main
+**Status**: Completed
+
+### What was implemented:
+- Created fluxhero/backend/execution/order_manager.py with complete order lifecycle management
+- Implemented 3 main classes and 2 dataclasses:
+  - ManagedOrder: Tracks orders being managed with chase metadata
+  - ChaseConfig: Configuration for chase behavior (max attempts, timeouts)
+  - OrderManager: Main class managing order lifecycle with heartbeat monitoring
+
+### Files created:
+- fluxhero/backend/execution/order_manager.py (360 lines, 3 classes + dataclasses)
+- tests/unit/test_order_manager.py (725 lines, 27 comprehensive tests)
+
+### Implementation details:
+
+#### ManagedOrder Dataclass:
+- Tracks order with lifecycle metadata
+- Fields: order, placed_at, last_checked_at, chase_count, is_abandoned
+- Original order details preserved (symbol, qty, side)
+
+#### ChaseConfig Dataclass (R10.2):
+- max_chase_attempts: 3 (R10.2.3)
+- chase_after_seconds: 60.0 (R10.2.2)
+- poll_interval_seconds: 5.0 (R10.2.1)
+- Configurable for different trading scenarios
+
+#### OrderManager Class:
+**Core Methods:**
+- start(): Start background monitoring loop
+- stop(): Clean shutdown of monitoring task
+- place_order_with_monitoring(): Place order and add to monitoring
+- _monitoring_loop(): Background task polling every 5s (R10.2.1)
+- _check_all_orders(): Check status of all managed orders
+- _chase_order(): Cancel and rechase with updated mid-price (R10.2.2)
+
+**Query Methods:**
+- get_managed_order(): Get managed order by ID
+- get_all_managed_orders(): Get all currently managed orders
+- get_active_order_count(): Count of non-abandoned orders
+
+**Heartbeat Monitor (R10.2.1):**
+- Background asyncio task polls order status every 5 seconds
+- Updates order status from broker
+- Removes terminal orders (filled/cancelled/rejected)
+- Tracks time since order placement
+
+**Order Chasing Logic (R10.2.2):**
+- Detects orders unfilled after 60 seconds
+- Cancels existing order
+- Recalculates mid-price (via optional get_mid_price_func)
+- Resubmits order with updated price
+- Increments chase counter
+
+**Max Chase Attempts (R10.2.3):**
+- Maximum 3 chase attempts per order
+- After max attempts, order is marked as abandoned
+- Abandoned orders are removed from monitoring
+- Final cancel is issued before abandonment
+
+**Integration Features:**
+- Optional get_mid_price_func callback for dynamic pricing
+- Works with any BrokerInterface implementation
+- Async/await throughout for non-blocking operations
+- Comprehensive error handling and logging
+
+### Tests (27 total, all passed):
+
+#### Initialization Tests (3 tests):
+- OrderManager initialization with defaults
+- Custom ChaseConfig configuration
+- ManagedOrder initialization
+
+#### Start/Stop Tests (3 tests):
+- Start monitoring loop
+- Stop monitoring loop
+- Double start warning handling
+
+#### Order Placement Tests (3 tests):
+- Market order (fills immediately, not monitored)
+- Limit order (pending, added to monitoring)
+- Multiple orders management
+
+#### Monitoring Loop Tests (3 tests):
+- Loop checks order status regularly (R10.2.1)
+- Removes filled orders automatically
+- Removes cancelled orders automatically
+
+#### Order Chasing Tests (5 tests):
+- Order chased after timeout (R10.2.2)
+- Max chase attempts enforced (R10.2.3)
+- Chase updates limit price with mid-price function
+- Chase works without mid-price function (uses original price)
+- Multiple chase cycles
+
+#### Query Methods Tests (4 tests):
+- Get managed order by ID
+- Get non-existent order (returns None)
+- Get all managed orders
+- Get active order count
+
+#### Edge Case Tests (3 tests):
+- Order fills during chase attempt
+- Order not found in broker (graceful handling)
+- Failed rechase (order abandoned)
+
+#### Success Criteria Tests (3 tests):
+- R10.2.1: Poll every 5 seconds (config validation)
+- R10.2.2: Chase after 60 seconds (config validation)
+- R10.2.3: Max 3 chase attempts (config validation)
+- Complete order lifecycle test
+
+### Performance results:
+All tests completed in ~5.84 seconds:
+- Monitoring loop: ~0.1s poll interval in tests (5s in production)
+- Chase timeout: ~0.5s in tests (60s in production)
+- Async operations: Non-blocking, no deadlocks
+- Clean shutdown: All tasks cancelled properly
+
+### Linting:
+- Fixed F401 (unused imports): removed time, AsyncMock, MagicMock
+- Fixed F841 (unused variables): changed to _ or removed
+- All files pass ruff linting with zero errors
+- Clean code structure with comprehensive documentation
+
+### Success criteria validation (from FLUXHERO_REQUIREMENTS.md):
+✓ R10.2.1: Poll order status every 5 seconds
+✓ R10.2.2: Cancel and rechase after 60 seconds if unfilled
+✓ R10.2.3: Maximum 3 chase attempts, then abandon
+✓ Heartbeat monitor: Order unfilled for 65s → Auto-canceled and rechased
+✓ Background monitoring: Non-blocking async operations
+✓ Mid-price recalculation: Optional callback support
+
+### Test summary:
+- 27 tests created
+- 27 tests passed (100% pass rate)
+- 0 tests failed
+- Test coverage: initialization, start/stop, placement, monitoring, chasing, queries, edge cases, success criteria
+- All requirements validated
+
+### Key features:
+- Async background monitoring loop with configurable intervals
+- Automatic order chasing with mid-price recalculation
+- Max chase attempts to prevent infinite loops
+- Clean shutdown with task cancellation
+- Works with any BrokerInterface implementation
+- Optional mid-price callback for dynamic pricing
+- Comprehensive error handling and logging
+- Terminal order removal (filled/cancelled/rejected)
+- Tracks chase count and abandonment state
+- Query methods for order inspection
+
+### Notable design decisions:
+1. Used asyncio.Task for background monitoring loop
+2. Configurable timeouts via ChaseConfig dataclass
+3. Optional get_mid_price_func for flexibility (not required)
+4. Chase updates order ID when new order created
+5. is_abandoned flag prevents infinite chase attempts
+6. Logging throughout for debugging and monitoring
+7. Dict-based order tracking for O(1) lookups
+8. Clean separation of concerns (monitor vs chase)
+9. Graceful handling of broker errors during chase
+10. Terminal status orders removed immediately
+
+### Integration notes:
+- Works with PaperBroker from Task 10 (broker_interface.py)
+- Ready for AlpacaBroker implementation
+- Compatible with position_sizer.py (next task)
+- Supports real-time order lifecycle tracking
+- Can be extended with callbacks for order events
+- Ready for production use with production config (5s poll, 60s chase)
+
+### Next task:
+- Phase 11: Feature 10 - Order Execution Engine (Part 3)
+- Implement backend/execution/position_sizer.py with 1% risk rule calculation
+
