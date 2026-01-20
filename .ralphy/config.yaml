@@ -29,6 +29,10 @@ rules:
   - "Risk management is mandatory: 1% max risk per trade, stop-loss on all positions"
   - "Follow next-bar fill logic in backtesting (signal on bar N, fill at bar N+1 open)"
   - "Frontend must have real-time updates via WebSocket, 5-second polling fallback"
+  - "CRITICAL: Before implementing any feature, read FLUXHERO_REQUIREMENTS.md for detailed specifications, formulas, success criteria, and validation tests"
+  - "Use Read tool to review the relevant Feature section in FLUXHERO_REQUIREMENTS.md before coding"
+  - "Consult quant_trading_guide.md for technical indicator formulas (EMA, RSI, ATR, KAMA, etc.)"
+  - "Refer to algorithmic-trading-guide.md for risk management, backtesting, and market microstructure concepts"
 
 # Boundaries - files/folders the AI should not modify
 boundaries:

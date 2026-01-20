@@ -8,6 +8,61 @@ This is the master task list for implementing FluxHero - an adaptive retail quan
 
 ---
 
+## 📚 IMPORTANT: Context Documents (Read Before Each Task)
+
+This task list provides **what** to build. The following documents explain **how** and **why**:
+
+### Primary Reference Documents
+
+1. **FLUXHERO_REQUIREMENTS.md** (MUST READ for each feature)
+   - Detailed mathematical formulas (e.g., Efficiency Ratio, KAMA, ATR calculations)
+   - Success criteria with specific metrics and targets
+   - Performance benchmarks (e.g., <100ms for 10k candles)
+   - Validation tests and edge cases
+   - Architectural decisions and reasoning
+   - **Usage**: Before implementing Feature X, read the corresponding "Feature X" section
+
+2. **quant_trading_guide.md** (Technical reference)
+   - EMA, RSI, MACD, ATR formulas and explanations
+   - Alpha smoothing, volatility concepts
+   - Adaptive indicators and regression techniques
+   - When to use which indicators for different market conditions
+   - **Usage**: Consult when implementing any technical indicator
+
+3. **algorithmic-trading-guide.md** (Domain knowledge)
+   - Risk management strategies (position sizing, drawdown limits)
+   - Backtesting best practices (slippage, transaction costs)
+   - Market microstructure (spreads, liquidity, order execution)
+   - Realistic performance expectations
+   - **Usage**: Reference for risk, execution, and backtesting tasks
+
+### Workflow for Each Task
+
+```
+1. Read the task description below
+2. Read the corresponding Feature section in FLUXHERO_REQUIREMENTS.md
+3. Review relevant formulas in quant_trading_guide.md if needed
+4. Consult algorithmic-trading-guide.md for domain-specific considerations
+5. Implement with full context
+6. Validate against success criteria in requirements
+```
+
+### Example
+
+**Task**: "Implement adaptive EMA (KAMA) calculation"
+
+**Before coding**:
+- ✅ Read: FLUXHERO_REQUIREMENTS.md → "Feature 2: Adaptive EMA (KAMA-Based)"
+  - Get: Efficiency Ratio formula, ASC calculation, regime thresholds
+- ✅ Read: quant_trading_guide.md → "Section 9: Adaptive Scaling with Regression"
+  - Get: Mathematical background on alpha adjustment
+- ✅ Read: algorithmic-trading-guide.md → "Strategy Ideas"
+  - Get: When KAMA works best (trending vs ranging markets)
+
+**Result**: Complete implementation with proper formulas, edge cases, and validation tests.
+
+---
+
 ## Phase 1: Project Setup & Core Infrastructure
 
 - [ ] Create project folder structure (fluxhero/backend/, fluxhero/frontend/, tests/, etc.)
@@ -30,12 +85,14 @@ This is the master task list for implementing FluxHero - an adaptive retail quan
 
 ## Phase 3: Feature 2 - Adaptive EMA (KAMA-Based)
 
-- [ ] Implement backend/computation/adaptive_ema.py with Efficiency Ratio (ER) calculation
-- [ ] Implement adaptive smoothing constant (ASC) calculation using fast/slow smoothing constants
-- [ ] Implement full KAMA (Kaufman Adaptive Moving Average) calculation with Numba optimization
-- [ ] Add regime-aware adjustment logic (trending vs choppy markets based on ER thresholds)
-- [ ] Write unit tests for KAMA with edge cases (perfect trend, pure noise, transitions)
-- [ ] Create validation tests to ensure ER stays between 0-1 and ASC between SC_slow and SC_fast
+**📖 READ FIRST**: FLUXHERO_REQUIREMENTS.md → "Feature 2: Adaptive EMA (KAMA-Based)" for formulas and success criteria
+
+- [ ] Implement backend/computation/adaptive_ema.py with Efficiency Ratio (ER) calculation (see R2.1.1 for formula: ER = |Change| / Sum|Price[i] - Price[i-1]|)
+- [ ] Implement adaptive smoothing constant (ASC) calculation using fast/slow smoothing constants (see R2.2.2: ASC = [ER × (SC_fast - SC_slow) + SC_slow]²)
+- [ ] Implement full KAMA (Kaufman Adaptive Moving Average) calculation with Numba optimization (see R2.2.3 for formula)
+- [ ] Add regime-aware adjustment logic (trending vs choppy markets based on ER thresholds: >0.6 trend, <0.3 choppy, see R2.3.1-2.3.3)
+- [ ] Write unit tests for KAMA with edge cases (perfect trend, pure noise, transitions) - see Success Criteria table in requirements
+- [ ] Create validation tests to ensure ER stays between 0-1 and ASC between SC_slow and SC_fast - see Mathematical Validation section
 
 ---
 
@@ -63,13 +120,15 @@ This is the master task list for implementing FluxHero - an adaptive retail quan
 
 ## Phase 6: Feature 5 - Regime Detection System
 
-- [ ] Implement backend/strategy/regime_detector.py with ADX (Average Directional Index) calculation
-- [ ] Add linear regression slope and R² calculation for trend strength measurement
-- [ ] Create regime classification logic (STRONG_TREND / MEAN_REVERSION / NEUTRAL)
-- [ ] Implement volatility regime detection (HIGH_VOL / LOW_VOL based on ATR)
-- [ ] Add regime persistence tracking with 3-bar confirmation to prevent whipsaws
-- [ ] Add multi-asset correlation checker for portfolio strategies
-- [ ] Write unit tests for regime detection accuracy with historical market data
+**📖 READ FIRST**: FLUXHERO_REQUIREMENTS.md → "Feature 5: Regime Detection System" for classification logic and thresholds
+
+- [ ] Implement backend/strategy/regime_detector.py with ADX (Average Directional Index) calculation (see R5.1.1: ADX >25 = trending, <20 = ranging)
+- [ ] Add linear regression slope and R² calculation for trend strength measurement (see R5.1.2: R² >0.7 = strong trend, <0.3 = no trend)
+- [ ] Create regime classification logic (STRONG_TREND / MEAN_REVERSION / NEUTRAL) - see R5.1.3 for combined ADX + R² logic
+- [ ] Implement volatility regime detection (HIGH_VOL / LOW_VOL based on ATR) - see R5.2.1 for thresholds (ATR > 1.5× ATR_MA)
+- [ ] Add regime persistence tracking with 3-bar confirmation to prevent whipsaws (see R5.2.3)
+- [ ] Add multi-asset correlation checker for portfolio strategies (see R5.3.1-3: correlation >0.8 = risk-on/risk-off)
+- [ ] Write unit tests for regime detection accuracy with historical market data - see Success Criteria table (>85% accuracy for trends)
 
 ---
 
@@ -113,15 +172,18 @@ This is the master task list for implementing FluxHero - an adaptive retail quan
 
 ## Phase 10: Feature 9 - Backtesting Module
 
+**📖 READ FIRST**: FLUXHERO_REQUIREMENTS.md → "Feature 9: Backtesting Module" for fill logic, slippage model, and success criteria
+**📖 ALSO READ**: algorithmic-trading-guide.md → "Backtesting & Transaction Costs" for realistic modeling
+
 - [ ] Implement backend/backtesting/engine.py with backtest orchestrator
-- [ ] Create backend/backtesting/fills.py with next-bar fill logic (signal on bar N → fill at bar N+1 open)
-- [ ] Add slippage and commission model (0.01% slippage, $0.005/share commission)
-- [ ] Implement order size impact model (extra 0.05% slippage if >10% avg volume)
-- [ ] Create backend/backtesting/metrics.py with Sharpe ratio, max drawdown, win rate calculations
-- [ ] Integrate quantstats library for detailed tearsheet and PDF export
-- [ ] Implement walk-forward testing (3-month train, 1-month test, rolling windows)
-- [ ] Add validation tests (buy-and-hold SPY should match actual returns ±2%)
-- [ ] Write comprehensive backtest unit tests with multiple scenarios
+- [ ] Create backend/backtesting/fills.py with next-bar fill logic (signal on bar N → fill at bar N+1 open, see R9.1.1 - simulates 60s delay)
+- [ ] Add slippage and commission model (0.01% slippage, $0.005/share commission, see R9.2.1-2.2.2)
+- [ ] Implement order size impact model (extra 0.05% slippage if >10% avg volume, see R9.2.3)
+- [ ] Create backend/backtesting/metrics.py with Sharpe ratio, max drawdown, win rate calculations (see R9.3.1 for formulas, risk-free rate = 4%)
+- [ ] Integrate quantstats library for detailed tearsheet and PDF export (see R9.3.3)
+- [ ] Implement walk-forward testing (3-month train, 1-month test, rolling windows, see R9.4.1-4.4 - must pass >60% of test periods)
+- [ ] Add validation tests (buy-and-hold SPY should match actual returns ±2%, see Validation Tests section)
+- [ ] Write comprehensive backtest unit tests with multiple scenarios - see Success Criteria table (Sharpe >0.8, Max DD <25%, Win Rate >45%)
 
 ---
 
