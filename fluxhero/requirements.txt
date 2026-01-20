@@ -1,0 +1,32 @@
+# FluxHero Core Dependencies
+# Updated: 2026-01-19
+
+# Performance & Computation
+numba>=0.58.0
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Data Storage
+pyarrow>=14.0.0
+
+# HTTP & WebSocket Client
+httpx>=0.25.0
+websockets>=12.0
+
+# Web Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Database
+# Note: sqlite3 is included in Python standard library
+
+# Testing & Development
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# Backtesting & Analytics
+quantstats>=0.0.62
+
+# Code Quality
+ruff>=0.1.0

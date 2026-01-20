@@ -1,0 +1,77 @@
+# Ralphy Progress Log
+
+## Task 1: Create Project Folder Structure
+**Date**: 2026-01-19
+**Branch**: ralphy/create-project-folder-structure-fluxhero-backend
+**Status**: Completed
+
+### What was implemented:
+- Created comprehensive folder structure for FluxHero project
+  - Backend directories: computation, strategy, storage, data, backtesting, execution, risk, api
+  - Frontend directories: pages, components, utils, styles
+  - Test directories: unit, integration, e2e
+  - Data directories: cache, archive
+  - Additional directories: logs, config
+- Created all necessary __init__.py files for Python packages
+- Created fluxhero/README.md documenting the project structure and module responsibilities
+
+### Files created:
+- fluxhero/ (root directory with all subdirectories)
+- fluxhero/README.md (documentation)
+- tests/unit/test_project_structure.py (comprehensive tests)
+- Multiple __init__.py files for Python package structure
+
+### Tests:
+- Created 11 unit tests verifying folder structure
+- All tests passed (11/11)
+- Tests verify: directories exist, __init__.py files present, README exists
+
+### Linting:
+- Installed ruff linter
+- All Python files pass linting checks
+
+### Next task:
+- Set up Python virtual environment and create requirements.txt with core dependencies
+
+
+## Task 2: Set up Python Virtual Environment and Requirements.txt
+**Date**: 2026-01-19
+**Branch**: ralphy/create-project-folder-structure-fluxhero-backend
+**Status**: Completed
+
+### What was implemented:
+- Created Python virtual environment in fluxhero/venv/
+- Created requirements.txt with all core dependencies:
+  - Performance & Computation: numba, numpy, pandas
+  - Data Storage: pyarrow
+  - HTTP & WebSocket: httpx, websockets
+  - Web Framework: fastapi, uvicorn
+  - Testing: pytest, pytest-asyncio, pytest-cov
+  - Analytics: quantstats
+  - Code Quality: ruff
+- Added version specifications (>=) for all core dependencies
+- Noted that sqlite3 is included in Python standard library
+
+### Files created:
+- fluxhero/venv/ (virtual environment directory)
+- fluxhero/requirements.txt (dependencies file)
+- tests/unit/test_requirements.py (validation tests)
+
+### Tests:
+- Created 7 unit tests verifying requirements.txt:
+  - requirements.txt file exists
+  - venv directory exists
+  - Contains all core dependencies (numba, numpy, pandas, httpx, websockets, fastapi, pyarrow)
+  - Contains testing dependencies (pytest)
+  - Valid file format
+  - Core dependencies have version specifications
+  - sqlite3 note present
+- All tests passed (7/7)
+
+### Linting:
+- Fixed unused import (removed `import os`)
+- All Python files pass ruff linting checks
+
+### Next task:
+- Set up React + Next.js frontend project with TypeScript and configure API integration
+
