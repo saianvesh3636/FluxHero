@@ -2436,3 +2436,201 @@ All tests completed in ~5.84 seconds:
 - Phase 11: Feature 10 - Order Execution Engine (Part 3)
 - Implement backend/execution/position_sizer.py with 1% risk rule calculation
 
+
+## Task 15: Implement Position Sizer with Risk Management (Feature 10 - Part 3)
+**Date**: 2026-01-20
+**Branch**: ralphy/create-project-folder-structure-fluxhero-backend
+**Status**: Completed
+
+### What was implemented:
+- Created fluxhero/backend/execution/position_sizer.py with complete risk-based position sizing
+- Implemented 1% risk rule calculation (R10.3.1)
+- Added max position size limits (20% per position, R10.3.2)
+- Added max total deployment limits (50% of account, R10.3.2)
+- Implemented safety kill-switch for -3% daily loss (R10.4.1-R10.4.3)
+- Whole share rounding (R10.3.3)
+- Manual kill-switch override capability
+
+### Files created:
+- fluxhero/backend/execution/position_sizer.py (429 lines, 3 dataclasses + 1 main class)
+- tests/unit/test_position_sizer.py (709 lines, 32 comprehensive tests)
+
+### Implementation details:
+
+#### PositionSizer Class:
+Core features:
+- calculate_position_size(): Main sizing calculation with all constraints
+- _check_kill_switch(): Daily P&L monitoring for kill-switch
+- reset_kill_switch(): Manual reset for new trading session (R10.4.3)
+- enable_kill_switch() / disable_kill_switch(): Manual override controls
+- get_max_shares(): Calculate maximum shares allowed
+- get_risk_metrics(): Real-time risk monitoring
+
+#### 1% Risk Rule (R10.3.1):
+- Formula: shares = (account_balance × 0.01) / (entry_price - stop_loss_price)
+- Limits risk to 1% of account per trade
+- Works for both long and short positions
+- Handles absolute value of risk per share
+
+#### Position Size Limits (R10.3.2):
+- Max 20% of account per position (diversification)
+- Max 50% total deployed capital (cash buffer)
+- Takes minimum of risk-based and limit-based sizing
+- Ensures proper diversification
+
+#### Whole Share Rounding (R10.3.3):
+- All positions rounded down to whole shares
+- Minimum 1 share required
+- No fractional shares (unless broker supports)
+- Integer type enforcement
+
+#### Kill-Switch (R10.4.1-R10.4.3):
+- Tracks daily P&L since session start
+- Triggers at -3% daily loss
+- Blocks all new trades when active
+- Manual reset required to re-enable (R10.4.3)
+- Can be disabled (manual override)
+- Tracks trigger time for logging
+
+#### Multi-Level Constraints:
+Position sizing respects multiple constraints in priority order:
+1. Kill-switch check (blocks if triggered)
+2. Input validation (prices must be valid)
+3. Risk-based calculation (1% risk rule)
+4. Position size limit (20% max)
+5. Total deployment limit (50% max)
+6. Cash availability
+7. Whole share rounding
+
+#### Data Classes:
+- AccountState: Current account state snapshot
+  - balance, cash, deployed_value
+  - daily_pnl, num_positions
+  - session_start_balance (for daily P&L tracking)
+- PositionSize: Result of position sizing
+  - shares, risk_amount, position_value
+  - result_code, reason (explanation)
+- PositionSizeResult enum: Result codes
+  - SUCCESS, INSUFFICIENT_CAPITAL, EXCEEDS_POSITION_LIMIT
+  - EXCEEDS_TOTAL_DEPLOYMENT, KILL_SWITCH_ACTIVE, INVALID_RISK
+
+### Tests (32 total, all passed):
+
+#### Initialization Tests (2 tests):
+- Default parameters
+- Custom parameters
+
+#### 1% Risk Rule Tests (3 tests):
+- Basic risk calculation with position limit interaction
+- Tight stop loss behavior
+- Wide stop loss reduces position size
+
+#### Max Position Size Limit Tests (2 tests):
+- 20% position limit enforcement
+- Expensive stock position limit
+
+#### Max Deployment Limit Tests (2 tests):
+- 50% deployment limit enforcement
+- Rejection when limit exceeded
+
+#### Whole Share Rounding Tests (2 tests):
+- Round down to whole shares
+- Minimum 1 share requirement
+
+#### Kill-Switch Tests (5 tests):
+- Triggers at -3% daily loss (R10.4.2)
+- Doesn't trigger below threshold (-2.9%)
+- Manual reset (R10.4.3)
+- Disable kill-switch (manual override)
+- Enable kill-switch
+
+#### Cash Constraint Tests (2 tests):
+- Insufficient cash handling
+- Zero cash rejection
+
+#### Edge Case Tests (5 tests):
+- Invalid entry price
+- Invalid stop loss price
+- Entry equals stop (zero risk)
+- Short position sizing (stop above entry)
+
+#### Utility Method Tests (3 tests):
+- get_max_shares calculation
+- get_max_shares with deployment constraint
+- get_risk_metrics monitoring
+- Risk metrics near kill-switch threshold
+
+#### Dataclass Tests (2 tests):
+- PositionSize dataclass
+- AccountState dataclass
+
+#### Success Criteria Tests (4 tests):
+- 1% risk rule validation
+- 20% max position enforcement
+- 50% max deployment enforcement
+- 3% kill-switch trigger
+
+### Performance results:
+All tests completed in ~0.07 seconds
+- Fast calculation (<1ms per position sizing)
+- No performance issues with multiple constraints
+- All edge cases handled efficiently
+
+### Linting:
+- All files pass ruff linting with zero errors
+- Clean code structure with comprehensive documentation
+- Type hints for all parameters
+
+### Success criteria validation (from FLUXHERO_REQUIREMENTS.md):
+✓ R10.3.1: 1% Risk Rule: shares = (account_balance × 0.01) / (entry_price - stop_loss_price)
+✓ R10.3.2: Max position size: 20% of account per position
+✓ R10.3.2: Max total deployment: 50% of account
+✓ R10.3.3: Round down to nearest whole share
+✓ R10.4.1: Track daily P&L since market open
+✓ R10.4.2: Kill-switch at 3% daily loss (close all, disable entries)
+✓ R10.4.3: Manual override to re-enable trading
+
+### Test summary:
+- 32 tests created
+- 32 tests passed (100% pass rate)
+- 0 tests failed
+- Test coverage: initialization, risk rules, position limits, deployment limits, rounding, kill-switch, cash constraints, edge cases, utilities, dataclasses, success criteria
+- All requirements validated
+
+### Key features:
+- Risk-based position sizing with 1% rule
+- Multi-level constraints (position, deployment, cash)
+- Safety kill-switch for daily loss protection
+- Manual override controls (enable/disable/reset)
+- Whole share rounding
+- Support for long and short positions
+- Comprehensive risk metrics monitoring
+- Type-safe data classes
+- Clear result codes and explanations
+- Well-documented with docstrings
+- Production-ready error handling
+
+### Notable design decisions:
+1. Takes minimum of risk-based and limit-based sizing (conservative)
+2. Kill-switch blocks all trades (safety first)
+3. Manual reset required after kill-switch (prevents accidental re-enable)
+4. Tracks trigger time for logging/audit
+5. Separate enable/disable from reset (flexibility)
+6. Result codes for programmatic handling
+7. Human-readable reasons for debugging
+8. Absolute value for risk per share (works for long/short)
+9. Multiple validation layers (fail early)
+10. Risk metrics utility for real-time monitoring
+
+### Integration notes:
+- Works with AccountState from any account source
+- Compatible with both trend and mean-reversion strategies
+- Can be used in backtesting (pass historical account states)
+- Ready for live trading with kill-switch protection
+- Integrates with order_manager.py for order placement
+- Supports future broker interfaces
+
+### Next task:
+- Add order chasing logic (max 3 chase attempts, recalculate mid-price each time)
+- This is a continuation of Phase 11: Feature 10 - Order Execution Engine
+

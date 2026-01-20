@@ -192,9 +192,9 @@ This task list provides **what** to build. The following documents explain **how
 - [x] Create backend/execution/broker_interface.py with abstract broker methods (place_order, cancel_order, get_positions, etc.)
 - [x] Implement PaperBroker class for testing (simulated fills)
 - [x] Create backend/execution/order_manager.py with order heartbeat monitor (poll every 5s, cancel/rechase after 60s)
-- [ ] Implement backend/execution/position_sizer.py with 1% risk rule calculation
-- [ ] Add max position size limits (20% per position, 50% total deployment)
-- [ ] Implement safety kill-switch (close all positions if daily loss >3%)
+- [x] Implement backend/execution/position_sizer.py with 1% risk rule calculation
+- [x] Add max position size limits (20% per position, 50% total deployment)
+- [x] Implement safety kill-switch (close all positions if daily loss >3%)
 - [ ] Add order chasing logic (max 3 chase attempts, recalculate mid-price each time)
 - [ ] Write unit tests for order lifecycle and position sizing edge cases
 
