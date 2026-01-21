@@ -6701,3 +6701,144 @@ python -m fluxhero.backend.maintenance.daily_reboot --config config.json
 ### Next task:
 - Phase 16: Task 4 - Add system operations documentation for maintenance tasks
 
+
+
+## Task 15: Add System Operations Documentation (Phase 16 - Task 4)
+**Date**: 2026-01-21
+**Branch**: main
+**Status**: Completed
+
+### What was implemented:
+- Created comprehensive SYSTEM_OPERATIONS.md documentation for FluxHero system operations
+- Documented daily operations, startup/shutdown procedures, monitoring, and maintenance tasks
+- Included troubleshooting guide for common issues
+- Documented emergency procedures including kill switch activation
+- Provided backup and recovery procedures
+- Created maintenance schedule (daily, weekly, monthly, quarterly)
+
+### Files created:
+- fluxhero/SYSTEM_OPERATIONS.md (510 lines, comprehensive operations guide)
+- tests/unit/test_system_operations_docs.py (178 lines, 12 validation tests)
+
+### Implementation details:
+
+#### Documentation Sections:
+1. **Daily Operations**: 9:00 AM EST automated reboot, pre-market checklist
+2. **System Startup**: Backend and frontend startup procedures, verification steps
+3. **System Shutdown**: Graceful shutdown process, pre-shutdown checklist
+4. **Monitoring**: Real-time monitoring, log files, key metrics
+5. **Maintenance Tasks**: Daily, weekly, monthly, quarterly schedules
+6. **Troubleshooting**: Common issues and solutions (WebSocket, slippage, startup, performance)
+7. **Emergency Procedures**: Kill switch activation and recovery
+8. **Backup and Recovery**: Backup strategy, recovery procedures, disaster recovery
+
+#### Daily Operations (Automated):
+- **9:00 AM EST**: Daily reboot (fetch 500 candles, reconnect WebSocket)
+- **4:30 PM EST**: End-of-day archival (archive trades >30 days old)
+- Pre-market checklist for operators
+
+#### Maintenance Schedules:
+- **Daily**: Automated reboot and archival
+- **Weekly**: Performance review, database cleanup, log rotation
+- **Monthly**: Full backup, dependency audit, performance attribution
+- **Quarterly**: Full backtest, strategy validation, security review
+
+#### Troubleshooting Guide:
+- WebSocket connection lost: Auto-reconnect troubleshooting
+- High slippage: Volume validation, SV ratio checks
+- Startup failures: Port conflicts, database integrity, cache cleanup
+- Performance degradation: Numba cache rebuild, memory monitoring
+- Database locks: Async write troubleshooting
+- Regime whipsaws: Persistence and threshold tuning
+
+#### Emergency Procedures:
+- Kill switch automatic triggers (3% daily loss, 20% drawdown, etc.)
+- Manual kill switch activation commands
+- Position closure procedures
+- Recovery and reset steps
+
+#### Backup and Recovery:
+- Daily incremental backups (SQLite database)
+- Weekly full backups (all data + config)
+- Monthly off-site backups
+- Disaster recovery procedures
+
+### Tests (12 total, all passed):
+- Documentation file exists
+- Not empty (>1000 characters)
+- Has required sections (9 major sections)
+- Daily reboot documented
+- Maintenance tasks documented
+- Troubleshooting section documented
+- Emergency procedures documented
+- Backup procedures documented
+- Monitoring section documented
+- Has executable commands (bash examples)
+- Proper structure (title, version, TOC)
+- References key system components
+
+### Linting:
+- Fixed F401 (unused import): removed `import os`
+- All files pass ruff linting checks with zero errors
+- Clean code structure
+
+### Key features:
+- Complete operations guide for system administrators
+- Step-by-step procedures for all operations
+- Troubleshooting guide with solutions
+- Emergency procedures with kill switch documentation
+- Backup and recovery procedures
+- Maintenance schedules with specific times
+- Useful commands and examples throughout
+- Contact information and maintenance schedule summary
+- Document version tracking
+
+### Notable documentation coverage:
+1. Daily reboot script reference (fluxhero/scripts/daily_reboot.py)
+2. System startup sequence (10 steps, <3s target)
+3. WebSocket monitoring and heartbeat alerts (>60s timeout)
+4. Database maintenance (vacuum, archival, cleanup)
+5. Log rotation and management
+6. Performance metrics monitoring (Sharpe, drawdown, win rate)
+7. Kill switch triggers and recovery
+8. Backup strategy (daily, weekly, monthly, off-site)
+9. Disaster recovery from backup
+10. Useful SQL queries for database inspection
+
+### Integration notes:
+- References all key system components (SQLite, Parquet, WebSocket, FastAPI)
+- Documents interaction with daily_reboot.py script (Phase 16 Task 3)
+- Covers monitoring of all implemented features (Phases 1-15)
+- Provides maintenance for storage systems (SQLite, Parquet, buffer)
+- Documents risk management and kill switch (Phase 12)
+- References backtesting and performance metrics (Phase 10)
+
+### Success criteria validation:
+✓ Comprehensive operations documentation created
+✓ Daily operations (9:00 AM reboot) documented
+✓ Startup and shutdown procedures documented
+✓ Monitoring and logging documented
+✓ Maintenance tasks with schedules documented
+✓ Troubleshooting guide with common issues
+✓ Emergency procedures (kill switch) documented
+✓ Backup and recovery procedures documented
+✓ All sections validated by unit tests
+
+### Test summary:
+- 12 tests created
+- 12 tests passed (100% pass rate)
+- 0 tests failed
+- Test coverage: file existence, content validation, section coverage, specific topics
+- All documentation requirements validated
+
+### Phase 16 completion:
+✓ All 4 tasks in Phase 16 (Retail-Specific Optimizations) are now complete
+- Task 1: Price gap filter implemented and tested
+- Task 2: Hourly close optimization implemented and tested
+- Task 3: Daily reboot script implemented and tested
+- Task 4: System operations documentation created and tested
+
+### Next task:
+- Phase 17: Testing & Validation
+- Run full integration test (startup → data fetch → signal generation → simulated trade)
+
