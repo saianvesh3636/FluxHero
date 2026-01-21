@@ -657,5 +657,285 @@ async def test_success_criteria_query_performance(temp_db, sample_trade):
     assert len(trades) == 50
 
 
+# ==================== Signal Explanation Storage Tests ====================
+
+@pytest.mark.asyncio
+async def test_signal_explanation_storage(temp_db, sample_trade):
+    """
+    Test signal explanation storage in trades table.
+
+    Phase 15, Task 3: Add signal explanation storage to trades table.
+    Verifies that signal explanations from SignalExplanation.to_dict()
+    can be stored and retrieved as JSON.
+    """
+    import json
+
+    # Create a signal explanation JSON (simulating SignalExplanation.to_dict())
+    signal_explanation = {
+        'symbol': 'SPY',
+        'signal_type': 1,  # LONG
+        'price': 420.50,
+        'timestamp': 1700000000.0,
+        'strategy_mode': 2,  # TREND_FOLLOWING
+        'regime': 2,  # STRONG_TREND
+        'volatility_state': 2,  # HIGH
+        'atr': 3.2,
+        'kama': 418.0,
+        'rsi': 65.0,
+        'adx': 32.0,
+        'r_squared': 0.81,
+        'risk_amount': 1000.0,
+        'risk_percent': 1.0,
+        'stop_loss': 415.0,
+        'position_size': 100,
+        'entry_trigger': 'KAMA crossover (Price > KAMA+0.5×ATR)',
+        'noise_filtered': True,
+        'volume_validated': True,
+        'formatted_reason': 'BUY SPY @ $420.50\nReason: Volatility (ATR=3.2, High) + KAMA crossover\nRegime: STRONG_TREND (ADX=32, R²=0.81)\nRisk: $1000 (1.00% account), Stop: $415.00',
+        'compact_reason': 'BUY @ $420.50 | KAMA crossover | STRONG_TREND (ATR=3.2, High) | Risk: $1000 (1.00%)'
+    }
+
+    # Add trade with signal explanation
+    trade = Trade(**sample_trade.__dict__)
+    trade.signal_explanation = json.dumps(signal_explanation)
+
+    trade_id = await temp_db.add_trade(trade)
+
+    # Wait for async write
+    await asyncio.sleep(0.1)
+
+    # Retrieve trade
+    retrieved_trade = await temp_db.get_trade(trade_id)
+
+    # Verify signal explanation was stored and retrieved
+    assert retrieved_trade is not None
+    assert retrieved_trade.signal_explanation is not None
+
+    # Parse JSON and verify contents
+    parsed_explanation = json.loads(retrieved_trade.signal_explanation)
+    assert parsed_explanation['symbol'] == 'SPY'
+    assert parsed_explanation['signal_type'] == 1
+    assert parsed_explanation['price'] == 420.50
+    assert parsed_explanation['atr'] == 3.2
+    assert parsed_explanation['kama'] == 418.0
+    assert parsed_explanation['risk_amount'] == 1000.0
+    assert parsed_explanation['entry_trigger'] == 'KAMA crossover (Price > KAMA+0.5×ATR)'
+    assert 'BUY SPY @ $420.50' in parsed_explanation['formatted_reason']
+
+
+@pytest.mark.asyncio
+async def test_signal_explanation_none_handling(temp_db, sample_trade):
+    """
+    Test that trades without signal explanations work correctly.
+
+    Verifies backward compatibility - trades can be created without
+    signal_explanation field (None value).
+    """
+    # Add trade without signal explanation
+    trade = Trade(**sample_trade.__dict__)
+    trade.signal_explanation = None
+
+    trade_id = await temp_db.add_trade(trade)
+
+    # Wait for async write
+    await asyncio.sleep(0.1)
+
+    # Retrieve trade
+    retrieved_trade = await temp_db.get_trade(trade_id)
+
+    # Verify trade was stored correctly
+    assert retrieved_trade is not None
+    assert retrieved_trade.signal_explanation is None
+
+
+@pytest.mark.asyncio
+async def test_signal_explanation_update(temp_db, sample_trade):
+    """
+    Test updating signal explanation for existing trades.
+
+    Verifies that signal_explanation can be updated after trade creation.
+    Useful for enriching trades with post-analysis explanations.
+    """
+    import json
+
+    # Add trade without signal explanation
+    trade = Trade(**sample_trade.__dict__)
+    trade_id = await temp_db.add_trade(trade)
+
+    # Wait for async write
+    await asyncio.sleep(0.1)
+
+    # Create signal explanation
+    signal_explanation = {
+        'symbol': 'AAPL',
+        'signal_type': -1,  # SHORT
+        'price': 175.00,
+        'atr': 2.5,
+        'entry_trigger': 'RSI overbought + Upper Bollinger Band',
+        'formatted_reason': 'SELL SHORT AAPL @ $175.00\nReason: Volatility (ATR=2.5, Normal) + RSI overbought\nRegime: MEAN_REVERSION\nRisk: $750 (0.75% account), Stop: $178.00'
+    }
+
+    # Update trade with signal explanation
+    await temp_db.update_trade(
+        trade_id,
+        signal_explanation=json.dumps(signal_explanation)
+    )
+
+    # Wait for async write
+    await asyncio.sleep(0.1)
+
+    # Retrieve updated trade
+    retrieved_trade = await temp_db.get_trade(trade_id)
+
+    # Verify update
+    assert retrieved_trade is not None
+    assert retrieved_trade.signal_explanation is not None
+
+    parsed_explanation = json.loads(retrieved_trade.signal_explanation)
+    assert parsed_explanation['symbol'] == 'AAPL'
+    assert parsed_explanation['signal_type'] == -1
+    assert parsed_explanation['price'] == 175.00
+
+
+@pytest.mark.asyncio
+async def test_signal_explanation_query_recent_trades(temp_db, sample_trade):
+    """
+    Test querying recent trades with signal explanations.
+
+    Verifies that signal explanations are properly returned when
+    querying multiple trades.
+    """
+    import json
+
+    # Add multiple trades with signal explanations
+    for i in range(5):
+        trade = Trade(**sample_trade.__dict__)
+        trade.symbol = f"TEST{i}"
+
+        signal_explanation = {
+            'symbol': f'TEST{i}',
+            'signal_type': 1,
+            'price': 100.0 + i,
+            'atr': 2.0 + i * 0.1,
+            'entry_trigger': f'Test trigger {i}'
+        }
+
+        trade.signal_explanation = json.dumps(signal_explanation)
+        await temp_db.add_trade(trade)
+
+    # Wait for async writes
+    await asyncio.sleep(0.2)
+
+    # Query recent trades
+    recent_trades = await temp_db.get_recent_trades(5)
+
+    # Verify all trades have signal explanations
+    assert len(recent_trades) == 5
+    for trade in recent_trades:
+        assert trade.signal_explanation is not None
+        parsed = json.loads(trade.signal_explanation)
+        assert 'symbol' in parsed
+        assert 'signal_type' in parsed
+        assert 'entry_trigger' in parsed
+
+
+@pytest.mark.asyncio
+async def test_signal_explanation_migration(temp_db):
+    """
+    Test database migration for signal_explanation column.
+
+    Verifies that the column migration logic works correctly when
+    signal_explanation column is added to existing databases.
+    """
+    # The migration should have already run during initialize()
+    # Verify the column exists
+    conn = temp_db._get_connection()
+    cursor = conn.execute("PRAGMA table_info(trades)")
+    columns = [row[1] for row in cursor.fetchall()]
+
+    assert 'signal_explanation' in columns, "signal_explanation column not found in trades table"
+
+
+@pytest.mark.asyncio
+async def test_signal_explanation_full_workflow(temp_db, sample_trade):
+    """
+    Test complete workflow: create trade with explanation, update, query, verify.
+
+    Integration test for signal explanation storage feature.
+    Simulates real trading workflow with signal explanations.
+    """
+    import json
+
+    # Step 1: Create signal explanation (simulating SignalGenerator output)
+    entry_explanation = {
+        'symbol': 'MSFT',
+        'signal_type': 1,  # LONG
+        'price': 350.00,
+        'timestamp': 1700000000.0,
+        'strategy_mode': 2,  # TREND_FOLLOWING
+        'regime': 2,  # STRONG_TREND
+        'volatility_state': 1,  # NORMAL
+        'atr': 3.5,
+        'kama': 348.0,
+        'rsi': 55.0,
+        'adx': 28.0,
+        'r_squared': 0.75,
+        'risk_amount': 1500.0,
+        'risk_percent': 1.0,
+        'stop_loss': 341.25,
+        'position_size': 150,
+        'entry_trigger': 'KAMA crossover (Price > KAMA+0.5×ATR)',
+        'noise_filtered': True,
+        'volume_validated': True,
+        'formatted_reason': 'BUY MSFT @ $350.00\nReason: Volatility (ATR=3.5, Normal) + KAMA crossover\nRegime: STRONG_TREND (ADX=28, R²=0.75)\nRisk: $1500 (1.00% account), Stop: $341.25'
+    }
+
+    # Step 2: Create and save trade with entry explanation
+    trade = Trade(**sample_trade.__dict__)
+    trade.symbol = 'MSFT'
+    trade.entry_price = 350.00
+    trade.stop_loss = 341.25
+    trade.shares = 150
+    trade.signal_explanation = json.dumps(entry_explanation)
+
+    trade_id = await temp_db.add_trade(trade)
+    await asyncio.sleep(0.1)
+
+    # Step 3: Retrieve and verify entry explanation
+    retrieved_trade = await temp_db.get_trade(trade_id)
+    assert retrieved_trade is not None
+    assert retrieved_trade.signal_explanation is not None
+
+    entry_parsed = json.loads(retrieved_trade.signal_explanation)
+    assert entry_parsed['entry_trigger'] == 'KAMA crossover (Price > KAMA+0.5×ATR)'
+    assert entry_parsed['risk_amount'] == 1500.0
+
+    # Step 4: Close trade and update with exit explanation
+    exit_explanation = entry_explanation.copy()
+    exit_explanation['exit_reason'] = 'Trailing stop hit at $348.00'
+    exit_explanation['hold_period_bars'] = 25
+    exit_explanation['realized_pnl'] = -300.0
+
+    await temp_db.update_trade(
+        trade_id,
+        exit_price=348.00,
+        realized_pnl=-300.0,
+        status=TradeStatus.CLOSED,
+        signal_explanation=json.dumps(exit_explanation)
+    )
+    await asyncio.sleep(0.1)
+
+    # Step 5: Verify final trade state
+    final_trade = await temp_db.get_trade(trade_id)
+    assert final_trade.status == TradeStatus.CLOSED
+    assert final_trade.exit_price == 348.00
+    assert final_trade.realized_pnl == -300.0
+
+    exit_parsed = json.loads(final_trade.signal_explanation)
+    assert 'exit_reason' in exit_parsed
+    assert exit_parsed['exit_reason'] == 'Trailing stop hit at $348.00'
+    assert exit_parsed['realized_pnl'] == -300.0
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

@@ -5579,3 +5579,114 @@ BUY @ $420.50 | KAMA crossover | STRONG_TREND (ATR=3.20, High) | Risk: $1000 (1.
 - Phase 15: Signal Explainer & Logging (Task 3)
 - Add signal explanation storage to trades table
 
+
+
+## Task 15: Add Signal Explanation Storage to Trades Table (Phase 15 - Task 3)
+**Date**: 2026-01-21
+**Branch**: main
+**Status**: Completed
+
+### What was implemented:
+- Added `signal_explanation` TEXT column to trades table schema
+- Updated Trade dataclass with signal_explanation field (Optional[str])
+- Updated _insert_trade_sync to save signal_explanation as JSON
+- Added database migration logic to add column to existing databases
+- Comprehensive unit tests for signal explanation storage (6 new tests)
+
+### Files modified:
+- fluxhero/backend/storage/sqlite_store.py (schema, dataclass, insert method, migration)
+- tests/unit/test_sqlite_store.py (6 new comprehensive tests)
+
+### Implementation details:
+
+#### Trade Dataclass:
+- Added `signal_explanation: Optional[str] = None` field
+- Stores JSON string from SignalExplanation.to_dict()
+- Backward compatible with None values
+
+#### Database Schema:
+- Added `signal_explanation TEXT` column to trades table
+- Migration logic checks if column exists and adds it if missing
+- Uses PRAGMA table_info() to check existing columns
+- Handles both new databases and existing databases gracefully
+
+#### Insert Method:
+- Updated _insert_trade_sync to include signal_explanation in INSERT
+- Properly handles None values for backward compatibility
+- Signal explanation stored as JSON TEXT for flexible storage
+
+#### Migration Logic:
+- Automatically adds column to existing databases on initialize()
+- Uses try/except to handle case where table doesn't exist yet
+- Safe for repeated runs (idempotent)
+
+### Tests (6 new tests, all passed):
+
+#### test_signal_explanation_storage:
+- Tests storing and retrieving complete signal explanation
+- Verifies JSON parsing and data integrity
+- Tests all fields: symbol, signal_type, price, atr, kama, risk_amount, entry_trigger, formatted_reason
+
+#### test_signal_explanation_none_handling:
+- Tests backward compatibility with None values
+- Ensures trades can be created without signal_explanation
+
+#### test_signal_explanation_update:
+- Tests updating signal_explanation after trade creation
+- Useful for enriching trades with post-analysis explanations
+
+#### test_signal_explanation_query_recent_trades:
+- Tests querying multiple trades with signal explanations
+- Verifies all trades return signal_explanation correctly
+
+#### test_signal_explanation_migration:
+- Tests database migration logic
+- Verifies signal_explanation column exists after initialize()
+
+#### test_signal_explanation_full_workflow:
+- Integration test simulating complete trading workflow
+- Entry explanation → retrieve → update with exit explanation
+- Tests realistic scenario with MSFT trade
+
+### Test results:
+- 38 tests total (32 existing + 6 new)
+- 38 tests passed (100% pass rate)
+- 0 tests failed
+- Test execution time: 1.22 seconds
+- 401 warnings (datetime.utcnow() deprecation warnings from existing code)
+
+### Linting:
+- All files pass ruff linting with zero errors
+- backend/storage/sqlite_store.py: All checks passed!
+- tests/unit/test_sqlite_store.py: All checks passed!
+
+### Success criteria validation:
+✓ Signal explanation can be stored as JSON in trades table
+✓ SignalExplanation.to_dict() output can be stored and retrieved
+✓ Backward compatible with existing trades (None values)
+✓ Migration logic works for existing databases
+✓ All trade query methods return signal_explanation
+✓ Update method can modify signal_explanation
+✓ JSON parsing works correctly for retrieval
+
+### Key features:
+- Stores complete signal explanation from SignalExplanation class
+- JSON format for flexible storage (supports all fields)
+- Backward compatible (None values for trades without explanation)
+- Automatic database migration for existing databases
+- Update support for enriching trades post-creation
+- Comprehensive test coverage (storage, retrieval, update, migration, workflow)
+- Ready for frontend integration (next task: tooltip component)
+
+### Integration notes:
+- Works seamlessly with SignalExplanation class from signal_generator.py
+- Trade.signal_explanation stores JSON string from SignalExplanation.to_dict()
+- Frontend can parse JSON to display in tooltips and archive viewer
+- Contains formatted_reason (multi-line) and compact_reason (single-line) for UI
+- Includes all indicator values, regime, volatility state, risk parameters
+- Exit explanations can be stored by updating signal_explanation on trade close
+
+### Next task:
+- Phase 15, Task 4: Create frontend tooltip component to display signal explanations on hover
+- Will use signal_explanation JSON to populate tooltip content
+

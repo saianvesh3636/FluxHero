@@ -271,7 +271,7 @@ This task list provides **what** to build. The following documents explain **how
 
 - [x] Create backend/strategy/signal_generator.py with signal explanation logging
 - [x] Implement trade reason formatter (volatility state, regime, indicator values, risk calculation)
-- [ ] Add signal explanation storage to trades table
+- [x] Add signal explanation storage to trades table
 - [ ] Create frontend tooltip component to display signal explanations on hover
 - [ ] Build signal explainer archive viewer for post-trade analysis
 

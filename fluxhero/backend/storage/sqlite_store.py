@@ -57,6 +57,7 @@ class Trade:
     strategy: str = ""  # "TREND" or "MEAN_REVERSION"
     regime: str = ""  # "STRONG_TREND", "MEAN_REVERSION", "NEUTRAL"
     signal_reason: str = ""  # Explanation for signal
+    signal_explanation: Optional[str] = None  # JSON signal explanation from SignalExplanation.to_dict()
     created_at: str = ""
     updated_at: str = ""
 
@@ -158,10 +159,22 @@ class SQLiteStore:
                 strategy TEXT NOT NULL,
                 regime TEXT,
                 signal_reason TEXT,
+                signal_explanation TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
         """)
+
+        # Migration: Add signal_explanation column to existing databases
+        # Check if column exists, if not add it
+        try:
+            cursor = conn.execute("PRAGMA table_info(trades)")
+            columns = [row[1] for row in cursor.fetchall()]
+            if 'signal_explanation' not in columns:
+                conn.execute("ALTER TABLE trades ADD COLUMN signal_explanation TEXT")
+        except sqlite3.OperationalError:
+            # Table doesn't exist yet, will be created above
+            pass
 
         # Create positions table
         conn.execute("""
@@ -258,13 +271,13 @@ class SQLiteStore:
             INSERT INTO trades (
                 symbol, side, entry_price, entry_time, exit_price, exit_time,
                 shares, stop_loss, take_profit, realized_pnl, status,
-                strategy, regime, signal_reason, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                strategy, regime, signal_reason, signal_explanation, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             trade.symbol, trade.side, trade.entry_price, trade.entry_time,
             trade.exit_price, trade.exit_time, trade.shares, trade.stop_loss,
             trade.take_profit, trade.realized_pnl, trade.status,
-            trade.strategy, trade.regime, trade.signal_reason, now, now
+            trade.strategy, trade.regime, trade.signal_reason, trade.signal_explanation, now, now
         ))
         return cursor.lastrowid
 
