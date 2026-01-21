@@ -292,7 +292,7 @@ This task list provides **what** to build. The following documents explain **how
 - [x] Execute 1-year backtest on SPY with dual-mode strategy
 - [x] Validate backtest metrics meet minimum targets (Sharpe >0.8, Max DD <25%, Win Rate >45%)
 - [x] Test regime detection accuracy on historical trending/ranging periods
-- [ ] Validate frontend displays correct real-time data from backend API
+- [x] Validate frontend displays correct real-time data from backend API
 - [ ] Test all error scenarios (API failures, WebSocket disconnects, invalid data)
 - [ ] Performance benchmark: ensure 10k candle indicator calculation completes in <500ms
 
