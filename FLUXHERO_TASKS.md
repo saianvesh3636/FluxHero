@@ -273,7 +273,7 @@ This task list provides **what** to build. The following documents explain **how
 - [x] Implement trade reason formatter (volatility state, regime, indicator values, risk calculation)
 - [x] Add signal explanation storage to trades table
 - [x] Create frontend tooltip component to display signal explanations on hover
-- [ ] Build signal explainer archive viewer for post-trade analysis
+- [x] Build signal explainer archive viewer for post-trade analysis
 
 ---
 
