@@ -280,7 +280,7 @@ This task list provides **what** to build. The following documents explain **how
 ## Phase 16: Retail-Specific Optimizations
 
 - [x] Add price gap filter to noise_filter.py (reject trades if |Open - Prev_Close| / Prev_Close > 0.02)
-- [ ] Implement "hourly close" optimization (check signal at minute 59, submit at minute 60)
+- [x] Implement "hourly close" optimization (check signal at minute 59, submit at minute 60)
 - [ ] Create daily reboot script for 9:00 AM EST (fetch 500 candles, reconnect WebSocket)
 - [ ] Add system operations documentation for maintenance tasks
 

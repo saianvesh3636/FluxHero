@@ -6253,3 +6253,228 @@ signals = signals & valid_gaps  # Only keep signals with acceptable gaps
 - Phase 16: Retail-Specific Optimizations (Task 2)
 - Implement "hourly close" optimization (check signal at minute 59, submit at minute 60)
 
+
+## Task 15: Implement "Hourly Close" Optimization (Phase 16 - Task 2)
+**Date**: 2026-01-21
+**Branch**: main
+**Status**: Completed
+
+### What was implemented:
+- Created fluxhero/backend/execution/hourly_close_optimizer.py with complete hourly close optimization system
+- Implements timing advantage strategy for retail trading (check signals at minute 59, submit at minute 60)
+- Comprehensive order scheduling and management system
+- 60-second headstart vs traders waiting for candle close confirmation
+
+### Files created:
+- fluxhero/backend/execution/hourly_close_optimizer.py (496 lines, 2 classes + 2 enums)
+- tests/unit/test_hourly_close_optimizer.py (714 lines, 45 comprehensive tests)
+
+### Implementation details:
+
+#### ScheduledOrder Dataclass:
+- Stores all order details: symbol, side, quantity, order_type
+- Optional fields: limit_price, stop_price for advanced order types
+- Timing metadata: scheduled_time, signal_check_time
+- Signal explanation and additional metadata support
+
+#### HourlyCloseOptimizer Class:
+Core features:
+- is_signal_check_time(): Detects minute 59 for signal evaluation
+- is_order_submit_time(): Detects minute 0 (top of hour) for order submission
+- schedule_order(): Schedules orders for next hour boundary
+- get_pending_orders(): Retrieves orders ready for submission with time window
+- mark_order_submitted(): Moves orders from scheduled to history
+- cancel_order(), cancel_all_orders(): Order cancellation support
+- get_time_until_next_check(), get_time_until_next_submit(): Timing utilities
+
+#### Timing Strategy:
+- Signal check minute: 59 (configurable, e.g., 10:59:00)
+- Order submit minute: 0 (configurable, e.g., 11:00:00)
+- Time window: 60 seconds (configurable) for submission flexibility
+- Headstart: 60 seconds before typical retail trader (who waits for 11:00:01)
+
+#### Queue Management:
+- scheduled_orders: List of pending orders
+- submitted_orders_history: Historical submissions with size limit
+- Automatic history trimming (default: 100 orders)
+- Clear history utility for memory management
+
+#### Enums:
+- OrderSide: BUY (1), SELL (-1)
+- OrderType: MARKET (0), LIMIT (1), STOP (2), STOP_LIMIT (3)
+
+### Tests (45 total, all passed):
+
+#### Initialization Tests (4 tests):
+- Default initialization values
+- Custom configuration
+- Invalid minute validation (raises ValueError)
+
+#### Signal Check Timing Tests (4 tests):
+- Signal check time detection at minute 59
+- False detection at other minutes
+- Works with any seconds value
+- Custom signal check minute
+
+#### Order Submit Timing Tests (4 tests):
+- Order submit time detection at minute 0
+- False detection at other minutes
+- Works with any seconds value
+- Custom order submit minute
+
+#### Order Scheduling Tests (4 tests):
+- Schedule order at minute 59
+- Schedule multiple orders
+- Schedule order with metadata
+- Schedule at times other than minute 59
+
+#### Pending Orders Tests (5 tests):
+- Get pending orders at exact time
+- Get within time window
+- Get outside time window (returns empty)
+- Custom time window
+- Empty queue
+
+#### Order Submission Tests (3 tests):
+- Mark single order as submitted
+- Mark multiple orders as submitted
+- History max size limit enforced
+
+#### Order Cancellation Tests (4 tests):
+- Cancel scheduled order
+- Cancel nonexistent order
+- Cancel all orders
+- Cancel all from empty queue
+
+#### Utility Methods Tests (3 tests):
+- Get scheduled order count
+- Get submission history count
+- Clear history
+
+#### Timing Calculations Tests (6 tests):
+- Time until next check (before check minute)
+- Time until next check (after check minute)
+- Time until next check (at check minute)
+- Time until next submit (before submit minute)
+- Time until next submit (after submit minute)
+- Time until next submit (at submit minute)
+
+#### Integration Scenarios Tests (4 tests):
+- Complete hourly workflow (check → schedule → submit)
+- Multiple hour workflow
+- Missed submission window handling
+- Cancel before submission
+
+#### Edge Cases Tests (4 tests):
+- Schedule at exactly minute 0
+- Order with all fields populated
+- Short (sell) order
+- Across day boundary (23:59 → 00:00)
+
+### Performance results:
+All tests completed in 0.08 seconds
+- Fast initialization and configuration
+- Efficient order queue management
+- O(1) scheduling operations
+- O(n) pending order retrieval with time window filtering
+
+### Linting:
+- Fixed F401 (unused import): removed `timedelta` import
+- Fixed F841 (unused variable): removed `time_10_59_45` assignment
+- All files pass ruff linting with zero errors
+- Clean code structure with comprehensive documentation
+
+### Success criteria validation (from FLUXHERO_REQUIREMENTS.md):
+✓ Check signal at minute 59 (configurable)
+✓ Submit order at minute 60 (configurable)
+✓ 60-second headstart vs typical retail traders
+✓ Order scheduling with metadata support
+✓ Queue management with history tracking
+✓ Comprehensive timing utilities
+✓ Edge case handling (day boundaries, missed windows)
+
+### Test summary:
+- 45 tests created
+- 45 tests passed (100% pass rate)
+- 0 tests failed
+- Test coverage: initialization, timing detection, scheduling, pending orders, submission, cancellation, utilities, timing calculations, integration workflows, edge cases
+- All requirements validated
+
+### Key features:
+- Timing advantage optimization for retail trading
+- Configurable signal check and order submit minutes
+- Comprehensive order scheduling and management
+- Time window support for submission flexibility
+- Order cancellation support
+- Submission history with size limits
+- Timing calculation utilities
+- Type-safe with dataclasses and enums
+- Well-documented with docstrings and examples
+- Integration-ready with existing execution engine
+
+### Notable design decisions:
+1. Used dataclasses for type-safe order representation
+2. Configurable timing (not hardcoded to 59/0)
+3. Time window for submission flexibility (handles clock drift)
+4. Separate scheduled and submitted queues
+5. History size limit to prevent memory bloat
+6. Utility methods for time calculations
+7. Support for all order types (MARKET, LIMIT, STOP, STOP_LIMIT)
+8. Metadata support for signal explanations and debugging
+9. Cross-day boundary handling (23:59 → 00:00)
+10. No external dependencies (uses only datetime from stdlib)
+
+### Integration notes:
+- Works with existing order_manager.py for order submission
+- Compatible with signal_generator.py for signal evaluation
+- Can be used with dual_mode.py strategy engine
+- Supports paper trading and live trading
+- Easy to integrate with WebSocket live feed
+- Compatible with backtesting (can simulate minute-level precision)
+
+### Usage example:
+```python
+from fluxhero.backend.execution.hourly_close_optimizer import (
+    HourlyCloseOptimizer, ScheduledOrder, OrderSide, OrderType
+)
+
+# Initialize optimizer
+optimizer = HourlyCloseOptimizer()
+
+# Main trading loop
+while trading:
+    current_time = datetime.now()
+    
+    # Check if it's signal evaluation time (minute 59)
+    if optimizer.is_signal_check_time(current_time):
+        # Evaluate signals
+        signals = strategy.generate_signals()
+        
+        # Schedule orders for each signal
+        for signal in signals:
+            order = ScheduledOrder(
+                symbol=signal.symbol,
+                side=OrderSide.BUY if signal.direction > 0 else OrderSide.SELL,
+                quantity=signal.quantity,
+                order_type=OrderType.MARKET,
+                signal_reason=signal.reason
+            )
+            optimizer.schedule_order(order, current_time)
+    
+    # Check if it's order submission time (minute 0)
+    if optimizer.is_order_submit_time(current_time):
+        # Get pending orders
+        pending = optimizer.get_pending_orders(current_time)
+        
+        # Submit to broker
+        for order in pending:
+            broker.place_order(order)
+            optimizer.mark_order_submitted(order)
+    
+    time.sleep(1)  # Check every second
+```
+
+### Next task:
+- Phase 16: Retail-Specific Optimizations (Task 3)
+- Create daily reboot script for 9:00 AM EST (fetch 500 candles, reconnect WebSocket)
+
