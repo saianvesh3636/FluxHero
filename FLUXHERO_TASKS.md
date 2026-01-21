@@ -260,7 +260,7 @@ This task list provides **what** to build. The following documents explain **how
 ### UI/UX Polish
 
 - [x] Implement dark mode toggle with persistent storage
-- [ ] Add responsive design for tablet support
+- [x] Add responsive design for tablet support
 - [ ] Create loading states for all async operations
 - [ ] Add error boundaries for graceful error handling
 - [ ] Implement WebSocket connection for live price updates in frontend

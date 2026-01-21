@@ -213,8 +213,8 @@ const TradeHistoryPage: React.FC = () => {
   };
 
   return (
-    <div className="trade-history-page">
-      <div className="page-header">
+    <div className="trade-history-page page-container">
+      <div className="page-header flex-col-tablet">
         <h1>Trade History</h1>
         <button onClick={handleExport} className="export-button" disabled={loading}>
           📥 Export CSV

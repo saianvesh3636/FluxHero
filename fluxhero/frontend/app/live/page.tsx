@@ -100,10 +100,10 @@ export default function LiveTradingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 page-container">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-6 page-header">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Live Trading</h1>
           <p className="text-gray-600">
             Last updated: {lastUpdate.toLocaleTimeString()}
@@ -118,7 +118,7 @@ export default function LiveTradingPage() {
         )}
 
         {/* System Heartbeat & Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 stats-grid">
           {/* System Status */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
@@ -178,7 +178,7 @@ export default function LiveTradingPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto table-container">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -245,9 +245,9 @@ export default function LiveTradingPage() {
 
         {/* Account Info Summary */}
         {accountInfo && (
-          <div className="mt-6 bg-white rounded-lg shadow p-6">
+          <div className="mt-6 bg-white rounded-lg shadow p-6 card card-padding">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Summary</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stats-grid">
               <div>
                 <p className="text-sm text-gray-600">Equity</p>
                 <p className="text-lg font-semibold text-gray-900">

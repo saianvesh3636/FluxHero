@@ -131,19 +131,19 @@ export default function BacktestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-gray-900 text-white p-6 page-container">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-6 page-header">
           <h1 className="text-3xl font-bold mb-2">Backtesting Module</h1>
           <p className="text-gray-400">Test your strategy against historical data</p>
         </div>
 
         {/* Configuration Form */}
-        <div className="bg-gray-800 rounded-lg p-6 mb-6">
+        <div className="bg-gray-800 rounded-lg p-6 mb-6 card card-padding">
           <h2 className="text-xl font-bold mb-4">Backtest Configuration</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 single-col-tablet">
             {/* Symbol Selector */}
             <div>
               <label className="block text-sm font-medium mb-2">Symbol</label>
