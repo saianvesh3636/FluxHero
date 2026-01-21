@@ -229,11 +229,11 @@ This task list provides **what** to build. The following documents explain **how
 
 ### Tab A: Live Trading
 
-- [ ] Create frontend/pages/live.tsx with open positions table component
-- [ ] Add real-time P&L updates with color coding (green profit, red loss)
-- [ ] Implement system heartbeat indicator (🟢 Active / 🟡 Delayed / 🔴 Offline)
-- [ ] Add quick stats display (daily P&L, current drawdown %, total exposure %)
-- [ ] Set up 5-second auto-refresh for live data
+- [x] Create frontend/pages/live.tsx with open positions table component
+- [x] Add real-time P&L updates with color coding (green profit, red loss)
+- [x] Implement system heartbeat indicator (🟢 Active / 🟡 Delayed / 🔴 Offline)
+- [x] Add quick stats display (daily P&L, current drawdown %, total exposure %)
+- [x] Set up 5-second auto-refresh for live data
 
 ### Tab B: Analytics
 
