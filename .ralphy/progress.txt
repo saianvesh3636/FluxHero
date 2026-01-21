@@ -2970,3 +2970,264 @@ Total: 59 tests passed (100% pass rate)
   - 50% size reduction at 15% drawdown
   - Full stop at 20% drawdown
   - Manual override required to re-enable
+
+## Task 15: Implement Kill Switch with Drawdown Circuit Breakers (Feature 11 - Part 2)
+**Date**: 2026-01-20
+**Branch**: main
+**Status**: Completed
+
+### What was implemented:
+- Created fluxhero/backend/risk/kill_switch.py with complete drawdown circuit breaker system
+- Implemented 3 main classes and multiple supporting functions:
+  - EquityTracker: Tracks equity peak and current drawdown (R11.3.1)
+  - DrawdownCircuitBreaker: Implements circuit breaker logic (R11.3.2, R11.3.3)
+  - Complete risk monitoring and daily reporting system (R11.4.1, R11.4.2)
+
+### Files created:
+- fluxhero/backend/risk/kill_switch.py (850 lines, 3 main classes + helper functions)
+- tests/unit/test_kill_switch.py (682 lines, 43 comprehensive tests)
+
+### Implementation details:
+
+#### EquityTracker Class (R11.3.1):
+- Tracks equity peak and current equity
+- Calculates drawdown in dollars and percentage
+- Maintains equity history with timestamps
+- Updates peak automatically when equity reaches new high
+- Formula: drawdown_pct = (peak - current) / peak
+
+#### DrawdownCircuitBreaker Class (R11.3.2, R11.3.3):
+- Three drawdown levels:
+  - NORMAL: Below 15% drawdown (normal operation)
+  - WARNING: 15-20% drawdown (reduced size mode)
+  - CRITICAL: 20%+ drawdown (trading disabled)
+
+- Actions at 15% drawdown (R11.3.2):
+  - Reduce all new position sizes by 50%
+  - Tighten stops to 2.0× ATR (from 2.5× ATR)
+  - Send warning alert
+  - Trading status: REDUCED
+
+- Actions at 20% drawdown (R11.3.3):
+  - Close all open positions immediately
+  - Disable all new trading
+  - Require manual review before resuming
+  - Trading status: DISABLED
+
+#### Position Size and Stop Multipliers:
+- get_position_size_multiplier():
+  - ACTIVE: 1.0 (normal size)
+  - REDUCED: 0.5 (50% size cut)
+  - DISABLED: 0.0 (no trading)
+
+- get_stop_loss_multiplier():
+  - ACTIVE: 2.5× ATR (normal stops)
+  - REDUCED: 2.0× ATR (tighter stops)
+
+#### Real-Time Risk Monitoring (R11.4.1):
+- calculate_risk_metrics() function provides comprehensive metrics:
+  - Equity peak and current equity
+  - Current drawdown (dollars and percentage)
+  - Drawdown level classification
+  - Total portfolio exposure (dollars and percentage)
+  - Number of open positions
+  - Total risk deployed (sum of all stop distances)
+  - Worst-case loss scenario (if all stops hit)
+  - Largest position by market value
+
+- calculate_correlation_matrix():
+  - Calculates Pearson correlation for all position pairs
+  - Symmetric matrix with diagonal = 1.0
+  - Uses NumPy for efficient computation
+  - Handles edge cases (insufficient data, constant prices)
+
+#### Daily Risk Report (R11.4.2):
+- generate_daily_risk_report() creates comprehensive daily summary:
+  - Account status (balance, peak, drawdown %)
+  - Trading status (ACTIVE/REDUCED/DISABLED)
+  - Portfolio exposure (positions, total exposure %)
+  - Risk metrics (total risk, worst-case loss)
+  - Largest position details
+  - Recent alerts
+
+- format_daily_risk_report() generates human-readable text output:
+  - Formatted with 60-character separator lines
+  - Timestamp in YYYY-MM-DD HH:MM:SS format
+  - Dollar amounts with thousand separators
+  - Percentages with appropriate precision
+  - Alert history section
+
+#### Alert System:
+- Alerts stored with timestamps
+- get_recent_alerts(n) retrieves last N alerts
+- Alerts generated for:
+  - WARNING: 15% drawdown reached
+  - CRITICAL: 20% drawdown reached
+  - INFO: Recovery from drawdown
+
+#### Manual Review System:
+- manual_review_required flag set at critical level
+- Trading disabled until review acknowledged
+- acknowledge_manual_review() resets flag and resumes trading
+- Prevents automatic resumption after severe drawdowns
+
+### Tests (43 total, all passed):
+
+#### EquityTracker Tests (7 tests):
+- Initialization with starting equity
+- Update with profit (peak increases)
+- Update with loss (peak unchanged)
+- Drawdown calculation accuracy
+- Peak recovery after drawdown
+- Manual peak reset
+- Equity history tracking with timestamps
+
+#### DrawdownCircuitBreaker Tests (13 tests):
+- Initialization (ACTIVE status)
+- Normal drawdown detection (<15%)
+- Warning level detection (15-20%)
+- Critical level detection (20%+)
+- Warning actions (status change, alerts)
+- Critical actions (trading disabled, manual review)
+- Position size multipliers (1.0, 0.5, 0.0)
+- Stop loss multipliers (2.5, 2.0)
+- Can open position checks
+- Should close all positions
+- Manual review requirement
+- Recovery from warning to normal
+- Alert tracking and retrieval
+
+#### Risk Metrics Tests (4 tests):
+- Metrics with no positions
+- Metrics with multiple positions
+- Warning level metrics (15% DD)
+- Critical level metrics (20% DD)
+
+#### Correlation Matrix Tests (4 tests):
+- Perfect positive correlation (1.0)
+- Negative correlation (<0)
+- Independent assets (~0)
+- Insufficient data handling
+
+#### Daily Risk Report Tests (3 tests):
+- Report generation with all fields
+- Report formatting (human-readable text)
+- Report with alerts included
+
+#### Position Data Class Tests (4 tests):
+- Market value calculation
+- Risk amount calculation
+- Unrealized P&L calculation
+- Short position handling
+
+#### Integration Tests (2 tests):
+- Full drawdown workflow (normal → warning → critical)
+- Risk monitoring with multiple positions
+
+#### Edge Case Tests (3 tests):
+- Zero equity peak handling
+- Custom configuration values
+- Empty position list
+
+#### Success Criteria Tests (3 tests):
+- 5 consecutive 1% losses don't trigger breaker (<15% DD)
+- 15% drawdown triggers size reduction and alerts (R11.3.2)
+- 20% drawdown disables trading and requires review (R11.3.3)
+
+### Performance results:
+All tests completed in ~0.12 seconds:
+- EquityTracker operations: O(1) time complexity
+- Drawdown calculations: Simple arithmetic, very fast
+- Risk metrics calculation: O(n) where n = number of positions
+- Correlation matrix: O(n²) where n = number of assets (acceptable for n ≤ 5)
+- Report generation: Fast text formatting
+
+### Linting:
+- Fixed E402 (module import order) with noqa comments
+- All files pass ruff linting with zero errors
+- Clean code structure with comprehensive documentation
+
+### Success criteria validation (from FLUXHERO_REQUIREMENTS.md):
+✓ R11.3.1: Track drawdown from equity peak (EquityTracker class)
+✓ R11.3.2: At 15% drawdown: reduce sizes 50%, tighten stops to 2.0× ATR, alert
+✓ R11.3.3: At 20% drawdown: close all, disable trading, require manual review
+✓ R11.4.1: Real-time monitoring (drawdown %, exposure %, correlation matrix)
+✓ R11.4.2: Daily risk report (total risk, worst-case loss, largest position)
+
+### Test case validation (from requirements success criteria):
+✓ 5 consecutive losing trades: Drawdown <6%, no circuit breaker triggered
+✓ 15% drawdown: Position sizes cut 50%, stops tightened to 2.0× ATR
+✓ 20% drawdown: All positions closed, trading disabled, manual review required
+✓ System prevents further decline through aggressive risk reduction
+
+### Key features:
+- Automatic equity peak tracking with no manual intervention
+- Three-tier drawdown classification (NORMAL/WARNING/CRITICAL)
+- Graduated response to drawdowns (reduce → tighten → disable)
+- Manual review requirement prevents automatic resumption after severe loss
+- Comprehensive risk metrics for real-time monitoring
+- Correlation matrix for portfolio diversification analysis
+- Daily risk reports with formatted output
+- Alert system with timestamp tracking
+- Recovery detection (automatic resumption when DD improves)
+- Configurable thresholds and multipliers
+- Thread-safe with simple state management
+- Well-documented with formulas and examples
+
+### Notable design decisions:
+1. Used IntEnum for DrawdownLevel and TradingStatus (efficient, type-safe)
+2. Separate EquityTracker and DrawdownCircuitBreaker classes (single responsibility)
+3. Equity history stored as list of (timestamp, equity) tuples
+4. Drawdown calculated from peak (standard industry practice)
+5. Symmetric correlation matrix with efficient NumPy computation
+6. Alert history with timestamps for audit trail
+7. Manual review flag separate from trading status (explicit control)
+8. Position size and stop multipliers as methods (easy to customize)
+9. Formatted report with 60-character separator for readability
+10. Position dataclass with calculated properties (clean interface)
+
+### Integration notes:
+- Works seamlessly with position_limits.py (Phase 12 - Part 1)
+- Compatible with DualModeStrategy for size adjustments
+- Integrates with order execution for position closing
+- Risk metrics support frontend dashboard display
+- Daily reports can be logged or sent as notifications
+- Correlation matrix supports portfolio optimization
+- Circuit breaker prevents catastrophic losses
+
+### Usage example:
+```python
+from fluxhero.backend.risk.kill_switch import EquityTracker, DrawdownCircuitBreaker
+
+# Initialize
+tracker = EquityTracker(initial_equity=100000.0)
+breaker = DrawdownCircuitBreaker()
+
+# Update equity after each trade
+new_equity = 95000.0  # 5% loss
+dd_pct = tracker.update_equity(new_equity)
+
+# Check trading status
+status, alerts = breaker.update_trading_status(dd_pct)
+
+# Get position size multiplier
+size_mult = breaker.get_position_size_multiplier()  # 1.0 (normal)
+
+# Check if can trade
+can_trade, reason = breaker.can_open_new_position()  # True
+
+# At 15% drawdown
+tracker.update_equity(85000.0)
+status, alerts = breaker.update_trading_status(tracker.calculate_drawdown_pct())
+# status = REDUCED, size_mult = 0.5, stop_mult = 2.0
+
+# At 20% drawdown
+tracker.update_equity(80000.0)
+status, alerts = breaker.update_trading_status(tracker.calculate_drawdown_pct())
+# status = DISABLED, should_close_all = True, manual_review_required = True
+```
+
+### Next task:
+- Phase 13: Backend API Layer
+- Create backend/api/server.py with FastAPI setup and CORS configuration
+

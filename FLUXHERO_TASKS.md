@@ -206,9 +206,9 @@ This task list provides **what** to build. The following documents explain **how
 - [x] Add portfolio-level exposure limits (max 50% deployed, max 5 positions)
 - [x] Create correlation checker (reduce position size by 50% if correlation >0.7 with existing)
 - [x] Write unit tests for risk limits with backtested worst-case scenarios
-- [ ] Implement backend/risk/kill_switch.py with drawdown circuit breakers (50% size cut at 15% DD, full stop at 20% DD)
-- [ ] Add real-time risk monitoring (current drawdown, exposure %, correlation matrix)
-- [ ] Create daily risk report generation (total risk deployed, worst-case loss scenario)
+- [x] Implement backend/risk/kill_switch.py with drawdown circuit breakers (50% size cut at 15% DD, full stop at 20% DD)
+- [x] Add real-time risk monitoring (current drawdown, exposure %, correlation matrix)
+- [x] Create daily risk report generation (total risk deployed, worst-case loss scenario)
 
 ---
 
