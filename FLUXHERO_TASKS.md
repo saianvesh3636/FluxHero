@@ -252,14 +252,14 @@ This task list provides **what** to build. The following documents explain **how
 
 ### Tab D: Backtesting
 
-- [ ] Create frontend/pages/backtest.tsx with configuration form (date pickers, symbol selector, parameter sliders)
-- [ ] Implement "Run Backtest" button with loading spinner
-- [ ] Add results modal/page displaying backtest tearsheet
-- [ ] Integrate quantstats HTML export display
+- [x] Create frontend/pages/backtest.tsx with configuration form (date pickers, symbol selector, parameter sliders)
+- [x] Implement "Run Backtest" button with loading spinner
+- [x] Add results modal/page displaying backtest tearsheet
+- [x] Integrate quantstats HTML export display
 
 ### UI/UX Polish
 
-- [ ] Implement dark mode toggle with persistent storage
+- [x] Implement dark mode toggle with persistent storage
 - [ ] Add responsive design for tablet support
 - [ ] Create loading states for all async operations
 - [ ] Add error boundaries for graceful error handling
