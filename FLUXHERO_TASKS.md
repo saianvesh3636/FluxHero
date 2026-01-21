@@ -269,7 +269,7 @@ This task list provides **what** to build. The following documents explain **how
 
 ## Phase 15: Signal Explainer & Logging
 
-- [ ] Create backend/strategy/signal_generator.py with signal explanation logging
+- [x] Create backend/strategy/signal_generator.py with signal explanation logging
 - [ ] Implement trade reason formatter (volatility state, regime, indicator values, risk calculation)
 - [ ] Add signal explanation storage to trades table
 - [ ] Create frontend tooltip component to display signal explanations on hover

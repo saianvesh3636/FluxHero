@@ -5341,3 +5341,162 @@ All tasks in Phase 14 (Feature 12 - Frontend Dashboard) are now complete:
 - Phase 15: Signal Explainer & Logging
 - Create backend/strategy/signal_generator.py with signal explanation logging
 
+
+## Task 15: Implement Signal Generator with Explanation Logging (Feature 12.3 - Phase 15)
+**Date**: 2026-01-21
+**Branch**: main
+**Status**: Completed
+
+### What was implemented:
+- Created fluxhero/backend/strategy/signal_generator.py with complete signal explanation logging system
+- Implemented 5 enum types and 2 main classes:
+  - SignalType, RegimeType, VolatilityState, StrategyMode enums
+  - SignalExplanation dataclass: Complete explanation for trading signals
+  - SignalGenerator class: Generate signals with comprehensive explanations
+
+### Files created:
+- fluxhero/backend/strategy/signal_generator.py (567 lines, 2 main classes + 4 enums)
+- tests/unit/test_signal_generator.py (663 lines, 25 comprehensive tests)
+
+### Implementation details:
+
+#### SignalExplanation Dataclass:
+- Stores complete signal context:
+  - Symbol, signal type, price, timestamp
+  - Strategy mode, regime, volatility state
+  - Indicator values: ATR, KAMA, RSI, ADX, R²
+  - Risk parameters: risk amount/percent, stop loss, position size
+  - Signal details: entry trigger, noise filter status, volume validation
+- format_signal_reason(): Multi-line explanation (R12.3.1 compliant)
+  - Line 1: "BUY SPY @ $420.50"
+  - Line 2: "Reason: Volatility (ATR=3.2, High) + KAMA crossover..."
+  - Line 3: "Regime: STRONG_TREND (ADX=32, R²=0.81)"
+  - Line 4: "Risk: $1,000 (1% account), Stop: $415.00"
+- format_compact_reason(): Single-line for UI tooltips
+- to_dict(): Dictionary conversion for database storage
+- Helper methods for human-readable names (_get_action_name, _get_volatility_state_name, etc.)
+
+#### SignalGenerator Class:
+- generate_signal_with_explanation(): Single signal generation
+  - Accepts all signal context (regime, volatility, indicators)
+  - Calculates risk parameters (risk amount, position size)
+  - Returns SignalExplanation with complete context
+- batch_generate_explanations(): Batch signal processing
+  - Processes arrays of signals, prices, indicators
+  - Skips NONE signals automatically
+  - Supports optional indicators (RSI, ADX, R²)
+  - Returns list of SignalExplanation objects
+- update_account_balance(): Update balance for risk calculations
+- Risk calculation logic:
+  - Risk amount = Account balance × Risk percent
+  - Position size = Risk amount / |Entry price - Stop price|
+  - Zero position size if stop equals entry or is zero
+
+#### Enum Types:
+- SignalType: NONE=0, LONG=1, SHORT=-1, EXIT_LONG=2, EXIT_SHORT=-2
+- RegimeType: MEAN_REVERSION=0, NEUTRAL=1, STRONG_TREND=2
+- VolatilityState: LOW=0, NORMAL=1, HIGH=2
+- StrategyMode: MEAN_REVERSION=1, TREND_FOLLOWING=2, NEUTRAL=3
+
+### Tests (25 total, all passed):
+
+#### SignalExplanation Tests (10 tests):
+- Signal explanation creation with all fields
+- Format signal reason for LONG (R12.3.1 compliance)
+- Format signal reason for SHORT
+- Format signal reason for EXIT (no risk line)
+- Format signal reason for mean-reversion
+- Format signal reason for NONE signal
+- Compact reason formatting
+- Dictionary conversion for storage
+- Volatility state names (Low, Normal, High)
+- Regime names (STRONG_TREND, MEAN_REVERSION, NEUTRAL)
+
+#### SignalGenerator Tests (10 tests):
+- Generator initialization
+- Generate signal with explanation
+- Risk calculation (long position)
+- Risk calculation (short position)
+- No risk for exit signals
+- Batch generate explanations
+- Batch with optional indicators (RSI, ADX, R²)
+- Update account balance
+- Edge case: zero stop distance
+- Edge case: no stop loss
+
+#### Enum Tests (4 tests):
+- SignalType enum values
+- RegimeType enum values
+- VolatilityState enum values
+- StrategyMode enum values
+
+#### Success Criteria Test (1 test):
+- R12.3.1 format compliance verification
+  - 4-line format with all required fields
+  - Proper formatting of action, reason, regime, risk
+
+### Performance results:
+All tests completed in ~0.08 seconds:
+- Lightweight dataclass-based design
+- No heavy computations (just formatting)
+- Dictionary conversion is fast
+- Ready for database integration
+
+### Linting:
+- Fixed F401 (unused import): removed `pytest` import
+- All files pass ruff linting with zero errors
+- Clean code structure with comprehensive documentation
+
+### Success criteria validation (from FLUXHERO_REQUIREMENTS.md):
+✓ R12.3.1: Trade reason logging format implemented
+  - "BUY SPY @ $420.50"
+  - "Reason: Volatility (ATR=3.2, High) + KAMA crossover..."
+  - "Regime: STRONG_TREND (ADX=32, R²=0.81)"
+  - "Risk: $1,000 (1% account), Stop: $415.00"
+✓ R12.3.2: Format suitable for tooltip display (compact_reason method)
+✓ R12.3.3: Storage-ready with to_dict() method
+
+### Test summary:
+- 25 tests created
+- 25 tests passed (100% pass rate)
+- 0 tests failed
+- Test coverage: signal explanation formatting, signal generation, risk calculation, batch processing, enums, success criteria
+- All requirements validated
+
+### Key features:
+- Complete signal explanation with full context
+- R12.3.1 compliant multi-line formatting
+- Compact single-line formatting for UI tooltips
+- Risk calculation with position sizing
+- Support for both trend-following and mean-reversion modes
+- Optional indicator values (RSI, ADX, R²)
+- Batch signal processing for efficiency
+- Dictionary conversion for database storage
+- Type-safe enums for all classifications
+- Comprehensive docstrings and examples
+- Integration-ready for dual-mode strategy engine
+
+### Notable design decisions:
+1. Used dataclass for SignalExplanation (type safety, clean API)
+2. Separate formatting methods for different use cases (full vs compact)
+3. Enum types match existing dual_mode.py and regime_detector.py
+4. Risk calculation built-in (no external dependencies)
+5. to_dict() includes both formatted_reason and compact_reason
+6. Optional indicators (None if not available)
+7. No risk calculation for exit signals
+8. Zero position size if stop distance is zero (safety)
+9. Human-readable names for all enums
+10. Storage-ready format for database integration
+
+### Integration notes:
+- Ready to integrate with dual_mode.py (signal generation)
+- Compatible with regime_detector.py (regime classification)
+- Works with noise_filter.py (validation status)
+- Can store explanations in SQLite trades table (to_dict)
+- Frontend can display compact_reason in tooltips
+- Backend can log formatted_reason for analysis
+
+### Next task:
+- Phase 15, Task 2: Implement trade reason formatter (NOTE: Already implemented in this task)
+- Move to next uncompleted task: Add signal explanation storage to trades table
+
