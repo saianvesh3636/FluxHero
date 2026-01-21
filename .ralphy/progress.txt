@@ -5500,3 +5500,82 @@ All tests completed in ~0.08 seconds:
 - Phase 15, Task 2: Implement trade reason formatter (NOTE: Already implemented in this task)
 - Move to next uncompleted task: Add signal explanation storage to trades table
 
+
+## Task 15: Verify Trade Reason Formatter Implementation (Phase 15 - Task 2)
+**Date**: 2026-01-21
+**Branch**: main
+**Status**: Completed (Already Implemented)
+
+### What was verified:
+- Trade reason formatter already fully implemented in backend/strategy/signal_generator.py
+- SignalExplanation.format_signal_reason() method provides complete multi-line explanation
+- SignalExplanation.format_compact_reason() method provides single-line tooltip format
+- All required components included in explanation:
+  - Volatility state (ATR value and state: Low/Normal/High)
+  - Regime detection (STRONG_TREND/MEAN_REVERSION/NEUTRAL with ADX, R², RSI)
+  - Indicator values (ATR, KAMA, RSI, ADX, R²)
+  - Risk calculation (dollar risk, percent risk, stop loss, position size)
+  - Entry trigger description
+  - Action type (BUY/SELL/SELL SHORT/COVER SHORT)
+
+### Implementation details verified:
+
+#### SignalExplanation Dataclass:
+- Complete data structure for signal context
+- Stores all market state, indicators, risk parameters
+- Three formatting methods:
+  1. format_signal_reason(): Multi-line detailed explanation
+  2. format_compact_reason(): Single-line tooltip format
+  3. to_dict(): Dictionary for database storage
+
+#### Format Example (Multi-line):
+```
+BUY SPY @ $420.50
+Reason: Volatility (ATR=3.20, High) + KAMA crossover (Price > KAMA+0.5×ATR)
+Regime: STRONG_TREND (ADX=32.0, R²=0.81, RSI=45.0)
+Risk: $1000 (1.00% account), Stop: $415.00
+```
+
+#### Format Example (Compact):
+```
+BUY @ $420.50 | KAMA crossover | STRONG_TREND (ATR=3.20, High) | Risk: $1000 (1.00%)
+```
+
+#### SignalGenerator Class:
+- generate_signal_with_explanation(): Creates explained signals
+- batch_generate_explanations(): Batch processing for multiple signals
+- Automatic risk calculation based on account balance
+- Position sizing using risk-per-trade and stop distance
+
+### Tests (25 total, all passed):
+- Signal explanation creation with all fields
+- Format signal reason for LONG/SHORT/EXIT signals
+- Format compact reason for tooltips
+- Dictionary conversion for storage
+- Volatility/regime name formatting
+- Risk calculations (LONG/SHORT)
+- Batch generation with optional indicators
+- Edge cases (zero stop distance, no stop loss)
+- Enum type validations
+
+### Performance results:
+- All 25 tests passed in 0.09 seconds
+- Formatting operations are very fast (<1ms)
+
+### Linting:
+- All files pass ruff linting checks with zero errors
+
+### Success criteria validation:
+✓ Volatility state included (ATR value and Low/Normal/High)
+✓ Regime included (STRONG_TREND/MEAN_REVERSION/NEUTRAL)
+✓ Indicator values included (ATR, KAMA, RSI, ADX, R²)
+✓ Risk calculation included (dollar risk, percent risk, stop loss, position size)
+✓ Entry trigger description included
+✓ Multi-line format for detailed logging
+✓ Single-line compact format for UI tooltips
+✓ Dictionary format for database storage
+
+### Next task:
+- Phase 15: Signal Explainer & Logging (Task 3)
+- Add signal explanation storage to trades table
+
