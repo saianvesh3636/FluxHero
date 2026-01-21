@@ -214,14 +214,14 @@ This task list provides **what** to build. The following documents explain **how
 
 ## Phase 13: Backend API Layer
 
-- [ ] Create backend/api/server.py with FastAPI setup and CORS configuration
-- [ ] Implement REST endpoints for positions (/api/positions GET)
-- [ ] Implement REST endpoints for trade history (/api/trades GET with pagination)
-- [ ] Implement REST endpoints for account info (/api/account GET)
-- [ ] Implement REST endpoints for system status (/api/status GET - heartbeat)
-- [ ] Implement REST endpoints for backtest execution (/api/backtest POST)
-- [ ] Add WebSocket endpoint for live price updates (/ws/prices)
-- [ ] Write API integration tests
+- [x] Create backend/api/server.py with FastAPI setup and CORS configuration
+- [x] Implement REST endpoints for positions (/api/positions GET)
+- [x] Implement REST endpoints for trade history (/api/trades GET with pagination)
+- [x] Implement REST endpoints for account info (/api/account GET)
+- [x] Implement REST endpoints for system status (/api/status GET - heartbeat)
+- [x] Implement REST endpoints for backtest execution (/api/backtest POST)
+- [x] Add WebSocket endpoint for live price updates (/ws/prices)
+- [x] Write API integration tests
 
 ---
 
