@@ -237,11 +237,11 @@ This task list provides **what** to build. The following documents explain **how
 
 ### Tab B: Analytics
 
-- [ ] Create frontend/pages/analytics.tsx with TradingView-style candlestick chart using lightweight-charts library
-- [ ] Add KAMA line overlay and ATR bands to chart
-- [ ] Implement buy/sell signal annotations as arrows on chart
-- [ ] Create indicator panel showing real-time ATR, RSI, ADX, regime state
-- [ ] Add performance metrics display (total return %, Sharpe ratio, win rate, max drawdown)
+- [x] Create frontend/pages/analytics.tsx with TradingView-style candlestick chart using lightweight-charts library
+- [x] Add KAMA line overlay and ATR bands to chart
+- [x] Implement buy/sell signal annotations as arrows on chart
+- [x] Create indicator panel showing real-time ATR, RSI, ADX, regime state
+- [x] Add performance metrics display (total return %, Sharpe ratio, win rate, max drawdown)
 
 ### Tab C: Trade History
 
