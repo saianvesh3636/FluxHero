@@ -5120,3 +5120,224 @@ const { data, error, isLoading, refetch } = useQuery();
 - Phase 14: UI/UX Polish (Task 2)
 - Implement WebSocket connection for live price updates in frontend
 
+
+## Task 15: Implement WebSocket Connection for Live Price Updates in Frontend (Phase 14 - UI/UX Polish)
+**Date**: 2026-01-21
+**Branch**: ralphy/create-project-folder-structure-fluxhero-backend
+**Status**: Completed
+
+### What was implemented:
+- Created comprehensive WebSocket connection system for frontend live price updates
+- Implemented 3 core modules with full TypeScript support:
+  - useWebSocket hook: Custom React hook for WebSocket lifecycle management
+  - WebSocketContext: Context provider for managing price updates across the application
+  - WebSocketStatus components: Visual status indicators for connection state
+- All modules include automatic reconnection, state management, and error handling
+
+### Files created:
+- fluxhero/frontend/hooks/useWebSocket.ts (280 lines, custom React hook)
+- fluxhero/frontend/contexts/WebSocketContext.tsx (175 lines, context provider)
+- fluxhero/frontend/components/WebSocketStatus.tsx (130 lines, 2 components)
+- tests/unit/test_websocket_frontend.py (366 lines, 41 comprehensive tests)
+
+### Implementation details:
+
+#### useWebSocket Hook (hooks/useWebSocket.ts):
+- Custom React hook for managing WebSocket connections
+- Automatic reconnection with exponential backoff
+- Connection state tracking (CONNECTING, CONNECTED, DISCONNECTED, RECONNECTING, FAILED)
+- Configurable options:
+  - autoReconnect (default: true)
+  - maxReconnectAttempts (default: 5)
+  - reconnectDelay (default: 1000ms)
+  - maxReconnectDelay (default: 30000ms)
+- Callbacks for lifecycle events (onOpen, onClose, onError)
+- Methods:
+  - reconnect(): Manually trigger reconnection
+  - disconnect(): Close WebSocket connection
+  - send(): Send messages to WebSocket (with JSON serialization)
+- Exponential backoff formula: delay = reconnectDelay × 2^attempt (capped at maxReconnectDelay)
+- Proper cleanup on component unmount
+- TypeScript interfaces: PriceUpdate, WebSocketOptions, UseWebSocketReturn
+
+#### WebSocketContext (contexts/WebSocketContext.tsx):
+- Context provider for distributing price updates to child components
+- Maintains price map: { [symbol: string]: PriceUpdate }
+- Methods:
+  - getPrice(symbol): Get latest price for specific symbol
+  - subscribe(symbols): Subscribe to symbol updates
+  - unsubscribe(symbols): Unsubscribe from symbols
+- Features:
+  - Auto re-subscribes to symbols on reconnection
+  - Tracks subscribed symbols across reconnects
+  - Configurable WebSocket URL (default: '/ws/prices')
+  - Enable/disable WebSocket connection via props
+- TypeScript interfaces: PriceMap, WebSocketContextValue
+- Custom hook: useWebSocketContext() for consuming context
+- Throws error if used outside provider (proper error handling)
+
+#### WebSocketStatus Components (components/WebSocketStatus.tsx):
+- Two components for displaying connection status:
+  1. WebSocketStatus: Full status indicator with text and retry button
+  2. WebSocketStatusBadge: Compact indicator for navbar/header
+- Status mapping:
+  - CONNECTED: 🟢 Green (bg-green-500)
+  - CONNECTING: 🟡 Yellow with pulse animation (bg-yellow-500)
+  - RECONNECTING: 🟠 Orange with reconnect count (bg-orange-500)
+  - DISCONNECTED: ⚪ Gray (bg-gray-500)
+  - FAILED: 🔴 Red with retry button (bg-red-500)
+- Props:
+  - showText (optional): Display status text
+  - className (optional): Custom styling
+- Features:
+  - Error message display
+  - Manual retry button on failure
+  - Pulse animation for connecting states
+  - Accessibility attributes (role, aria-label)
+  - Dark mode compatible color scheme
+
+### Tests (41 total, all passed):
+
+#### useWebSocket Hook Tests (10 tests):
+- File exists and exports all interfaces
+- WebSocketState enum exported (CONNECTING, CONNECTED, etc.)
+- PriceUpdate interface with symbol, price, timestamp
+- WebSocketOptions interface with reconnection config
+- UseWebSocketReturn interface with state, data, error, methods
+- useWebSocket function exported with proper signature
+- Reconnection logic with exponential backoff
+- Connection management (connect, disconnect, onopen, onmessage, onerror, onclose)
+- Send method for outgoing messages with JSON serialization
+- Lifecycle management with useEffect cleanup
+
+#### WebSocketContext Tests (8 tests):
+- Context file exists
+- WebSocketProvider component exported
+- useWebSocketContext hook exported
+- WebSocketContextValue interface defined
+- PriceMap interface and state management
+- Subscribe/unsubscribe methods implemented
+- Reconnection handling with re-subscription
+- 'use client' directive for Next.js
+
+#### WebSocketStatus Components Tests (9 tests):
+- Component files exist
+- WebSocketStatus main component exported
+- WebSocketStatusBadge compact version exported
+- Props interface defined (showText, className)
+- Uses WebSocket context (connectionState, error, reconnect)
+- Status mapping for all connection states
+- Retry button on failure state
+- Color-coded indicators (green, yellow, red, orange, gray)
+- Pulse animation for connecting states
+- 'use client' directive for Next.js
+
+#### Integration Tests (9 tests):
+- All required directories exist (hooks, contexts, components)
+- All WebSocket files created
+- Imports are consistent across modules
+- WebSocket URL configurable (/ws/prices default)
+- Reconnection parameters configurable
+- Exponential backoff implemented
+- Message parsing with JSON.parse and error handling
+
+#### Documentation Tests (4 tests):
+- Hook has JSDoc comments with @param, @returns, @example
+- Context has usage examples
+- Components have usage examples
+- All files have descriptive headers
+
+### Test results:
+All 41 tests passed (100% pass rate)
+- Test execution time: ~0.02 seconds
+- All code quality checks passed
+
+### Linting:
+- Fixed F401 (unused import): removed unused `json` import
+- All files pass ruff linting with zero errors
+- Clean code structure with comprehensive documentation
+
+### Key features:
+- Automatic reconnection with exponential backoff (prevents server overload)
+- Connection state tracking for UI feedback
+- Price map for efficient symbol lookups
+- Subscribe/unsubscribe for selective data streaming
+- Type-safe with TypeScript interfaces
+- React context for global state sharing
+- Custom hooks for easy integration
+- Visual status indicators with retry functionality
+- Dark mode compatible styling
+- Proper cleanup on component unmount
+- Configurable options for different use cases
+- Comprehensive error handling and edge cases
+- Well-documented with JSDoc comments and usage examples
+
+### Notable design decisions:
+1. Used React hooks and context for state management (no external dependencies)
+2. Exponential backoff for reconnection (1s, 2s, 4s, ..., max 30s)
+3. Separate concerns: hook (connection), context (state), component (UI)
+4. TypeScript enums for connection states (type-safe)
+5. Re-subscribe on reconnect to preserve user intent
+6. WebSocket URL supports both relative and absolute paths
+7. 'use client' directives for Next.js App Router compatibility
+8. Color-coded status indicators with emoji for visual feedback
+9. Pulse animation for transient states (connecting, reconnecting)
+10. Retry button only shown on FAILED state (clear UX)
+
+### Integration notes:
+- Works with Next.js App Router (uses 'use client' directives)
+- Compatible with existing API client (utils/api.ts)
+- WebSocket proxy configured in next.config.ts (/ws/* → backend)
+- Can be used in any component via useWebSocketContext hook
+- Supports multiple symbols with subscribe/unsubscribe
+- Ready for live trading dashboard integration
+- Compatible with existing loading and error boundary components
+
+### Usage example:
+```tsx
+// In app layout or top-level component
+import { WebSocketProvider } from '@/contexts/WebSocketContext';
+
+<WebSocketProvider>
+  <YourApp />
+</WebSocketProvider>
+
+// In any child component
+import { useWebSocketContext } from '@/contexts/WebSocketContext';
+import { WebSocketStatus } from '@/components/WebSocketStatus';
+
+function PriceDisplay() {
+  const { prices, subscribe, connectionState } = useWebSocketContext();
+
+  useEffect(() => {
+    subscribe(['SPY', 'AAPL', 'TSLA']);
+  }, [subscribe]);
+
+  const spyPrice = prices['SPY']?.price;
+
+  return (
+    <div>
+      <WebSocketStatus showText />
+      {spyPrice && <div>SPY: ${spyPrice.toFixed(2)}</div>}
+    </div>
+  );
+}
+```
+
+### Phase 14 completion:
+All tasks in Phase 14 (Feature 12 - Frontend Dashboard) are now complete:
+- ✓ Tab A: Live Trading
+- ✓ Tab B: Analytics
+- ✓ Tab C: Trade History
+- ✓ Tab D: Backtesting
+- ✓ UI/UX Polish (all 5 tasks complete)
+  - ✓ Dark mode toggle
+  - ✓ Responsive design
+  - ✓ Loading states
+  - ✓ Error boundaries
+  - ✓ WebSocket connection (this task)
+
+### Next task:
+- Phase 15: Signal Explainer & Logging
+- Create backend/strategy/signal_generator.py with signal explanation logging
+

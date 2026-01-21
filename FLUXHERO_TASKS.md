@@ -263,7 +263,7 @@ This task list provides **what** to build. The following documents explain **how
 - [x] Add responsive design for tablet support
 - [x] Create loading states for all async operations
 - [x] Add error boundaries for graceful error handling
-- [ ] Implement WebSocket connection for live price updates in frontend
+- [x] Implement WebSocket connection for live price updates in frontend
 
 ---
 
