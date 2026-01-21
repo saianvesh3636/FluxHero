@@ -19,6 +19,7 @@ import pytest
 from datetime import datetime
 import sys
 import os
+import time
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -32,6 +33,8 @@ from fluxhero.backend.strategy.noise_filter import (
     is_near_close,
     apply_noise_filter,
     calculate_rejection_reason,
+    calculate_price_gap_ratio,
+    validate_price_gap,
 )
 
 
@@ -605,6 +608,187 @@ class TestPerformance:
 
         print(f"\nSV ratio calculation (10k candles): {elapsed:.2f}ms")
         assert elapsed < 100, f"Performance too slow: {elapsed:.2f}ms"
+
+
+# ============================================================================
+# Price Gap Filter Tests
+# ============================================================================
+
+class TestPriceGapFilter:
+    """Test price gap filter functions (Phase 16 - Retail optimization)."""
+
+    def test_calculate_price_gap_ratio_basic(self):
+        """Test basic price gap ratio calculation."""
+        open_prices = np.array([100.0, 102.0, 101.0, 103.0])
+        close_prices = np.array([101.0, 103.0, 102.0, 104.0])
+
+        gap_ratio = calculate_price_gap_ratio(open_prices, close_prices)
+
+        # First bar should be NaN (no previous close)
+        assert np.isnan(gap_ratio[0])
+
+        # Bar 1: |102.0 - 101.0| / 101.0 = 0.0099 (0.99%)
+        assert np.isclose(gap_ratio[1], 0.0099, atol=0.0001)
+
+        # Bar 2: |101.0 - 103.0| / 103.0 = 0.0194 (1.94%)
+        assert np.isclose(gap_ratio[2], 0.0194, atol=0.0001)
+
+        # Bar 3: |103.0 - 102.0| / 102.0 = 0.0098 (0.98%)
+        assert np.isclose(gap_ratio[3], 0.0098, atol=0.0001)
+
+    def test_calculate_price_gap_ratio_large_gap(self):
+        """Test gap calculation with large overnight gap."""
+        open_prices = np.array([100.0, 105.0])  # 5% gap up
+        close_prices = np.array([101.0, 106.0])
+
+        gap_ratio = calculate_price_gap_ratio(open_prices, close_prices)
+
+        # Bar 1: |105.0 - 101.0| / 101.0 = 0.0396 (3.96%)
+        assert gap_ratio[1] > 0.02  # Exceeds 2% threshold
+        assert np.isclose(gap_ratio[1], 0.0396, atol=0.0001)
+
+    def test_calculate_price_gap_ratio_gap_down(self):
+        """Test gap calculation with gap down."""
+        open_prices = np.array([100.0, 97.0])  # 3% gap down
+        close_prices = np.array([101.0, 98.0])
+
+        gap_ratio = calculate_price_gap_ratio(open_prices, close_prices)
+
+        # Bar 1: |97.0 - 101.0| / 101.0 = 0.0396 (3.96%)
+        assert gap_ratio[1] > 0.02  # Exceeds 2% threshold
+        assert np.isclose(gap_ratio[1], 0.0396, atol=0.0001)
+
+    def test_calculate_price_gap_ratio_zero_division(self):
+        """Test gap calculation with zero previous close (edge case)."""
+        open_prices = np.array([100.0, 101.0])
+        close_prices = np.array([0.0, 102.0])  # Zero previous close
+
+        gap_ratio = calculate_price_gap_ratio(open_prices, close_prices)
+
+        # Should handle division by zero gracefully
+        assert gap_ratio[1] == 999.0  # High ratio = reject
+
+    def test_calculate_price_gap_ratio_single_bar(self):
+        """Test gap calculation with insufficient data."""
+        open_prices = np.array([100.0])
+        close_prices = np.array([101.0])
+
+        gap_ratio = calculate_price_gap_ratio(open_prices, close_prices)
+
+        # Single bar: all NaN
+        assert np.isnan(gap_ratio[0])
+
+    def test_validate_price_gap_within_threshold(self):
+        """Test gap validation with gaps within threshold."""
+        gap_ratio = np.array([np.nan, 0.01, 0.015, 0.019])
+
+        valid = validate_price_gap(gap_ratio, threshold=0.02)
+
+        # First bar: NaN → rejected
+        assert not valid[0]
+
+        # Bars 1-3: all within 2% threshold → accepted
+        assert valid[1]  # 1%
+        assert valid[2]  # 1.5%
+        assert valid[3]  # 1.9%
+
+    def test_validate_price_gap_exceeds_threshold(self):
+        """Test gap validation with gaps exceeding threshold."""
+        gap_ratio = np.array([np.nan, 0.01, 0.025, 0.03])
+
+        valid = validate_price_gap(gap_ratio, threshold=0.02)
+
+        # First bar: NaN → rejected
+        assert not valid[0]
+
+        # Bar 1: 1% → accepted
+        assert valid[1]
+
+        # Bars 2-3: exceed 2% threshold → rejected
+        assert not valid[2]  # 2.5%
+        assert not valid[3]  # 3%
+
+    def test_validate_price_gap_custom_threshold(self):
+        """Test gap validation with custom threshold."""
+        gap_ratio = np.array([np.nan, 0.005, 0.008, 0.012])
+
+        valid = validate_price_gap(gap_ratio, threshold=0.01)
+
+        # First bar: NaN → rejected
+        assert not valid[0]
+
+        # Bar 1: 0.5% → accepted
+        assert valid[1]
+
+        # Bar 2: 0.8% → accepted
+        assert valid[2]
+
+        # Bar 3: 1.2% → rejected (exceeds 1% threshold)
+        assert not valid[3]
+
+    def test_price_gap_filter_earnings_scenario(self):
+        """Test gap filter for earnings announcement scenario."""
+        # Simulate normal trading, then earnings gap
+        open_prices = np.array([100.0, 100.5, 101.0, 107.0])  # 5.9% gap on bar 3
+        close_prices = np.array([100.2, 100.8, 101.2, 107.5])
+
+        gap_ratio = calculate_price_gap_ratio(open_prices, close_prices)
+        valid = validate_price_gap(gap_ratio, threshold=0.02)
+
+        # Normal gaps accepted
+        assert valid[1]  # Small gap
+        assert valid[2]  # Small gap
+
+        # Earnings gap rejected
+        assert not valid[3]  # Large gap (5.9%)
+
+    def test_price_gap_filter_empty_array(self):
+        """Test gap filter with empty arrays."""
+        open_prices = np.array([])
+        close_prices = np.array([])
+
+        gap_ratio = calculate_price_gap_ratio(open_prices, close_prices)
+        valid = validate_price_gap(gap_ratio)
+
+        # Should return empty arrays
+        assert len(gap_ratio) == 0
+        assert len(valid) == 0
+
+    def test_price_gap_filter_performance(self):
+        """Test gap filter performance on large dataset."""
+        n = 10_000
+        np.random.seed(42)
+
+        # Generate realistic price data with occasional gaps
+        base_price = 100.0
+        close_prices = np.zeros(n)
+        open_prices = np.zeros(n)
+
+        close_prices[0] = base_price
+        open_prices[0] = base_price
+
+        for i in range(1, n):
+            # Normal price change (90% of time)
+            if np.random.rand() > 0.1:
+                close_prices[i] = close_prices[i-1] * (1 + np.random.randn() * 0.01)
+                open_prices[i] = close_prices[i-1] * (1 + np.random.randn() * 0.005)
+            else:
+                # Occasional large gap (10% of time)
+                close_prices[i] = close_prices[i-1] * (1 + np.random.randn() * 0.03)
+                open_prices[i] = close_prices[i-1] * (1 + np.random.randn() * 0.02)
+
+        # Benchmark
+        start = time.perf_counter()
+        gap_ratio = calculate_price_gap_ratio(open_prices, close_prices)
+        valid = validate_price_gap(gap_ratio)
+        elapsed = (time.perf_counter() - start) * 1000
+
+        print(f"\nPrice gap filter (10k candles): {elapsed:.2f}ms")
+        assert elapsed < 50, f"Performance too slow: {elapsed:.2f}ms"
+
+        # Verify some gaps were rejected
+        num_rejected = np.sum(~valid[1:])  # Exclude first bar (NaN)
+        assert num_rejected > 0, "Expected some gaps to be rejected"
 
 
 # ============================================================================

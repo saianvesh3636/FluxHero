@@ -440,3 +440,96 @@ def calculate_rejection_reason(
         reasons[i] = 0
 
     return reasons
+
+
+# ============================================================================
+# Price Gap Filter Functions
+# ============================================================================
+
+@njit(cache=True)
+def calculate_price_gap_ratio(
+    open_prices: np.ndarray,
+    close_prices: np.ndarray
+) -> np.ndarray:
+    """
+    Calculate price gap ratio between open and previous close.
+
+    Retail-specific optimization (Phase 16): Reject trades with excessive overnight
+    gaps that may indicate news events or earnings releases.
+
+    Formula:
+        Gap_Ratio[i] = |Open[i] - Close[i-1]| / Close[i-1]
+
+    Args:
+        open_prices: Open prices (float64 array)
+        close_prices: Close prices (float64 array)
+
+    Returns:
+        Gap ratio array (float64), NaN for first bar (no previous close)
+
+    Example:
+        >>> open_prices = np.array([100.0, 102.0, 101.0])
+        >>> close_prices = np.array([101.0, 103.0, 102.0])
+        >>> gap_ratio = calculate_price_gap_ratio(open_prices, close_prices)
+        >>> # gap_ratio[1] = |102.0 - 101.0| / 101.0 = 0.0099 (0.99%)
+        >>> # gap_ratio[2] = |101.0 - 103.0| / 103.0 = 0.0194 (1.94%)
+    """
+    n = len(open_prices)
+    gap_ratio = np.full(n, np.nan, dtype=np.float64)
+
+    if n < 2:
+        return gap_ratio
+
+    for i in range(1, n):
+        prev_close = close_prices[i - 1]
+
+        # Avoid division by zero
+        if prev_close > 1e-10:
+            gap = np.abs(open_prices[i] - prev_close)
+            gap_ratio[i] = gap / prev_close
+        else:
+            # Zero or very small previous close, treat as suspicious
+            gap_ratio[i] = 999.0
+
+    return gap_ratio
+
+
+@njit(cache=True)
+def validate_price_gap(
+    gap_ratio: np.ndarray,
+    threshold: float = 0.02
+) -> np.ndarray:
+    """
+    Validate signals based on price gap ratio.
+
+    Retail-specific optimization: Reject trades if gap exceeds threshold (default 2%).
+    Large gaps often indicate:
+        - Earnings announcements
+        - News events
+        - Low liquidity overnight
+        - Increased slippage risk
+
+    Args:
+        gap_ratio: Price gap ratio array from calculate_price_gap_ratio()
+        threshold: Maximum acceptable gap ratio (default: 0.02 = 2%)
+
+    Returns:
+        Boolean array: True = gap acceptable, False = gap too large (reject trade)
+
+    Example:
+        >>> gap_ratio = np.array([np.nan, 0.01, 0.025, 0.015])
+        >>> valid = validate_price_gap(gap_ratio, threshold=0.02)
+        >>> # valid = [False (NaN), True (1%), False (2.5%), True (1.5%)]
+    """
+    n = len(gap_ratio)
+    valid = np.full(n, False, dtype=np.bool_)
+
+    for i in range(n):
+        if np.isnan(gap_ratio[i]):
+            # No previous close data
+            valid[i] = False
+        else:
+            # Valid if gap is within threshold
+            valid[i] = gap_ratio[i] <= threshold
+
+    return valid
