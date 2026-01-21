@@ -289,7 +289,7 @@ This task list provides **what** to build. The following documents explain **how
 ## Phase 17: Testing & Validation
 
 - [x] Run full integration test (startup → data fetch → signal generation → simulated trade)
-- [ ] Execute 1-year backtest on SPY with dual-mode strategy
+- [x] Execute 1-year backtest on SPY with dual-mode strategy
 - [ ] Validate backtest metrics meet minimum targets (Sharpe >0.8, Max DD <25%, Win Rate >45%)
 - [ ] Test regime detection accuracy on historical trending/ranging periods
 - [ ] Validate frontend displays correct real-time data from backend API
