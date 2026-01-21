@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { LoadingButton } from '../../components/LoadingSpinner';
 
 // Type definitions
 interface BacktestConfig {
@@ -319,24 +320,14 @@ export default function BacktestPage() {
 
           {/* Run Button */}
           <div className="mt-6 flex justify-center">
-            <button
+            <LoadingButton
               onClick={runBacktest}
-              disabled={isRunning}
-              className={`px-8 py-3 rounded-lg font-semibold text-lg ${
-                isRunning
-                  ? 'bg-gray-600 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
-              } transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              isLoading={isRunning}
+              loadingText="Running Backtest..."
+              className="px-8 py-3 rounded-lg font-semibold text-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {isRunning ? (
-                <div className="flex items-center gap-3">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Running Backtest...</span>
-                </div>
-              ) : (
-                'Run Backtest'
-              )}
-            </button>
+              Run Backtest
+            </LoadingButton>
           </div>
 
           {/* Error Display */}

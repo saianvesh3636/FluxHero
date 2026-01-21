@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { api, Trade } from '../utils/api';
+import LoadingSpinner, { SkeletonTable } from '../components/LoadingSpinner';
 
 /**
  * Trade History Page Component
@@ -167,6 +168,7 @@ const TradeTooltip: React.FC<TooltipProps> = ({ trade, children }) => {
 const TradeHistoryPage: React.FC = () => {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [initialLoad, setInitialLoad] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const tradesPerPage = 20;
@@ -183,6 +185,7 @@ const TradeHistoryPage: React.FC = () => {
         setError(err instanceof Error ? err.message : 'Failed to fetch trades');
       } finally {
         setLoading(false);
+        setInitialLoad(false);
       }
     };
 
@@ -212,6 +215,18 @@ const TradeHistoryPage: React.FC = () => {
     downloadCSV(trades, `trades_${timestamp}.csv`);
   };
 
+  // Show initial loading state
+  if (initialLoad) {
+    return (
+      <div className="trade-history-page page-container">
+        <div className="page-header flex-col-tablet">
+          <h1>Trade History</h1>
+        </div>
+        <SkeletonTable rows={10} cols={9} />
+      </div>
+    );
+  }
+
   return (
     <div className="trade-history-page page-container">
       <div className="page-header flex-col-tablet">
@@ -227,9 +242,9 @@ const TradeHistoryPage: React.FC = () => {
         </div>
       )}
 
-      {loading ? (
-        <div className="loading-spinner">
-          <p>Loading trades...</p>
+      {loading && !initialLoad ? (
+        <div className="loading-overlay">
+          <LoadingSpinner size="lg" message="Loading trades..." />
         </div>
       ) : (
         <>
