@@ -262,7 +262,7 @@ This task list provides **what** to build. The following documents explain **how
 - [x] Implement dark mode toggle with persistent storage
 - [x] Add responsive design for tablet support
 - [x] Create loading states for all async operations
-- [ ] Add error boundaries for graceful error handling
+- [x] Add error boundaries for graceful error handling
 - [ ] Implement WebSocket connection for live price updates in frontend
 
 ---
