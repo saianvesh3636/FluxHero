@@ -245,10 +245,10 @@ This task list provides **what** to build. The following documents explain **how
 
 ### Tab C: Trade History
 
-- [ ] Create frontend/pages/history.tsx with trade log table component
-- [ ] Add pagination (20 trades per page)
-- [ ] Implement CSV export functionality
-- [ ] Add trade detail tooltips with signal explanations
+- [x] Create frontend/pages/history.tsx with trade log table component
+- [x] Add pagination (20 trades per page)
+- [x] Implement CSV export functionality
+- [x] Add trade detail tooltips with signal explanations
 
 ### Tab D: Backtesting
 
