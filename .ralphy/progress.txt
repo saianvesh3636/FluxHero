@@ -7542,3 +7542,170 @@ This provides confidence that the frontend will correctly display all real-time 
 Continue to Phase 17 - Task 6: Test all error scenarios (API failures, WebSocket disconnects, invalid data)
 
 ---
+
+## Phase 17 - Task 6: Test All Error Scenarios (API Failures, WebSocket Disconnects, Invalid Data)
+
+**Date**: 2026-01-21
+**Status**: ✅ COMPLETE
+
+### Summary
+
+Created comprehensive error scenario test suite with 35 tests covering API failures, WebSocket disconnects, and invalid data handling. All error scenarios are properly handled with appropriate retries, reconnections, and graceful degradation.
+
+### Implementation Details
+
+**File Created**:
+- `tests/integration/test_error_scenarios.py` (720 lines)
+  - 8 API failure tests
+  - 7 WebSocket disconnect tests
+  - 14 invalid data scenario tests
+  - 3 data pipeline error tests
+  - 2 edge case aggregation tests
+  - Complete error recovery validation
+
+### Error Scenarios Covered
+
+#### 1. API Failure Scenarios (8 tests)
+- **Network Timeout**: Handles httpx.TimeoutException correctly
+- **HTTP 500 Server Errors**: Retries 3 times with exponential backoff
+- **HTTP 404 Client Errors**: No retries on 4xx errors (fail fast)
+- **Malformed JSON Responses**: Raises ValueError on invalid JSON
+- **Rate Limiting**: Blocks requests when limit exceeded
+- **Connection Pool Configuration**: Verifies httpx client initialization
+- **Missing API Credentials**: Handles empty credentials gracefully
+- **Connection Refused**: Retries on connection errors
+
+#### 2. WebSocket Disconnect Scenarios (7 tests)
+- **Unexpected Disconnect During Stream**: Attempts reconnection
+- **Failed Reconnection (All Attempts)**: Raises ConnectionError after max attempts
+- **Heartbeat Timeout Detection**: Detects stale connections after 60s
+- **Authentication Failure**: Handles auth failures with timeout
+- **Stale Connection Detection**: `is_stale()` correctly identifies old connections
+- **Subscribe Not Connected**: Raises RuntimeError if not connected
+- **Close During Reconnect**: Handles intermittent failures with retry
+
+#### 3. Invalid Data Scenarios (14 tests)
+- **Empty Candles Response**: Returns empty list
+- **Missing Required Fields**: Raises KeyError
+- **Negative Prices**: Handled mathematically (not realistic but valid)
+- **Zero Volume**: ATR calculation continues (doesn't use volume)
+- **NaN Values**: Propagates NaN through calculations
+- **Inf Values**: Propagates Inf through calculations
+- **Single Data Point**: Handles gracefully with NaN output
+- **Empty Array**: Returns empty array
+- **Invalid Period**: Uses available data
+- **Extreme Volatility**: RSI stays between 0-100
+- **Constant Price**: RSI calculation completes
+- **Insufficient Data for Regime Detection**: Returns valid regime dict
+- **KAMA with Zero Volatility**: Handles constant prices
+- **Malformed WebSocket Message**: Continues processing
+- **Missing 'bars' Field**: Returns empty list
+
+#### 4. Data Pipeline Errors (3 tests)
+- **Pipeline Start with API Failure**: Raises error on initial fetch failure
+- **Pipeline Start with WebSocket Failure**: Raises error on WS connection failure
+- **Continue After Reconnect**: Verifies pipeline continues after WS reconnection
+
+#### 5. Edge Case Aggregation (2 tests)
+- **Complete System Failure Recovery**: Tests full failure→retry→recovery cycle
+- **Indicator Calculation with All Edge Cases**: NaN, Inf, negative, zero values
+
+### Test Results
+
+```bash
+$ ./venv/bin/python -m pytest tests/integration/test_error_scenarios.py -v
+============================= test session starts ==============================
+collecting ... collected 35 items
+
+tests/integration/test_error_scenarios.py::TestAPIFailures::test_network_timeout PASSED
+tests/integration/test_error_scenarios.py::TestAPIFailures::test_http_500_server_error_retries PASSED
+tests/integration/test_error_scenarios.py::TestAPIFailures::test_http_404_no_retry PASSED
+tests/integration/test_error_scenarios.py::TestAPIFailures::test_malformed_json_response PASSED
+tests/integration/test_error_scenarios.py::TestAPIFailures::test_rate_limit_exceeded_blocks PASSED
+tests/integration/test_error_scenarios.py::TestAPIFailures::test_connection_pool_configuration PASSED
+tests/integration/test_error_scenarios.py::TestAPIFailures::test_missing_api_credentials PASSED
+tests/integration/test_error_scenarios.py::TestAPIFailures::test_connection_refused PASSED
+tests/integration/test_error_scenarios.py::TestWebSocketDisconnects::test_unexpected_disconnect_during_stream PASSED
+tests/integration/test_error_scenarios.py::TestWebSocketDisconnects::test_failed_reconnection_all_attempts PASSED
+tests/integration/test_error_scenarios.py::TestWebSocketDisconnects::test_heartbeat_timeout_detection PASSED
+tests/integration/test_error_scenarios.py::TestWebSocketDisconnects::test_authentication_failure PASSED
+tests/integration/test_error_scenarios.py::TestWebSocketDisconnects::test_stale_connection_detection PASSED
+tests/integration/test_error_scenarios.py::TestWebSocketDisconnects::test_websocket_subscribe_not_connected PASSED
+tests/integration/test_error_scenarios.py::TestWebSocketDisconnects::test_websocket_close_during_reconnect PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_empty_candles_response PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_missing_required_candle_fields PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_negative_prices_in_indicator_calculation PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_zero_volume_in_data PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_nan_values_in_price_data PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_inf_values_in_price_data PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_single_data_point_indicator PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_empty_array_indicator_calculation PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_invalid_period_for_indicator PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_extreme_price_volatility PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_constant_price_rsi_calculation PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_regime_detection_with_insufficient_data PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_kama_with_zero_volatility PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_malformed_websocket_message PASSED
+tests/integration/test_error_scenarios.py::TestInvalidDataScenarios::test_missing_bars_field_in_response PASSED
+tests/integration/test_error_scenarios.py::TestDataPipelineErrors::test_pipeline_start_with_api_failure PASSED
+tests/integration/test_error_scenarios.py::TestDataPipelineErrors::test_pipeline_start_with_websocket_failure PASSED
+tests/integration/test_error_scenarios.py::TestDataPipelineErrors::test_pipeline_continue_after_websocket_reconnect PASSED
+tests/integration/test_error_scenarios.py::TestEdgeCaseAggregation::test_complete_system_failure_recovery PASSED
+tests/integration/test_error_scenarios.py::TestEdgeCaseAggregation::test_indicator_calculation_with_all_edge_cases PASSED
+
+============================= 35 passed in 30.73s ==============================
+```
+
+### Linting
+
+```bash
+$ ./venv/bin/ruff check tests/integration/test_error_scenarios.py
+All checks passed!
+```
+
+### Requirements Coverage
+
+✅ **R8.1.2**: Retry logic handles all failure types correctly (timeout, 5xx, connection errors)  
+✅ **R8.2.2**: WebSocket auto-reconnect handles failures (max 5 retries, exponential backoff)  
+✅ **R8.2.4**: Heartbeat monitor detects stale connections (>60s timeout)  
+✅ **All Components**: Handle invalid data gracefully (NaN, Inf, empty, malformed)  
+✅ **System Resilience**: Recovers from complete failures (API + WS)  
+✅ **Edge Cases**: Propagate correctly through calculations  
+
+### Key Error Handling Patterns Validated
+
+1. **API Client**:
+   - Retries on 5xx and network errors (3 attempts, exponential backoff)
+   - No retry on 4xx client errors (fail fast)
+   - Rate limiting enforced (blocks when limit exceeded)
+   - Graceful handling of malformed responses
+
+2. **WebSocket Feed**:
+   - Auto-reconnect on disconnect (max 5 attempts)
+   - Heartbeat monitoring (timeout after 60s of no data)
+   - Stale connection detection via `is_stale()`
+   - Graceful handling of auth failures
+
+3. **Indicators**:
+   - Handle edge cases: NaN, Inf, negative, zero, single point, empty
+   - Warmup period produces NaN (expected behavior)
+   - Valid values after warmup period
+   - No crashes on extreme inputs
+
+4. **Data Pipeline**:
+   - Fails fast on initial setup errors
+   - Continues after WebSocket reconnection
+   - Signal callbacks work correctly
+
+### Validation Status
+
+✅ **35/35 tests passing**  
+✅ **Linting clean**  
+✅ **All error scenarios covered**  
+✅ **System resilience validated**  
+
+### Next Steps
+
+Continue to Phase 17 - Task 7: Performance benchmark (ensure 10k candle indicator calculation completes in <500ms)
+
+---
