@@ -2787,3 +2787,186 @@ Total: 59 tests passed (100% pass rate)
 ### Next task:
 - Phase 12: Feature 11 - Risk Management System
 - Implement backend/risk/position_limits.py with position-level risk checks
+
+## Task 15: Validate and Fix Position Limits Module (Feature 11 - Part 1)
+**Date**: 2026-01-20
+**Branch**: main
+**Status**: Completed
+
+### What was validated and fixed:
+- Validated existing implementation of backend/risk/position_limits.py
+- Module already existed with complete implementation of Feature 11 (R11.1 and R11.2)
+- Fixed 7 failing unit tests in test_position_limits.py
+- All functionality verified and working correctly
+
+### Implementation verified (position_limits.py):
+
+#### Data Classes and Enums:
+- StrategyType enum: MEAN_REVERSION (0), NEUTRAL (1), TREND_FOLLOWING (2)
+- RiskCheckResult enum: APPROVED, REJECTED_NO_STOP, REJECTED_EXCESSIVE_RISK, REJECTED_POSITION_TOO_LARGE, REJECTED_MAX_POSITIONS, REJECTED_TOTAL_EXPOSURE, REJECTED_HIGH_CORRELATION
+- Position dataclass: Represents open position with symbol, shares, entry_price, current_price, stop_loss
+- PositionLimitsConfig dataclass: Configuration for all risk limits
+
+#### Position-Level Risk Functions (R11.1):
+- calculate_position_size_from_risk(): Calculate shares based on risk percentage (1% trend, 0.75% MR)
+- validate_position_level_risk(): Validate position-level constraints (R11.1.1-11.1.3)
+- calculate_atr_stop_loss(): Calculate ATR-based stops (2.5× ATR trend, 3% fixed MR) - R11.1.4
+
+#### Portfolio-Level Risk Functions (R11.2):
+- validate_portfolio_level_risk(): Validate portfolio constraints (R11.2.1-11.2.2)
+  - Max total exposure: 50% of account
+  - Max open positions: 5 simultaneously
+- calculate_correlation(): Numba JIT-compiled Pearson correlation (R11.2.3)
+- check_correlation_with_existing_positions(): Check correlation threshold (>0.7 triggers 50% size reduction)
+
+#### Comprehensive Validation:
+- validate_new_position(): All-in-one validation combining:
+  1. Position-level risk checks
+  2. Portfolio-level risk checks
+  3. Correlation checks with automatic size adjustment
+
+#### Risk Monitoring (R11.4):
+- calculate_total_portfolio_risk(): Total risk and exposure across all positions
+- get_largest_position(): Identify largest position by market value
+- calculate_worst_case_loss(): Worst-case scenario if all stops hit
+
+### Test fixes (7 failures → 0 failures):
+
+**Issue**: Tests used position sizes that exceeded the 20% account limit
+
+**Fixes applied**:
+1. test_validate_position_level_risk_approved: Changed from 500 shares (25%) to 333 shares (17%)
+2. test_validate_new_position_all_checks_pass: Changed from 500 shares to 333 shares
+3. test_validate_new_position_correlation_adjustment: Changed from 500 shares to 333 shares, reduced existing position from 100 shares to 50 shares to stay within 50% total exposure limit
+4. test_validate_new_position_fails_portfolio_risk: Changed from 500 shares to 333 shares to pass position-level check before portfolio-level check
+5. test_success_criteria_correlation_reduction: Reduced existing position from 100 shares to 50 shares to avoid total exposure limit
+6. test_check_correlation_low_correlation: Fixed price series to have truly low correlation (previous series had -1.0 correlation which triggered reduction)
+7. test_edge_case_custom_config: Used 600 shares for validation (within 30% custom limit) instead of 1000 shares
+
+**Root cause**: Tests were written assuming risk-based sizing would always work, but didn't account for the additional 20% position size limit that takes precedence when the risk-based calculation would exceed it.
+
+### Tests (39 total, all passed):
+
+#### Position Size Calculation (4 tests):
+- Trend-following: 1% risk calculation
+- Mean-reversion: 0.75% risk calculation
+- Zero risk edge case
+- Short position sizing
+
+#### Position-Level Validation (4 tests):
+- All checks pass
+- Rejection on missing stop loss (R11.1.3)
+- Rejection on excessive risk (R11.1.1)
+- Rejection on position too large (R11.1.2)
+
+#### ATR-Based Stop Loss (4 tests):
+- Trend long: 2.5× ATR below entry
+- Trend short: 2.5× ATR above entry
+- Mean-rev long: 3% below entry
+- Mean-rev short: 3% above entry
+
+#### Portfolio-Level Validation (4 tests):
+- All checks pass
+- Rejection on max positions (5 limit)
+- Rejection on total exposure (50% limit)
+- Empty portfolio edge case
+
+#### Correlation Calculation (4 tests):
+- Perfect positive correlation (+1.0)
+- Perfect negative correlation (-1.0)
+- No correlation (~0.0)
+- Edge cases (different lengths, zero std dev)
+
+#### Correlation Checking (3 tests):
+- No existing positions (no reduction)
+- High correlation (>0.7 triggers reduction)
+- Low correlation (no reduction)
+
+#### Comprehensive Validation (4 tests):
+- All checks pass
+- Correlation adjustment (50% size reduction)
+- Position-level risk failure
+- Portfolio-level risk failure
+
+#### Risk Monitoring (6 tests):
+- Total portfolio risk calculation
+- Empty portfolio edge case
+- Largest position identification
+- Empty portfolio for largest
+- Worst-case loss calculation
+- Empty portfolio for worst-case
+
+#### Success Criteria (3 tests):
+- Five losing trades scenario (<6% drawdown)
+- Position sizing accuracy
+- Correlation reduction (50% when >0.7)
+
+#### Edge Cases (3 tests):
+- Very tight stop (large position)
+- Very wide stop (small position)
+- Custom configuration parameters
+
+### Performance:
+- All tests completed in 0.40 seconds
+- Numba JIT-compiled correlation function provides fast execution
+- All edge cases handled correctly
+
+### Linting:
+- All files pass ruff linting with zero errors
+- Clean code structure with comprehensive documentation
+- Proper type hints throughout
+
+### Success criteria validation (from FLUXHERO_REQUIREMENTS.md):
+✓ R11.1.1: Max risk per trade: 1% (trend), 0.75% (mean-rev)
+✓ R11.1.2: Max position size: 20% of account value
+✓ R11.1.3: Stop loss mandatory on all positions
+✓ R11.1.4: ATR-based stops (2.5× ATR trend, 3% fixed mean-rev)
+✓ R11.2.1: Max total exposure: 50% of account
+✓ R11.2.2: Max open positions: 5 simultaneously
+✓ R11.2.3: Correlation check (reduce size by 50% if >0.7)
+✓ R11.4.2: Risk monitoring functions (total risk, worst-case loss, largest position)
+
+### Test summary:
+- 39 tests created and validated
+- 39 tests passed (100% pass rate)
+- 0 tests failed
+- Test coverage: position sizing, position-level risk, portfolio-level risk, correlation, comprehensive validation, risk monitoring, success criteria, edge cases
+- All requirements validated
+
+### Key features validated:
+- Position-level risk management (1% trend, 0.75% MR risk limits)
+- Portfolio-level exposure limits (50% total, 5 positions max)
+- Correlation-based diversification (50% reduction when >0.7)
+- Mandatory stop losses with strategy-specific logic
+- ATR-based stops for trend-following (2.5× ATR)
+- Fixed percentage stops for mean-reversion (3%)
+- Comprehensive risk validation pipeline
+- Real-time risk monitoring utilities
+- Worst-case scenario calculations
+- Flexible configuration system
+- High-performance Numba JIT correlation
+- Comprehensive edge case handling
+
+### Notable design decisions:
+1. Used enums for strategy types and result codes (type-safe, efficient)
+2. Dataclasses for clean data structures
+3. Separate validation functions for position-level and portfolio-level
+4. Comprehensive validate_new_position() combining all checks
+5. Numba JIT for correlation calculation (performance)
+6. Configuration dataclass for flexibility
+7. Defensive programming with extensive edge case handling
+8. Risk monitoring utilities for real-time tracking
+
+### Integration notes:
+- Works with Position dataclass from storage module
+- Compatible with StrategyType enum from dual-mode strategy
+- Ready for integration with order execution engine (Task 10)
+- Supports both paper trading and live trading modes
+- Can be extended for additional risk metrics
+
+### Next task:
+- Phase 12: Feature 11 - Risk Management System (Part 2)
+- Implement backend/risk/kill_switch.py with drawdown circuit breakers
+  - 50% size reduction at 15% drawdown
+  - Full stop at 20% drawdown
+  - Manual override required to re-enable

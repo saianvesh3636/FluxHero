@@ -202,13 +202,13 @@ This task list provides **what** to build. The following documents explain **how
 
 ## Phase 12: Feature 11 - Risk Management System
 
-- [ ] Implement backend/risk/position_limits.py with position-level risk checks (1% trend, 0.75% mean-rev)
-- [ ] Add portfolio-level exposure limits (max 50% deployed, max 5 positions)
-- [ ] Create correlation checker (reduce position size by 50% if correlation >0.7 with existing)
+- [x] Implement backend/risk/position_limits.py with position-level risk checks (1% trend, 0.75% mean-rev)
+- [x] Add portfolio-level exposure limits (max 50% deployed, max 5 positions)
+- [x] Create correlation checker (reduce position size by 50% if correlation >0.7 with existing)
+- [x] Write unit tests for risk limits with backtested worst-case scenarios
 - [ ] Implement backend/risk/kill_switch.py with drawdown circuit breakers (50% size cut at 15% DD, full stop at 20% DD)
 - [ ] Add real-time risk monitoring (current drawdown, exposure %, correlation matrix)
 - [ ] Create daily risk report generation (total risk deployed, worst-case loss scenario)
-- [ ] Write unit tests for risk limits with backtested worst-case scenarios
 
 ---
 
