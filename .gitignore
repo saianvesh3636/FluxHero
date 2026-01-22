@@ -325,3 +325,4 @@ temp/
 
 # NOTE: REQUIREMENTS.md, TASKS.md, .context/ ARE committed to git
 # They are excluded from DISTRIBUTION via .npmignore/.dockerignore (see below)
+.pids/
