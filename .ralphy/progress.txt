@@ -1,73 +1,3 @@
-  * Added Alpaca API configuration section
-  * Added Risk Management configuration section
-  * Added Data Storage configuration section
-  * Added Market Data configuration section
-- Created test to verify server.py uses centralized config settings
-- All tests passing (config tests: 37/37, server config test: 3/3)
-- Linting passes with ruff
-
-Files Modified:
-- fluxhero/backend/api/server.py (added config import, updated app initialization and CORS middleware)
-- fluxhero/backend/.env.example (added comprehensive configuration documentation)
-- tests/unit/test_api_server.py (added test_server_uses_config_settings)
-- AUDIT_TASKS.md (marked Phase 4 - Task 2 as complete, marked .env.example task as complete)
-
-Next Task: Phase 4 - Task 3: Move API URLs from backend/daily_reboot.py to config
-
-## 2026-01-22 - Phase 4 Task 3: Move API URLs to Centralized Config
-
-### Task
-Move API URLs from `backend/daily_reboot.py:44` to centralized config
-
-### Changes Made
-1. **Updated daily_reboot.py**:
-   - Added import for `get_settings` from `backend.core.config`
-   - Modified `RebootConfig.__init__()` to accept optional parameters (None defaults)
-   - Updated parameter defaults to use centralized config via `get_settings()`
-   - Changed command-line argument defaults from hardcoded values to None
-   - Updated docstrings to reflect centralized config usage
-
-2. **Verified .env.example**:
-   - Confirmed API URL configuration fields already exist:
-     - FLUXHERO_ALPACA_API_URL
-     - FLUXHERO_ALPACA_WS_URL
-   - No additional changes needed
-
-3. **Added tests**:
-   - `test_reboot_config_uses_centralized_config()`: Verifies defaults come from centralized config
-   - `test_reboot_config_overrides_centralized_config()`: Verifies explicit values override defaults
-
-### Results
-- All 21 tests pass (including 2 new tests for centralized config integration)
-- Linting passes with no issues
-- API URLs now sourced from centralized config instead of hardcoded defaults
-- Backward compatible: CLI args can still override config values
-
-### Impact
-- Centralized configuration now controls API URLs for daily_reboot script
-- Easier to manage different environments (paper trading vs live)
-- Follows same pattern as CORS configuration (Phase 4 Task 2)
-
-## 2026-01-22 - Phase 4 Task 4: Move Risk Parameters to Centralized Config
-
-### Changes Made
-1. **Updated position_limits.py**:
-   - Changed all function signatures to accept `Settings` instead of `PositionLimitsConfig`
-   - Added import for `Settings` and `get_settings` from `backend.core.config`
-   - All functions now default to `get_settings()` when config is None
-   - Deprecated `PositionLimitsConfig` class with note to use centralized config
-
-2. **Updated .env.example**:
-   - Added detailed comments for all risk parameters
-   - Documented requirement references (R11.1, R11.2, R11.1.4)
-   - Risk parameters already present, enhanced with descriptions
-
-3. **Updated test_position_limits.py**:
-   - Added `test_centralized_config_integration()` to verify Settings work with all risk functions
-   - Added `test_centralized_config_default_values()` to verify default config behavior
-   - Both tests validate position sizing, validation, ATR stops, portfolio limits, and correlation
-
-4. **Updated AUDIT_TASKS.md**:
    - Marked "Move risk parameters to config" as complete
    - Marked "Update all modules to import from centralized config" as complete
 
@@ -118,3 +48,28 @@ Move API URLs from `backend/daily_reboot.py:44` to centralized config
 **Linting**: Passed with ruff
 
 **Status**: ✅ Complete
+Phase 5 - Task 2: Add rate limiting middleware to API endpoints
+
+Implementation:
+- Created backend/api/rate_limit.py with RateLimiter and RateLimitMiddleware classes
+- Adapted sliding window rate limiting pattern from backend/data/fetcher.py
+- Integrated middleware into backend/api/server.py with 100 req/60s limit
+- Excluded health check and documentation endpoints from rate limiting
+- Implemented proper 429 responses with Retry-After headers
+
+Tests:
+- Created comprehensive test suite with 19 test cases covering:
+  - Basic rate limiting functionality
+  - Sliding window behavior
+  - Per-client isolation
+  - Middleware integration
+  - Edge cases and concurrency
+- All tests pass (19/19)
+
+Files modified:
+- fluxhero/backend/api/rate_limit.py (new)
+- fluxhero/backend/api/server.py
+- tests/unit/test_rate_limit.py (new)
+- AUDIT_TASKS.md
+
+2026-01-22 06:14:13 UTC

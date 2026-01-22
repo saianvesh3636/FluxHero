@@ -45,6 +45,7 @@ from backend.backtesting.engine import BacktestEngine, BacktestConfig
 from backend.backtesting.metrics import PerformanceMetrics
 from backend.api.auth import validate_websocket_auth
 from backend.core.config import get_settings
+from backend.api.rate_limit import RateLimitMiddleware
 
 
 # ============================================================================
@@ -253,6 +254,16 @@ app.add_middleware(
     allow_credentials=settings.cors_allow_credentials,
     allow_methods=settings.cors_allow_methods,
     allow_headers=settings.cors_allow_headers,
+)
+
+# Rate Limiting Configuration
+# Limit: 100 requests per 60 seconds per IP
+# Exclude health check and root endpoints from rate limiting
+app.add_middleware(
+    RateLimitMiddleware,
+    max_requests=100,
+    window_seconds=60,
+    exclude_paths=["/health", "/", "/docs", "/openapi.json", "/redoc"],
 )
 
 
