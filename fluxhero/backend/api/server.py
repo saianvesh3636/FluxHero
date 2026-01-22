@@ -23,7 +23,7 @@ Endpoints:
 import asyncio
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Request, Response
@@ -174,10 +174,23 @@ class AppState:
         self.start_time: datetime = datetime.now()
         self.last_update: datetime = datetime.now()
         self.data_feed_active: bool = False
+        # Metrics tracking
+        self.request_latencies: List[float] = []
+        self.request_count: int = 0
+        self.request_count_by_path: Dict[str, int] = {}
 
     def update_timestamp(self):
         """Update last activity timestamp"""
         self.last_update = datetime.now()
+
+    def record_request_latency(self, path: str, latency_ms: float):
+        """Record request latency for metrics"""
+        self.request_latencies.append(latency_ms)
+        self.request_count += 1
+        self.request_count_by_path[path] = self.request_count_by_path.get(path, 0) + 1
+        # Keep only last 1000 latencies to prevent memory growth
+        if len(self.request_latencies) > 1000:
+            self.request_latencies = self.request_latencies[-1000:]
 
 
 # Global state instance
@@ -313,6 +326,9 @@ async def log_requests(request: Request, call_next):
                 "process_time_ms": round(process_time * 1000, 2),
             }
         )
+
+        # Record metrics
+        app_state.record_request_latency(request.url.path, round(process_time * 1000, 2))
 
         # Add request ID and process time to response headers
         response.headers["X-Request-ID"] = request_id
@@ -747,10 +763,140 @@ async def websocket_prices(websocket: WebSocket):
 # Health Check Endpoint
 # ============================================================================
 
+@app.get("/metrics")
+async def metrics():
+    """
+    Prometheus-compatible metrics endpoint.
+
+    Exposes:
+    - Order counts (total trades from database)
+    - Request latency percentiles (p50, p90, p95, p99)
+    - Current drawdown percentage
+    - Request counts by endpoint
+    - System uptime
+
+    Returns metrics in Prometheus text format.
+    """
+    lines = []
+
+    # Helper to format Prometheus metrics
+    def add_metric(name: str, value: float, help_text: str, metric_type: str = "gauge"):
+        lines.append(f"# HELP {name} {help_text}")
+        lines.append(f"# TYPE {name} {metric_type}")
+        lines.append(f"{name} {value}")
+        lines.append("")
+
+    # System uptime
+    uptime_seconds = (datetime.now() - app_state.start_time).total_seconds()
+    add_metric("fluxhero_uptime_seconds", uptime_seconds, "System uptime in seconds", "counter")
+
+    # Request metrics
+    add_metric("fluxhero_requests_total", app_state.request_count, "Total number of HTTP requests", "counter")
+
+    # Request latency percentiles
+    if app_state.request_latencies:
+        latencies = np.array(app_state.request_latencies)
+        p50 = float(np.percentile(latencies, 50))
+        p90 = float(np.percentile(latencies, 90))
+        p95 = float(np.percentile(latencies, 95))
+        p99 = float(np.percentile(latencies, 99))
+
+        add_metric("fluxhero_request_latency_p50_ms", p50, "Request latency 50th percentile in milliseconds")
+        add_metric("fluxhero_request_latency_p90_ms", p90, "Request latency 90th percentile in milliseconds")
+        add_metric("fluxhero_request_latency_p95_ms", p95, "Request latency 95th percentile in milliseconds")
+        add_metric("fluxhero_request_latency_p99_ms", p99, "Request latency 99th percentile in milliseconds")
+
+    # Order/Trade counts from database
+    if app_state.sqlite_store:
+        try:
+            # Get recent trades to calculate metrics (limit to last 1000 for performance)
+            all_trades = await app_state.sqlite_store.get_recent_trades(limit=1000)
+            total_trades = len(all_trades)
+            add_metric("fluxhero_orders_total", total_trades, "Total number of orders/trades", "counter")
+
+            # Calculate current drawdown from trades
+            if all_trades:
+                # Calculate equity curve from trade P&L
+                equity = 100000.0  # Assume initial capital
+                peak_equity = equity
+                current_drawdown_pct = 0.0
+
+                for trade in all_trades:
+                    if trade.realized_pnl is not None:
+                        equity += trade.realized_pnl
+                        if equity > peak_equity:
+                            peak_equity = equity
+                        elif peak_equity > 0:
+                            current_drawdown_pct = ((peak_equity - equity) / peak_equity) * 100.0
+
+                add_metric("fluxhero_drawdown_percent", current_drawdown_pct, "Current drawdown percentage")
+                add_metric("fluxhero_equity", equity, "Current equity value")
+
+            # Win rate
+            completed_trades = [t for t in all_trades if t.realized_pnl is not None]
+            if completed_trades:
+                winning_trades = len([t for t in completed_trades if t.realized_pnl > 0])
+                win_rate = (winning_trades / len(completed_trades)) * 100.0
+                add_metric("fluxhero_win_rate_percent", win_rate, "Win rate percentage")
+        except Exception as e:
+            logger.error(f"Error calculating trade metrics: {e}")
+
+    # Request counts by endpoint
+    for path, count in app_state.request_count_by_path.items():
+        # Sanitize path for Prometheus label
+        safe_path = path.replace("/", "_").replace("-", "_").strip("_")
+        if safe_path:
+            lines.append('# HELP fluxhero_requests_by_path_total Requests by endpoint path')
+            lines.append('# TYPE fluxhero_requests_by_path_total counter')
+            lines.append(f'fluxhero_requests_by_path_total{{path="{path}"}} {count}')
+            lines.append("")
+
+    # WebSocket connections
+    add_metric("fluxhero_websocket_connections", len(app_state.websocket_clients), "Active WebSocket connections")
+
+    # Data feed status
+    add_metric("fluxhero_data_feed_active", 1.0 if app_state.data_feed_active else 0.0, "Data feed active status (1=active, 0=inactive)")
+
+    # Return as plain text with Prometheus content type
+    return Response(content="\n".join(lines), media_type="text/plain; version=0.0.4")
+
+
 @app.get("/health")
 async def health_check():
-    """Simple health check endpoint"""
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    """
+    Health check endpoint with basic system metrics.
+
+    Returns:
+    - Status: healthy/unhealthy
+    - Timestamp: Current server time
+    - Uptime: Seconds since server start
+    - Database: Connection status
+    - Active connections: WebSocket client count
+    """
+    uptime_seconds = (datetime.now() - app_state.start_time).total_seconds()
+
+    # Check database connectivity
+    db_healthy = False
+    if app_state.sqlite_store:
+        try:
+            # Simple connectivity test
+            await app_state.sqlite_store.get_recent_trades(limit=1)
+            db_healthy = True
+        except Exception as e:
+            logger.error(f"Database health check failed: {e}")
+
+    # Determine overall health status
+    overall_status = "healthy" if db_healthy else "degraded"
+
+    return {
+        "status": overall_status,
+        "timestamp": datetime.now().isoformat(),
+        "uptime_seconds": round(uptime_seconds, 2),
+        "database_connected": db_healthy,
+        "websocket_connections": len(app_state.websocket_clients),
+        "data_feed_active": app_state.data_feed_active,
+        "total_requests": app_state.request_count,
+    }
 
 
 # ============================================================================

@@ -62,8 +62,8 @@ Fix critical issues, improve observability, and address architecture gaps identi
 ## Phase 5: API Middleware & Observability
 
 - [x] Add request/response logging middleware to `backend/api/server.py`
-- [ ] Create `/metrics` endpoint with Prometheus-compatible format (order counts, latency percentiles, drawdown %)
-- [ ] Update `/health` endpoint to include basic system metrics
+- [x] Create `/metrics` endpoint with Prometheus-compatible format (order counts, latency percentiles, drawdown %)
+- [x] Update `/health` endpoint to include basic system metrics
 - [ ] Add tests for rate limiting and metrics endpoint
 
 ---

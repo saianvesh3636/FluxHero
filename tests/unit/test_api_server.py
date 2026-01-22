@@ -820,5 +820,212 @@ def test_middleware_logs_client_ip(client, caplog):
     assert hasattr(incoming_logs[0], 'client_ip')
 
 
+# ============================================================================
+# Metrics Endpoint Tests
+# ============================================================================
+
+def test_metrics_endpoint_format(client):
+    """Test that /metrics endpoint returns Prometheus-compatible format"""
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    # Content-type should be text/plain with optional Prometheus version
+    assert "text/plain" in response.headers["content-type"]
+
+    # Parse response text
+    content = response.text
+
+    # Verify Prometheus format markers
+    assert "# HELP" in content
+    assert "# TYPE" in content
+
+    # Verify required metrics exist
+    assert "fluxhero_uptime_seconds" in content
+    assert "fluxhero_requests_total" in content
+    assert "fluxhero_websocket_connections" in content
+    assert "fluxhero_data_feed_active" in content
+
+
+def test_metrics_includes_latency_percentiles(client):
+    """Test that metrics includes request latency percentiles after requests"""
+    # Make several requests to populate latency data
+    for _ in range(10):
+        client.get("/api/status")
+
+    # Now check metrics
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    content = response.text
+
+    # After requests, latency metrics should be present
+    assert "fluxhero_request_latency_p50_ms" in content
+    assert "fluxhero_request_latency_p90_ms" in content
+    assert "fluxhero_request_latency_p95_ms" in content
+    assert "fluxhero_request_latency_p99_ms" in content
+
+
+def test_metrics_includes_order_counts(client, test_db):
+    """Test that metrics includes order/trade counts from database"""
+    # Add some trades
+    for i in range(5):
+        trade = Trade(
+            symbol="SPY",
+            side=PositionSide.LONG,
+            entry_price=450.0,
+            entry_time=datetime.now().isoformat(),
+            shares=100,
+            stop_loss=440.0,
+            status=TradeStatus.CLOSED,
+            strategy="TREND",
+            regime="STRONG_TREND",
+            signal_reason=f"Test trade {i}",
+            exit_price=455.0,
+            exit_time=datetime.now().isoformat(),
+            realized_pnl=500.0,
+            created_at=datetime.now().isoformat(),
+            updated_at=datetime.now().isoformat(),
+        )
+        asyncio.run(test_db.add_trade(trade))
+
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    content = response.text
+
+    # Should have order count metric
+    assert "fluxhero_orders_total" in content
+    assert "fluxhero_orders_total 5" in content
+
+
+def test_metrics_includes_drawdown(client, test_db):
+    """Test that metrics includes drawdown percentage"""
+    # Add trades with P&L to create drawdown scenario
+    # First a winning trade
+    trade1 = Trade(
+        symbol="SPY",
+        side=PositionSide.LONG,
+        entry_price=450.0,
+        entry_time=datetime.now().isoformat(),
+        shares=100,
+        stop_loss=440.0,
+        status=TradeStatus.CLOSED,
+        strategy="TREND",
+        regime="STRONG_TREND",
+        signal_reason="Winner",
+        exit_price=460.0,
+        exit_time=datetime.now().isoformat(),
+        realized_pnl=1000.0,  # Big win
+        created_at=datetime.now().isoformat(),
+        updated_at=datetime.now().isoformat(),
+    )
+    asyncio.run(test_db.add_trade(trade1))
+
+    # Then a losing trade
+    trade2 = Trade(
+        symbol="QQQ",
+        side=PositionSide.LONG,
+        entry_price=380.0,
+        entry_time=datetime.now().isoformat(),
+        shares=100,
+        stop_loss=370.0,
+        status=TradeStatus.CLOSED,
+        strategy="TREND",
+        regime="STRONG_TREND",
+        signal_reason="Loser",
+        exit_price=375.0,
+        exit_time=datetime.now().isoformat(),
+        realized_pnl=-500.0,  # Loss after peak
+        created_at=datetime.now().isoformat(),
+        updated_at=datetime.now().isoformat(),
+    )
+    asyncio.run(test_db.add_trade(trade2))
+
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    content = response.text
+
+    # Should have drawdown metric
+    assert "fluxhero_drawdown_percent" in content
+    assert "fluxhero_equity" in content
+    assert "fluxhero_win_rate_percent" in content
+
+
+def test_metrics_includes_request_counts_by_path(client):
+    """Test that metrics includes request counts broken down by endpoint"""
+    # Make requests to different endpoints
+    client.get("/api/status")
+    client.get("/api/status")
+    client.get("/api/positions")
+
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    content = response.text
+
+    # Should have per-path request counts
+    assert "fluxhero_requests_by_path_total" in content
+    assert 'path="/api/status"' in content
+
+
+def test_metrics_no_database_error_handling(client):
+    """Test that metrics endpoint handles database errors gracefully"""
+    # Clear the database connection
+    app_state.sqlite_store = None
+
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    content = response.text
+
+    # Should still return basic metrics
+    assert "fluxhero_uptime_seconds" in content
+    assert "fluxhero_requests_total" in content
+
+
+def test_health_endpoint_includes_system_metrics(client):
+    """Test that updated /health endpoint includes system metrics"""
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+
+    # Check for required fields
+    assert "status" in data
+    assert "timestamp" in data
+    assert "uptime_seconds" in data
+    assert "database_connected" in data
+    assert "websocket_connections" in data
+    assert "data_feed_active" in data
+    assert "total_requests" in data
+
+    # Verify types
+    assert isinstance(data["uptime_seconds"], (int, float))
+    assert isinstance(data["database_connected"], bool)
+    assert isinstance(data["websocket_connections"], int)
+    assert isinstance(data["data_feed_active"], bool)
+    assert isinstance(data["total_requests"], int)
+
+
+def test_health_endpoint_database_check(client, test_db):
+    """Test that health endpoint properly checks database connectivity"""
+    # With database connected
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["database_connected"] is True
+    assert data["status"] in ["healthy", "degraded"]
+
+
+def test_health_endpoint_degraded_status(client):
+    """Test that health endpoint returns degraded status when database fails"""
+    # Simulate database failure
+    original_store = app_state.sqlite_store
+    app_state.sqlite_store = None
+
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["database_connected"] is False
+    assert data["status"] == "degraded"
+
+    # Restore
+    app_state.sqlite_store = original_store
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
