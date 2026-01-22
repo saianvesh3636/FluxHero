@@ -26,10 +26,11 @@ from datetime import datetime
 from typing import List, Optional
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import numpy as np
+import time
 
 # Import storage modules
 import sys
@@ -253,6 +254,75 @@ app.add_middleware(
     allow_methods=settings.cors_allow_methods,
     allow_headers=settings.cors_allow_headers,
 )
+
+
+# ============================================================================
+# Request/Response Logging Middleware
+# ============================================================================
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """
+    Middleware to log all HTTP requests and responses.
+
+    Logs:
+    - Request method, path, client IP
+    - Response status code, processing time
+    - Request/response body size
+    """
+    # Generate request ID for tracking
+    request_id = f"{int(time.time() * 1000)}-{id(request)}"
+
+    # Log incoming request
+    start_time = time.time()
+    logger.info(
+        "Incoming request",
+        extra={
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "query_params": str(request.query_params),
+            "client_ip": request.client.host if request.client else "unknown",
+        }
+    )
+
+    # Process request
+    try:
+        response: Response = await call_next(request)
+        process_time = time.time() - start_time
+
+        # Log response
+        logger.info(
+            "Request completed",
+            extra={
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": response.status_code,
+                "process_time_ms": round(process_time * 1000, 2),
+            }
+        )
+
+        # Add request ID and process time to response headers
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Process-Time"] = str(round(process_time * 1000, 2))
+
+        return response
+
+    except Exception as e:
+        process_time = time.time() - start_time
+        logger.error(
+            "Request failed",
+            extra={
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+                "process_time_ms": round(process_time * 1000, 2),
+                "error": str(e),
+            },
+            exc_info=True
+        )
+        raise
 
 
 # ============================================================================

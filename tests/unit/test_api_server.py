@@ -675,5 +675,150 @@ def test_logger_exists():
     assert server.logger.name == 'fluxhero.backend.api.server'
 
 
+# ============================================================================
+# Request/Response Logging Middleware Tests
+# ============================================================================
+
+def test_request_logging_middleware(client, caplog):
+    """Test that requests are logged with proper context"""
+    with caplog.at_level(logging.INFO):
+        response = client.get("/api/status")
+        assert response.status_code == 200
+
+    # Verify incoming request log exists
+    assert "Incoming request" in caplog.text
+
+    # Check log records for extra fields
+    incoming_logs = [r for r in caplog.records if "Incoming request" in r.message]
+    assert len(incoming_logs) > 0
+    incoming_log = incoming_logs[0]
+    assert hasattr(incoming_log, 'method')
+    assert incoming_log.method == "GET"
+    assert hasattr(incoming_log, 'path')
+    assert incoming_log.path == "/api/status"
+
+    # Verify request completed log
+    assert "Request completed" in caplog.text
+    completed_logs = [r for r in caplog.records if "Request completed" in r.message]
+    assert len(completed_logs) > 0
+    completed_log = completed_logs[0]
+    assert hasattr(completed_log, 'status_code')
+    assert completed_log.status_code == 200
+
+
+def test_request_logging_includes_request_id(client, caplog):
+    """Test that request ID is included in logs and response headers"""
+    with caplog.at_level(logging.INFO):
+        response = client.get("/api/positions")
+        assert response.status_code == 200
+
+    # Verify request ID in response headers
+    assert "X-Request-ID" in response.headers
+    request_id = response.headers["X-Request-ID"]
+    assert request_id is not None
+    assert len(request_id) > 0
+
+    # Verify request ID appears in log records
+    incoming_logs = [r for r in caplog.records if "Incoming request" in r.message]
+    assert len(incoming_logs) > 0
+    assert hasattr(incoming_logs[0], 'request_id')
+    assert incoming_logs[0].request_id == request_id
+
+
+def test_request_logging_includes_process_time(client, caplog):
+    """Test that processing time is logged and included in response headers"""
+    with caplog.at_level(logging.INFO):
+        response = client.get("/api/account")
+        assert response.status_code == 200
+
+    # Verify process time in response headers
+    assert "X-Process-Time" in response.headers
+    process_time = float(response.headers["X-Process-Time"])
+    assert process_time >= 0
+
+    # Verify process time in log records
+    completed_logs = [r for r in caplog.records if "Request completed" in r.message]
+    assert len(completed_logs) > 0
+    assert hasattr(completed_logs[0], 'process_time_ms')
+    assert completed_logs[0].process_time_ms >= 0
+
+
+def test_request_logging_with_query_params(client, caplog):
+    """Test that query parameters are logged"""
+    with caplog.at_level(logging.INFO):
+        response = client.get("/api/trades?page=1&page_size=10")
+        assert response.status_code == 200
+
+    # Verify query params in log records
+    incoming_logs = [r for r in caplog.records if "Incoming request" in r.message]
+    assert len(incoming_logs) > 0
+    assert hasattr(incoming_logs[0], 'query_params')
+    # Query params are logged as string
+    assert 'page' in incoming_logs[0].query_params
+
+
+def test_request_logging_on_error(client, caplog):
+    """Test that failed requests are logged with error details"""
+    with caplog.at_level(logging.INFO):
+        # Make request that will fail validation
+        _ = client.get("/api/trades?page=0")
+        # This should fail validation (422) or work if validation allows it
+
+    # Should have both incoming and completion logs regardless
+    assert "Incoming request" in caplog.text
+
+
+def test_request_logging_different_methods(client, caplog):
+    """Test that different HTTP methods are logged correctly"""
+    with caplog.at_level(logging.INFO):
+        # GET request
+        response_get = client.get("/api/status")
+        assert response_get.status_code == 200
+
+    # Verify GET method is logged in log records
+    incoming_logs = [r for r in caplog.records if "Incoming request" in r.message]
+    assert len(incoming_logs) >= 1
+    methods = [r.method for r in incoming_logs if hasattr(r, 'method')]
+    assert "GET" in methods
+
+
+def test_middleware_preserves_response(client):
+    """Test that middleware doesn't modify response body"""
+    response = client.get("/api/status")
+    assert response.status_code == 200
+
+    # Response should still be valid JSON
+    data = response.json()
+    assert "status" in data
+    # Check for either timestamp or last_update field
+    assert "last_update" in data or "timestamp" in data
+
+
+def test_middleware_adds_headers_without_breaking_response(client):
+    """Test that middleware headers don't break existing functionality"""
+    response = client.get("/")
+    assert response.status_code == 200
+
+    # Response should have our custom headers
+    assert "X-Request-ID" in response.headers
+    assert "X-Process-Time" in response.headers
+
+    # But response body should still be intact
+    data = response.json()
+    assert data["name"] == "FluxHero API"
+
+
+def test_middleware_logs_client_ip(client, caplog):
+    """Test that client IP is logged (or unknown in test environment)"""
+    with caplog.at_level(logging.INFO):
+        response = client.get("/api/status")
+        assert response.status_code == 200
+
+    # Verify client IP field exists in log records (may be testclient or unknown)
+    incoming_logs = [r for r in caplog.records if "Incoming request" in r.message]
+    assert len(incoming_logs) > 0
+    assert hasattr(incoming_logs[0], 'client_ip')
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

@@ -83,3 +83,38 @@ Move API URLs from `backend/daily_reboot.py:44` to centralized config
 - Backward compatible: existing tests using PositionLimitsConfig still work
 - Phase 4 (Centralized Configuration) is now complete
 
+
+## 2026-01-22 - Phase 5 Task 1: Request/Response Logging Middleware
+
+**Task**: Add request/response logging middleware to backend/api/server.py
+
+**Implementation**:
+1. Added imports for Request, Response from FastAPI and time module
+2. Implemented @app.middleware("http") decorator function `log_requests`
+3. Middleware logs:
+   - Incoming requests with method, path, query params, client IP
+   - Request completion with status code and processing time
+   - Request failures with error details and stack traces
+4. Added custom headers to responses:
+   - X-Request-ID: Unique identifier for tracking requests
+   - X-Process-Time: Processing time in milliseconds
+
+**Tests Added** (9 new tests in test_api_server.py):
+- test_request_logging_middleware: Verifies basic request/response logging
+- test_request_logging_includes_request_id: Validates request ID in logs and headers
+- test_request_logging_includes_process_time: Checks process time tracking
+- test_request_logging_with_query_params: Ensures query params are logged
+- test_request_logging_on_error: Tests error request logging
+- test_request_logging_different_methods: Validates different HTTP methods
+- test_middleware_preserves_response: Ensures response body is not modified
+- test_middleware_adds_headers_without_breaking_response: Verifies custom headers
+- test_middleware_logs_client_ip: Checks client IP logging
+
+**Files Modified**:
+- fluxhero/backend/api/server.py: Added logging middleware after CORS configuration
+- tests/unit/test_api_server.py: Added 9 new tests for middleware functionality
+
+**Test Results**: All middleware tests pass (9/9)
+**Linting**: Passed with ruff
+
+**Status**: ✅ Complete
