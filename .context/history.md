@@ -363,3 +363,44 @@
 - Replay timing: 2 seconds between updates (vs. 5 seconds for fallback mode)
 
 **Result:** WebSocket now provides realistic simulated live data by replaying historical CSV data in a loop. Frontend can receive continuous price updates for testing and development without connecting to live market data feeds. All tests passing.
+
+
+---
+
+## 2026-01-22 18:40 - Multiple Test Symbols (AAPL, MSFT)
+
+**Task:** Implement support for multiple test symbols (AAPL, MSFT) in addition to SPY
+
+**Files Changed:**
+- backend/test_data/aapl_daily.csv (NEW)
+- backend/test_data/msft_daily.csv (NEW)
+- scripts/download_multi_symbol_data.py (NEW)
+- backend/api/server.py
+- tests/integration/test_multi_symbol_support.py (NEW)
+
+**What Was Done:**
+1. Created download script to fetch AAPL and MSFT data from Yahoo Finance (252 rows each, 1 year of daily data)
+2. Updated AppState to use dict structure: test_data[symbol] → list of candles (replaces single test_spy_data)
+3. Modified CSV loading logic to handle both formats:
+   - SPY: skiprows=[1] for multi-index header
+   - AAPL/MSFT: standard CSV format
+4. Enhanced /api/test/candles endpoint:
+   - Accepts symbol parameter (SPY, AAPL, or MSFT)
+   - Returns appropriate error for unsupported symbols
+   - Case-insensitive symbol handling
+5. Updated WebSocket replay logic:
+   - Maintains separate index tracker for each symbol
+   - Cycles through all symbols in test_data
+   - Sends updates for all symbols every 2 seconds
+   - Falls back to synthetic data for all 3 symbols if CSV unavailable
+6. Created comprehensive test suite (26 tests, all passing):
+   - CSV file validation for all symbols
+   - Data parsing for different CSV formats
+   - API endpoint symbol support
+   - WebSocket data structure
+   - OHLC relationship validation
+   - Price range reasonableness checks
+7. All linting checks pass (ruff)
+
+**Result:** System now supports multiple test symbols (SPY, AAPL, MSFT) for frontend development and testing. WebSocket streams all three symbols simultaneously. API endpoint allows querying data for any supported symbol. All tests passing with 100% success rate.
+

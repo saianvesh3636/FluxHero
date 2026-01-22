@@ -190,8 +190,8 @@ class AppState:
         self.request_latencies: list[float] = []
         self.request_count: int = 0
         self.request_count_by_path: dict[str, int] = {}
-        # Test data cache (for development)
-        self.test_spy_data: list[dict] | None = None
+        # Test data cache (for development) - maps symbol to list of candles
+        self.test_data: dict[str, list[dict]] = {}
 
     def update_timestamp(self):
         """Update last activity timestamp"""
@@ -241,46 +241,57 @@ async def lifespan(app: FastAPI):
     # Load test data (only if not in production)
     env = os.getenv("ENV", "development")
     if env != "production":
-        try:
-            spy_csv_path = Path(__file__).parent.parent / "test_data" / "spy_daily.csv"
-            if spy_csv_path.exists():
-                # Read CSV and skip the multi-index header row
-                df = pd.read_csv(spy_csv_path, skiprows=[1])
-                df = df.rename(
-                    columns={
-                        "Price": "Date",
-                        "Close": "close",
-                        "High": "high",
-                        "Low": "low",
-                        "Open": "open",
-                        "Volume": "volume",
-                    }
-                )
-                df = df.rename(columns={"Ticker": "Date"})
+        # Load data for multiple symbols
+        symbols = ["SPY", "AAPL", "MSFT"]
+        test_data_dir = Path(__file__).parent.parent / "test_data"
 
-                # Convert to list of dicts
-                app_state.test_spy_data = []
-                for _, row in df.iterrows():
-                    try:
-                        app_state.test_spy_data.append(
-                            {
-                                "timestamp": str(row["Date"]),
-                                "open": float(row["open"]),
-                                "high": float(row["high"]),
-                                "low": float(row["low"]),
-                                "close": float(row["close"]),
-                                "volume": int(row["volume"]),
-                            }
-                        )
-                    except (ValueError, KeyError):
-                        continue  # Skip invalid rows
+        for symbol in symbols:
+            try:
+                csv_path = test_data_dir / f"{symbol.lower()}_daily.csv"
+                if csv_path.exists():
+                    # Read CSV - SPY has a different format with extra header row
+                    if symbol == "SPY":
+                        df = pd.read_csv(csv_path, skiprows=[1])
+                        df = df.rename(columns={"Price": "Date"})
+                    else:
+                        # AAPL and MSFT have standard format
+                        df = pd.read_csv(csv_path)
+                        df = df.rename(columns={"Price": "Date"})
 
-                logger.info(f"Loaded {len(app_state.test_spy_data)} rows of SPY test data")
-            else:
-                logger.warning(f"SPY test data file not found: {spy_csv_path}")
-        except Exception as e:
-            logger.error(f"Failed to load SPY test data: {e}")
-            app_state.test_spy_data = None
+                    # Common column renaming
+                    df = df.rename(
+                        columns={
+                            "Close": "close",
+                            "High": "high",
+                            "Low": "low",
+                            "Open": "open",
+                            "Volume": "volume",
+                        }
+                    )
+
+                    # Convert to list of dicts
+                    symbol_data = []
+                    for _, row in df.iterrows():
+                        try:
+                            symbol_data.append(
+                                {
+                                    "timestamp": str(row["Date"]),
+                                    "open": float(row["open"]),
+                                    "high": float(row["high"]),
+                                    "low": float(row["low"]),
+                                    "close": float(row["close"]),
+                                    "volume": int(row["volume"]),
+                                }
+                            )
+                        except (ValueError, KeyError):
+                            continue  # Skip invalid rows
+
+                    app_state.test_data[symbol] = symbol_data
+                    logger.info(f"Loaded {len(symbol_data)} rows of {symbol} test data")
+                else:
+                    logger.warning(f"{symbol} test data file not found: {csv_path}")
+            except Exception as e:
+                logger.error(f"Failed to load {symbol} test data: {e}")
 
     # Mark data feed as inactive (will be activated when WebSocket connects)
     app_state.data_feed_active = False
@@ -809,58 +820,80 @@ async def websocket_prices(websocket: WebSocket):
         )
 
         # Replay CSV data if available, otherwise send synthetic data
-        if app_state.test_spy_data and len(app_state.test_spy_data) > 0:
-            # Replay mode: iterate through CSV data and loop when done
-            data_index = 0
+        if app_state.test_data:
+            # Replay mode: iterate through CSV data for all symbols
+            # Create index trackers for each symbol
+            symbol_indices = {symbol: 0 for symbol in app_state.test_data.keys()}
+
             logger.info(
                 "WebSocket: Starting CSV replay mode",
-                extra={"rows": len(app_state.test_spy_data)},
+                extra={
+                    "symbols": list(app_state.test_data.keys()),
+                    "rows_per_symbol": {k: len(v) for k, v in app_state.test_data.items()}
+                },
             )
 
             while True:
-                # Get current candle from CSV data
-                candle = app_state.test_spy_data[data_index]
+                # Send updates for all symbols
+                for symbol, data in app_state.test_data.items():
+                    if not data:
+                        continue
 
-                # Send OHLCV update to client
-                await websocket.send_json(
-                    {
-                        "type": "price_update",
-                        "symbol": "SPY",
-                        "timestamp": candle["timestamp"],
-                        "open": candle["open"],
-                        "high": candle["high"],
-                        "low": candle["low"],
-                        "close": candle["close"],
-                        "volume": candle["volume"],
-                        "replay_index": data_index,
-                        "total_rows": len(app_state.test_spy_data),
-                    }
-                )
-                app_state.update_timestamp()
+                    # Get current candle for this symbol
+                    data_index = symbol_indices[symbol]
+                    candle = data[data_index]
 
-                # Move to next row, loop back to start when done
-                data_index = (data_index + 1) % len(app_state.test_spy_data)
+                    # Send OHLCV update to client
+                    await websocket.send_json(
+                        {
+                            "type": "price_update",
+                            "symbol": symbol,
+                            "timestamp": candle["timestamp"],
+                            "open": candle["open"],
+                            "high": candle["high"],
+                            "low": candle["low"],
+                            "close": candle["close"],
+                            "volume": candle["volume"],
+                            "replay_index": data_index,
+                            "total_rows": len(data),
+                        }
+                    )
+                    app_state.update_timestamp()
+
+                    # Move to next row for this symbol, loop back to start when done
+                    symbol_indices[symbol] = (data_index + 1) % len(data)
 
                 # Send updates every 2 seconds (simulating live feed)
+                # Divide by number of symbols to maintain reasonable update frequency
                 await asyncio.sleep(2.0)
 
         else:
             # Fallback: synthetic price updates if CSV data not available
             logger.warning("WebSocket: CSV data not available, using synthetic prices")
+            synthetic_symbols = ["SPY", "AAPL", "MSFT"]
             while True:
-                # Generate synthetic price update
-                price_update = PriceUpdate(
-                    symbol="SPY",
-                    price=round(np.random.uniform(400.0, 450.0), 2),
-                    timestamp=datetime.now().isoformat(),
-                    volume=np.random.randint(100000, 1000000),
-                )
+                # Generate synthetic price updates for all symbols
+                for symbol in synthetic_symbols:
+                    # Set price range based on typical stock prices
+                    if symbol == "SPY":
+                        price_range = (400.0, 450.0)
+                    elif symbol == "AAPL":
+                        price_range = (150.0, 250.0)
+                    else:  # MSFT
+                        price_range = (300.0, 450.0)
 
-                # Send update to client
-                await websocket.send_json(price_update.model_dump())
-                app_state.update_timestamp()
+                    price_update = PriceUpdate(
+                        symbol=symbol,
+                        price=round(np.random.uniform(*price_range), 2),
+                        timestamp=datetime.now().isoformat(),
+                        volume=np.random.randint(100000, 1000000),
+                    )
 
-                # Wait 5 seconds before next update
+                    # Send update to client
+                    await websocket.send_json(price_update.model_dump())
+                    app_state.update_timestamp()
+
+                # Wait 5 seconds before next batch of updates
                 await asyncio.sleep(5.0)
 
     except WebSocketDisconnect:
@@ -1021,17 +1054,18 @@ async def metrics():
 async def get_test_candles(
     symbol: str = Query(
         default="SPY",
-        description="Symbol to fetch (currently only SPY is supported)",
+        description="Symbol to fetch (SPY, AAPL, or MSFT)",
     ),
 ):
     """
     TEST ENDPOINT: Get historical candle data for development.
 
-    This endpoint serves static SPY data from a CSV file for frontend development.
+    This endpoint serves static data from CSV files for frontend development.
+    Supports SPY, AAPL, and MSFT symbols.
     It is disabled in production environments (ENV=production).
 
     Args:
-        symbol: The symbol to fetch (currently only SPY is supported)
+        symbol: The symbol to fetch (SPY, AAPL, or MSFT)
 
     Returns:
         List of candle data with timestamp, open, high, low, close, volume
@@ -1048,20 +1082,22 @@ async def get_test_candles(
         )
 
     # Validate symbol
-    if symbol.upper() != "SPY":
+    symbol_upper = symbol.upper()
+    supported_symbols = ["SPY", "AAPL", "MSFT"]
+    if symbol_upper not in supported_symbols:
         raise HTTPException(
             status_code=400,
-            detail="Only SPY symbol is currently supported for test data",
+            detail=f"Symbol {symbol} not supported. Available: {', '.join(supported_symbols)}",
         )
 
     # Check if data is loaded
-    if app_state.test_spy_data is None:
+    if symbol_upper not in app_state.test_data or not app_state.test_data[symbol_upper]:
         raise HTTPException(
             status_code=503,
-            detail="Test data not available. Check server logs for details.",
+            detail=f"Test data for {symbol_upper} not available. Check server logs for details.",
         )
 
-    return app_state.test_spy_data
+    return app_state.test_data[symbol_upper]
 
 
 @app.get("/health")

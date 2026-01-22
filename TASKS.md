@@ -124,7 +124,7 @@
 ## Phase 6: Nice to Have (Future)
 
 - [x] Simulated live price updates (WebSocket replays CSV data)
-- [ ] Multiple test symbols (AAPL, MSFT)
+- [x] Multiple test symbols (AAPL, MSFT)
 - [ ] Visual regression tests with Playwright screenshots
 
 ---
