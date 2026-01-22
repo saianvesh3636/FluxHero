@@ -1,0 +1,46 @@
+# ============================================================================
+# Docker Distribution Ignore
+# These files are in git but NOT shipped in Docker images
+# ============================================================================
+
+# AI/Planning files - development only
+REQUIREMENTS.md
+TASKS.md
+FLUXHERO_TASKS.md
+FLUXHERO_REQUIREMENTS.md
+.context/
+.ralphy/
+
+# Documentation (keep README, exclude detailed docs)
+*.guide.md
+*-guide.md
+
+# Development files
+.git/
+.gitignore
+.env.local
+.env.development
+*.log
+
+# Test files (unless you want tests in production)
+tests/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node development
+node_modules/
+.next/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

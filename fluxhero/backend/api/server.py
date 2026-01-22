@@ -195,6 +195,7 @@ async def lifespan(app: FastAPI):
     # Initialize SQLite store
     db_path = Path(__file__).parent.parent.parent.parent / "data" / "system.db"
     app_state.sqlite_store = SQLiteStore(db_path=str(db_path))
+    await app_state.sqlite_store.initialize()
     print(f"✓ SQLite store initialized: {db_path}")
 
     # Mark data feed as inactive (will be activated when WebSocket connects)

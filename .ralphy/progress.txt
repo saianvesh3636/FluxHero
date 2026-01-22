@@ -73,3 +73,41 @@ Next Task: Document risk management rules and circuit breaker behavior (Phase 18
 - All tests passing (82/82 tests in test_position_limits.py and test_kill_switch.py)
 - Linting passed with ruff
 - Task marked complete in FLUXHERO_TASKS.md
+
+=== Phase 18 - Task 4: Add README with installation instructions ===
+Date: 2026-01-21
+Status: COMPLETED
+
+Summary:
+Created comprehensive README.md with detailed installation instructions for both backend (Python) and frontend (React + Next.js).
+
+Changes Made:
+1. Replaced existing README.md with comprehensive documentation
+2. Added detailed sections:
+   - Overview with key features and target audience
+   - System requirements (hardware, software, API access)
+   - Installation instructions for backend and frontend
+   - Configuration examples (.env, trading_config.yaml)
+   - Running the system (development and production modes)
+   - Testing instructions (backend, frontend, integration, linting)
+   - Project structure visualization
+   - Usage guide for dashboard tabs and API endpoints
+   - Common operations (daily session, monitoring, emergency stop)
+   - Troubleshooting section with common issues and solutions
+   - Documentation references
+
+Key Features of README:
+- Step-by-step installation for Python virtual environment and dependencies
+- Node.js/npm setup for frontend
+- Configuration templates for environment variables and trading parameters
+- Commands for running development and production servers
+- Testing and linting instructions
+- Comprehensive troubleshooting guide
+- Links to additional documentation (API_DOCUMENTATION.md, USER_GUIDE.md, RISK_MANAGEMENT.md)
+
+Files Modified:
+- README.md (complete rewrite - 696 lines)
+- FLUXHERO_TASKS.md (marked task as complete)
+
+Next Task: Phase 18 - Task 5: Create deployment guide for VPS/cloud hosting options
+

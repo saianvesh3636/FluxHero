@@ -303,7 +303,7 @@ This task list provides **what** to build. The following documents explain **how
 - [x] Write API documentation (endpoint specs, request/response formats)
 - [x] Create user guide for running the system (setup, configuration, monitoring)
 - [x] Document risk management rules and circuit breaker behavior
-- [ ] Add README with installation instructions for backend and frontend
+- [x] Add README with installation instructions for backend and frontend
 - [ ] Create deployment guide for VPS/cloud hosting options
 - [ ] Write maintenance guide (dependency updates, data backup, monitoring)
 

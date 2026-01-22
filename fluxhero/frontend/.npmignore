@@ -1,0 +1,25 @@
+# ============================================================================
+# NPM Distribution Ignore
+# These files are in git but NOT published to npm
+# ============================================================================
+
+# AI/Planning files - development only
+../../REQUIREMENTS.md
+../../TASKS.md
+../../FLUXHERO_TASKS.md
+../../.context/
+../../.ralphy/
+
+# Development files
+.env*
+!.env.example
+*.log
+.next/
+node_modules/
+
+# Tests
+__tests__/
+*.test.ts
+*.test.tsx
+*.spec.ts
+jest.config.*

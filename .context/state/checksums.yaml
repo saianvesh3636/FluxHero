@@ -1,0 +1,16 @@
+# Checksums for drift detection
+requirements:
+  file: "FLUXHERO_REQUIREMENTS.md"
+  hash: "4acd5425b3e4a5b6e4d17fef30239128d1f85b713544303ec3c126af0892dd86"
+  last_sync: "2026-01-21T19:00:00Z"
+
+tasks:
+  file: "FLUXHERO_TASKS.md"
+  hash: "b201caa29016868352e3f4e2f728f9041f1980b476be5991e06685eafd51634d"
+  generated_from_requirements: "4acd5425b3e4a5b6e4d17fef30239128d1f85b713544303ec3c126af0892dd86"
+  generated_at: "2026-01-21T19:00:00Z"
+
+working_files:
+  - file: "fluxhero/backend/execution/broker_interface.py"
+    hash: ""
+    last_modified: "2026-01-21T18:19:00Z"

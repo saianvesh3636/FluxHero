@@ -311,9 +311,17 @@ tmp/
 temp/
 
 # ============================================================================
-# Ralphy Agent
+# Ralphy Agent & Context System
 # ============================================================================
 
-# Keep .ralphy/progress.txt out of git (tracks agent progress)
+# Ralphy runtime files (never commit these)
 .ralphy/progress.txt
 .ralphy/sessions/
+
+# Context system - runtime state only (never commit)
+.context/state/resume.json
+.context/cache/
+.context/*.log
+
+# NOTE: REQUIREMENTS.md, TASKS.md, .context/ ARE committed to git
+# They are excluded from DISTRIBUTION via .npmignore/.dockerignore (see below)
