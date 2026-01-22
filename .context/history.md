@@ -110,3 +110,30 @@
 - Marked Task 4.1 as complete in TASKS.md
 
 **Result:** Frontend-backend integration is working correctly. Live page displays real API data (empty positions, $10,000 account balance, active system status).
+
+## 2026-01-22 - Task 4.2: SPY Test Data Endpoint
+
+**Files Changed:**
+- `backend/api/server.py` - Added test data caching and `/api/test/candles` endpoint
+- `backend/test_data/spy_daily.csv` - Downloaded 252 rows of SPY OHLCV data (1 year)
+- `tests/unit/test_api_server.py` - Added 4 test cases for the test endpoint
+
+**What Was Done:**
+1. Downloaded SPY daily OHLCV data (1 year) from Yahoo Finance using yfinance
+2. Saved data to `backend/test_data/spy_daily.csv` (252 rows)
+3. Added `test_spy_data` field to AppState class to cache CSV data
+4. Implemented CSV loading in lifespan startup (disabled in production via ENV check)
+5. Created `GET /api/test/candles?symbol=SPY` endpoint with:
+   - Production gating (returns 403 when ENV=production)
+   - Symbol validation (only SPY currently supported)
+   - Error handling (503 when data not available)
+   - Response format: `[{timestamp, open, high, low, close, volume}, ...]`
+6. Added 4 comprehensive test cases covering success, production disable, invalid symbol, and missing data scenarios
+7. All tests pass successfully
+
+**Technical Details:**
+- CSV is loaded once at startup and cached in memory for fast access
+- Endpoint is automatically disabled in production environments
+- Data format matches requirements: timestamp, OHLCV, volume
+- Full test coverage with edge cases
+

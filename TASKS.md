@@ -75,12 +75,12 @@
 ### Task 4.2: SPY Test Data Endpoint
 **Goal**: Backend endpoint serving static SPY data for development
 
-- [ ] Download SPY daily OHLCV data (1 year) from Yahoo Finance
-- [ ] Save to `backend/test_data/spy_daily.csv`
-- [ ] Add `GET /api/test/candles?symbol=SPY` endpoint in `server.py`
-- [ ] Response format: `[{timestamp, open, high, low, close, volume}, ...]`
-- [ ] Gate endpoint: disabled when `ENV=production`
-- [ ] Cache CSV data in memory at startup
+- [x] Download SPY daily OHLCV data (1 year) from Yahoo Finance
+- [x] Save to `backend/test_data/spy_daily.csv`
+- [x] Add `GET /api/test/candles?symbol=SPY` endpoint in `server.py`
+- [x] Response format: `[{timestamp, open, high, low, close, volume}, ...]`
+- [x] Gate endpoint: disabled when `ENV=production`
+- [x] Cache CSV data in memory at startup
 
 ### Task 4.3: Frontend Error States
 **Goal**: UI handles API errors gracefully

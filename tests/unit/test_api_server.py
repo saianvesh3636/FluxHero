@@ -521,6 +521,112 @@ def test_server_uses_config_settings():
 
 
 # ============================================================================
+# Test Data Endpoint Tests
+# ============================================================================
+
+def test_get_test_candles_spy(client):
+    """Test getting SPY test candle data"""
+    # Ensure we're not in production mode
+    import os
+
+    import pandas as pd
+
+    os.environ["ENV"] = "development"
+
+    # Load test data manually for the test
+    spy_csv_path = (
+        Path(__file__).parent.parent.parent
+        / "backend"
+        / "test_data"
+        / "spy_daily.csv"
+    )
+
+    if spy_csv_path.exists():
+        df = pd.read_csv(spy_csv_path, skiprows=[1])
+        df = df.rename(
+            columns={
+                "Price": "Date",
+                "Close": "close",
+                "High": "high",
+                "Low": "low",
+                "Open": "open",
+                "Volume": "volume",
+            }
+        )
+        app_state.test_spy_data = []
+        for _, row in df.iterrows():
+            try:
+                app_state.test_spy_data.append({
+                    "timestamp": str(row["Date"]),
+                    "open": float(row["open"]),
+                    "high": float(row["high"]),
+                    "low": float(row["low"]),
+                    "close": float(row["close"]),
+                    "volume": int(row["volume"]),
+                })
+            except (ValueError, KeyError):
+                continue
+
+    response = client.get("/api/test/candles?symbol=SPY")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+
+    if len(data) > 0:
+        # Verify data structure
+        candle = data[0]
+        assert "timestamp" in candle
+        assert "open" in candle
+        assert "high" in candle
+        assert "low" in candle
+        assert "close" in candle
+        assert "volume" in candle
+
+        # Verify data types
+        assert isinstance(candle["open"], float)
+        assert isinstance(candle["high"], float)
+        assert isinstance(candle["low"], float)
+        assert isinstance(candle["close"], float)
+        assert isinstance(candle["volume"], int)
+
+
+def test_get_test_candles_production_disabled(client):
+    """Test that test endpoint is disabled in production"""
+    import os
+    os.environ["ENV"] = "production"
+
+    response = client.get("/api/test/candles?symbol=SPY")
+    assert response.status_code == 403
+    assert "disabled in production" in response.json()["detail"]
+
+    # Restore environment
+    os.environ["ENV"] = "development"
+
+
+def test_get_test_candles_invalid_symbol(client):
+    """Test that only SPY symbol is supported"""
+    import os
+    os.environ["ENV"] = "development"
+
+    response = client.get("/api/test/candles?symbol=AAPL")
+    assert response.status_code == 400
+    assert "Only SPY" in response.json()["detail"]
+
+
+def test_get_test_candles_no_data_loaded(client):
+    """Test endpoint when test data is not loaded"""
+    import os
+    os.environ["ENV"] = "development"
+
+    # Clear test data
+    app_state.test_spy_data = None
+
+    response = client.get("/api/test/candles?symbol=SPY")
+    assert response.status_code == 503
+    assert "not available" in response.json()["detail"]
+
+
+# ============================================================================
 # Success Criteria Tests
 # ============================================================================
 

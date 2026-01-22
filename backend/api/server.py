@@ -22,6 +22,7 @@ Endpoints:
 
 import asyncio
 import logging
+import os
 
 # Import storage modules
 import sys
@@ -31,6 +32,7 @@ from datetime import datetime
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from fastapi import FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -177,6 +179,8 @@ class AppState:
         self.request_latencies: list[float] = []
         self.request_count: int = 0
         self.request_count_by_path: dict[str, int] = {}
+        # Test data cache (for development)
+        self.test_spy_data: list[dict] | None = None
 
     def update_timestamp(self):
         """Update last activity timestamp"""
@@ -222,6 +226,48 @@ async def lifespan(app: FastAPI):
     await app_state.sqlite_store.initialize()
     logger.info("SQLite store initialized", extra={"db_path": str(db_path)})
 
+    # Load test data (only if not in production)
+    env = os.getenv("ENV", "development")
+    if env != "production":
+        try:
+            spy_csv_path = Path(__file__).parent.parent / "test_data" / "spy_daily.csv"
+            if spy_csv_path.exists():
+                # Read CSV and skip the multi-index header row
+                df = pd.read_csv(spy_csv_path, skiprows=[1])
+                df = df.rename(
+                    columns={
+                        "Price": "Date",
+                        "Close": "close",
+                        "High": "high",
+                        "Low": "low",
+                        "Open": "open",
+                        "Volume": "volume",
+                    }
+                )
+                df = df.rename(columns={"Ticker": "Date"})
+
+                # Convert to list of dicts
+                app_state.test_spy_data = []
+                for _, row in df.iterrows():
+                    try:
+                        app_state.test_spy_data.append({
+                            "timestamp": str(row["Date"]),
+                            "open": float(row["open"]),
+                            "high": float(row["high"]),
+                            "low": float(row["low"]),
+                            "close": float(row["close"]),
+                            "volume": int(row["volume"]),
+                        })
+                    except (ValueError, KeyError):
+                        continue  # Skip invalid rows
+
+                logger.info(f"Loaded {len(app_state.test_spy_data)} rows of SPY test data")
+            else:
+                logger.warning(f"SPY test data file not found: {spy_csv_path}")
+        except Exception as e:
+            logger.error(f"Failed to load SPY test data: {e}")
+            app_state.test_spy_data = None
+
     # Mark data feed as inactive (will be activated when WebSocket connects)
     app_state.data_feed_active = False
     app_state.start_time = datetime.now()
@@ -241,7 +287,10 @@ async def lifespan(app: FastAPI):
     # Close all WebSocket connections
     for client in app_state.websocket_clients:
         await client.close()
-    logger.info("WebSocket connections closed", extra={"client_count": len(app_state.websocket_clients)})
+    logger.info(
+        "WebSocket connections closed",
+        extra={"client_count": len(app_state.websocket_clients)},
+    )
 
     logger.info("FluxHero API server stopped")
 
@@ -858,6 +907,53 @@ async def metrics():
 
     # Return as plain text with Prometheus content type
     return Response(content="\n".join(lines), media_type="text/plain; version=0.0.4")
+
+
+@app.get("/api/test/candles")
+async def get_test_candles(
+    symbol: str = Query(
+        default="SPY",
+        description="Symbol to fetch (currently only SPY is supported)",
+    )
+):
+    """
+    TEST ENDPOINT: Get historical candle data for development.
+
+    This endpoint serves static SPY data from a CSV file for frontend development.
+    It is disabled in production environments (ENV=production).
+
+    Args:
+        symbol: The symbol to fetch (currently only SPY is supported)
+
+    Returns:
+        List of candle data with timestamp, open, high, low, close, volume
+
+    Raises:
+        HTTPException: If endpoint is disabled or data is not available
+    """
+    # Check if endpoint is enabled (disabled in production)
+    env = os.getenv("ENV", "development")
+    if env == "production":
+        raise HTTPException(
+            status_code=403,
+            detail="Test endpoints are disabled in production",
+        )
+
+    # Validate symbol
+    if symbol.upper() != "SPY":
+        raise HTTPException(
+            status_code=400,
+            detail="Only SPY symbol is currently supported for test data",
+        )
+
+    # Check if data is loaded
+    if app_state.test_spy_data is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Test data not available. Check server logs for details.",
+        )
+
+    return app_state.test_spy_data
 
 
 @app.get("/health")
