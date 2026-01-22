@@ -497,6 +497,27 @@ def test_cors_headers(client):
     assert response.status_code == 200
 
 
+def test_server_uses_config_settings():
+    """Test that server.py uses centralized config for CORS and API settings"""
+    from fluxhero.backend.api.server import app, settings
+    from fluxhero.backend.core.config import get_settings
+
+    # Verify that settings are imported and used
+    config = get_settings()
+
+    # Check that app uses config values
+    assert app.title == config.api_title
+    assert app.version == config.api_version
+    assert app.description == config.api_description
+
+    # Verify settings instance exists in server module
+    assert settings is not None
+    assert settings.cors_origins == config.cors_origins
+    assert settings.cors_allow_credentials == config.cors_allow_credentials
+    assert settings.cors_allow_methods == config.cors_allow_methods
+    assert settings.cors_allow_headers == config.cors_allow_headers
+
+
 # ============================================================================
 # Success Criteria Tests
 # ============================================================================

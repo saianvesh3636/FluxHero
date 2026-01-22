@@ -43,6 +43,7 @@ from backend.storage.sqlite_store import (
 from backend.backtesting.engine import BacktestEngine, BacktestConfig
 from backend.backtesting.metrics import PerformanceMetrics
 from backend.api.auth import validate_websocket_auth
+from backend.core.config import get_settings
 
 
 # ============================================================================
@@ -235,24 +236,22 @@ async def lifespan(app: FastAPI):
 # FastAPI App Initialization
 # ============================================================================
 
+settings = get_settings()
+
 app = FastAPI(
-    title="FluxHero API",
-    description="REST API for FluxHero adaptive quant trading system",
-    version="1.0.0",
+    title=settings.api_title,
+    description=settings.api_description,
+    version=settings.api_version,
     lifespan=lifespan,
 )
 
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # Next.js dev server
-        "http://localhost:3001",
-        "http://127.0.0.1:3000",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods
-    allow_headers=["*"],  # Allow all headers
+    allow_origins=settings.cors_origins,
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=settings.cors_allow_methods,
+    allow_headers=settings.cors_allow_headers,
 )
 
 

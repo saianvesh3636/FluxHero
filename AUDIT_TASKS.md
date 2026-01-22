@@ -51,10 +51,10 @@ Fix critical issues, improve observability, and address architecture gaps identi
 ## Phase 4: Centralized Configuration
 
 - [x] Create `backend/core/config.py` using pydantic-settings with `.env` file support
-- [ ] Move CORS origins from `backend/api/server.py:239-247` to config
+- [x] Move CORS origins from `backend/api/server.py:239-247` to config
 - [ ] Move API URLs from `backend/daily_reboot.py:44` to config
 - [ ] Move risk parameters from `backend/risk/position_limits.py:71-84` to config
-- [ ] Create `.env.example` with all configurable values documented
+- [x] Create `.env.example` with all configurable values documented
 - [ ] Update all modules to import from centralized config
 
 ---
