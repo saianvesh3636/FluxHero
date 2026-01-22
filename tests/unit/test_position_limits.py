@@ -37,6 +37,7 @@ from backend.risk.position_limits import (
 # Position-Level Risk Tests (R11.1)
 # ============================================================================
 
+
 def test_calculate_position_size_trend_following():
     """Test position sizing for trend-following strategy (1% risk)."""
     # R11.1.1: 1% risk for trend-following
@@ -170,9 +171,7 @@ def test_calculate_atr_stop_loss_trend_long():
     atr = 2.0
     side = 1  # Long
 
-    stop = calculate_atr_stop_loss(
-        entry_price, atr, side, StrategyType.TREND_FOLLOWING
-    )
+    stop = calculate_atr_stop_loss(entry_price, atr, side, StrategyType.TREND_FOLLOWING)
 
     # Expected: 100 - (2.5 × 2.0) = 95.0
     assert stop == 95.0
@@ -184,9 +183,7 @@ def test_calculate_atr_stop_loss_trend_short():
     atr = 2.0
     side = -1  # Short
 
-    stop = calculate_atr_stop_loss(
-        entry_price, atr, side, StrategyType.TREND_FOLLOWING
-    )
+    stop = calculate_atr_stop_loss(entry_price, atr, side, StrategyType.TREND_FOLLOWING)
 
     # Expected: 100 + (2.5 × 2.0) = 105.0
     assert stop == 105.0
@@ -198,9 +195,7 @@ def test_calculate_atr_stop_loss_mean_rev_long():
     atr = 2.0  # Ignored for mean-reversion
     side = 1  # Long
 
-    stop = calculate_atr_stop_loss(
-        entry_price, atr, side, StrategyType.MEAN_REVERSION
-    )
+    stop = calculate_atr_stop_loss(entry_price, atr, side, StrategyType.MEAN_REVERSION)
 
     # Expected: 100 - (3% of 100) = 97.0
     assert stop == 97.0
@@ -212,9 +207,7 @@ def test_calculate_atr_stop_loss_mean_rev_short():
     atr = 2.0
     side = -1  # Short
 
-    stop = calculate_atr_stop_loss(
-        entry_price, atr, side, StrategyType.MEAN_REVERSION
-    )
+    stop = calculate_atr_stop_loss(entry_price, atr, side, StrategyType.MEAN_REVERSION)
 
     # Expected: 100 + (3% of 100) = 103.0
     assert stop == 103.0
@@ -223,6 +216,7 @@ def test_calculate_atr_stop_loss_mean_rev_short():
 # ============================================================================
 # Portfolio-Level Risk Tests (R11.2)
 # ============================================================================
+
 
 def test_validate_portfolio_level_risk_approved():
     """Test portfolio-level risk validation (all checks pass)."""
@@ -293,6 +287,7 @@ def test_validate_portfolio_level_risk_empty_portfolio():
 # ============================================================================
 # Correlation Tests (R11.2.3)
 # ============================================================================
+
 
 def test_calculate_correlation_perfect_positive():
     """Test correlation calculation with perfect positive correlation."""
@@ -396,6 +391,7 @@ def test_check_correlation_low_correlation():
 # Comprehensive Validation Tests
 # ============================================================================
 
+
 def test_validate_new_position_all_checks_pass():
     """Test comprehensive validation with all checks passing."""
     account_balance = 100000
@@ -405,8 +401,12 @@ def test_validate_new_position_all_checks_pass():
     open_positions = []
 
     result, reason, adjusted_shares = validate_new_position(
-        account_balance, entry_price, stop_loss, shares,
-        StrategyType.TREND_FOLLOWING, open_positions
+        account_balance,
+        entry_price,
+        stop_loss,
+        shares,
+        StrategyType.TREND_FOLLOWING,
+        open_positions,
     )
 
     assert result == RiskCheckResult.APPROVED
@@ -430,10 +430,14 @@ def test_validate_new_position_correlation_adjustment():
     prices_map = {"SPY": existing_prices}
 
     result, reason, adjusted_shares = validate_new_position(
-        account_balance, entry_price, stop_loss, shares,
-        StrategyType.TREND_FOLLOWING, open_positions,
+        account_balance,
+        entry_price,
+        stop_loss,
+        shares,
+        StrategyType.TREND_FOLLOWING,
+        open_positions,
         new_symbol_prices=new_prices,
-        position_prices_map=prices_map
+        position_prices_map=prices_map,
     )
 
     # Should approve but reduce size by 50%
@@ -451,8 +455,12 @@ def test_validate_new_position_fails_position_risk():
     open_positions = []
 
     result, reason, adjusted_shares = validate_new_position(
-        account_balance, entry_price, stop_loss, shares,
-        StrategyType.TREND_FOLLOWING, open_positions
+        account_balance,
+        entry_price,
+        stop_loss,
+        shares,
+        StrategyType.TREND_FOLLOWING,
+        open_positions,
     )
 
     assert result == RiskCheckResult.REJECTED_NO_STOP
@@ -476,8 +484,12 @@ def test_validate_new_position_fails_portfolio_risk():
     ]
 
     result, reason, adjusted_shares = validate_new_position(
-        account_balance, entry_price, stop_loss, shares,
-        StrategyType.TREND_FOLLOWING, open_positions
+        account_balance,
+        entry_price,
+        stop_loss,
+        shares,
+        StrategyType.TREND_FOLLOWING,
+        open_positions,
     )
 
     assert result == RiskCheckResult.REJECTED_MAX_POSITIONS
@@ -488,11 +500,12 @@ def test_validate_new_position_fails_portfolio_risk():
 # Risk Monitoring Tests (R11.4)
 # ============================================================================
 
+
 def test_calculate_total_portfolio_risk():
     """Test calculation of total portfolio risk and exposure (R11.4.2)."""
     open_positions = [
         Position("SPY", 100, 400, 410, 395),  # Risk: 100×5=$500, Exposure: $41k
-        Position("QQQ", 50, 300, 305, 291),   # Risk: 50×9=$450, Exposure: $15.25k
+        Position("QQQ", 50, 300, 305, 291),  # Risk: 50×9=$450, Exposure: $15.25k
     ]
 
     total_risk, total_exposure = calculate_total_portfolio_risk(open_positions)
@@ -515,8 +528,8 @@ def test_get_largest_position():
     """Test getting largest position by market value (R11.4.2)."""
     open_positions = [
         Position("SPY", 100, 400, 410, 395),  # $41,000
-        Position("QQQ", 50, 300, 305, 291),   # $15,250
-        Position("AAPL", 200, 150, 155, 147), # $31,000
+        Position("QQQ", 50, 300, 305, 291),  # $15,250
+        Position("AAPL", 200, 150, 155, 147),  # $31,000
     ]
 
     largest = get_largest_position(open_positions)
@@ -539,8 +552,8 @@ def test_calculate_worst_case_loss():
     """Test worst-case loss calculation if all stops hit (R11.4.2)."""
     open_positions = [
         Position("SPY", 100, 400, 410, 395),  # Risk: $500
-        Position("QQQ", 50, 300, 305, 291),   # Risk: $450
-        Position("AAPL", 200, 150, 155, 147), # Risk: $600
+        Position("QQQ", 50, 300, 305, 291),  # Risk: $450
+        Position("AAPL", 200, 150, 155, 147),  # Risk: $600
     ]
 
     worst_case = calculate_worst_case_loss(open_positions)
@@ -560,6 +573,7 @@ def test_calculate_worst_case_loss_empty():
 # ============================================================================
 # Success Criteria Tests (from FLUXHERO_REQUIREMENTS.md)
 # ============================================================================
+
 
 def test_success_criteria_five_losing_trades():
     """Test that 5 consecutive 1% losses result in <6% drawdown."""
@@ -614,10 +628,14 @@ def test_success_criteria_correlation_reduction():
     prices_map = {"SPY": existing_prices}
 
     result, reason, adjusted_shares = validate_new_position(
-        account_balance, entry_price, stop_loss, shares,
-        StrategyType.TREND_FOLLOWING, open_positions,
+        account_balance,
+        entry_price,
+        stop_loss,
+        shares,
+        StrategyType.TREND_FOLLOWING,
+        open_positions,
         new_symbol_prices=new_prices,
-        position_prices_map=prices_map
+        position_prices_map=prices_map,
     )
 
     # Should reduce by 50%
@@ -627,6 +645,7 @@ def test_success_criteria_correlation_reduction():
 # ============================================================================
 # Edge Case Tests
 # ============================================================================
+
 
 def test_edge_case_very_tight_stop():
     """Test position sizing with very tight stop (large position)."""
@@ -678,8 +697,7 @@ def test_edge_case_custom_config():
 
     # With 2% risk: should get 1000 shares
     shares = calculate_position_size_from_risk(
-        account_balance, entry_price, stop_loss,
-        StrategyType.TREND_FOLLOWING, custom_config
+        account_balance, entry_price, stop_loss, StrategyType.TREND_FOLLOWING, custom_config
     )
 
     assert shares == 1000.0
@@ -687,8 +705,7 @@ def test_edge_case_custom_config():
     # Use 600 shares for validation (within 30% position size limit)
     # 600 shares * $50 = $30,000 = 30% of account
     result, reason = validate_position_level_risk(
-        account_balance, entry_price, stop_loss, 600,
-        StrategyType.TREND_FOLLOWING, custom_config
+        account_balance, entry_price, stop_loss, 600, StrategyType.TREND_FOLLOWING, custom_config
     )
 
     assert result == RiskCheckResult.APPROVED
@@ -712,8 +729,7 @@ def test_centralized_config_integration():
     # Test position sizing with custom settings
     # With 1.5% risk and $1 price risk: (100000 * 0.015) / 1 = 1500 shares
     shares = calculate_position_size_from_risk(
-        account_balance, entry_price, stop_loss,
-        StrategyType.TREND_FOLLOWING, custom_settings
+        account_balance, entry_price, stop_loss, StrategyType.TREND_FOLLOWING, custom_settings
     )
     assert shares == 1500.0
 
@@ -721,8 +737,7 @@ def test_centralized_config_integration():
     # Use smaller position (500 shares) to stay within 25% position size limit
     # 500 shares * $50 = $25,000 = 25% of account (exactly at limit)
     result, reason = validate_position_level_risk(
-        account_balance, entry_price, stop_loss, 500,
-        StrategyType.TREND_FOLLOWING, custom_settings
+        account_balance, entry_price, stop_loss, 500, StrategyType.TREND_FOLLOWING, custom_settings
     )
     assert result == RiskCheckResult.APPROVED
 
@@ -732,7 +747,7 @@ def test_centralized_config_integration():
         atr=2.0,
         side=1,  # Long position
         strategy_type=StrategyType.TREND_FOLLOWING,
-        config=custom_settings
+        config=custom_settings,
     )
     assert stop_price == 95.0  # 100 - (2.5 * 2.0)
 
@@ -762,8 +777,7 @@ def test_centralized_config_default_values():
 
     # Call without config parameter - should use get_settings() internally
     shares = calculate_position_size_from_risk(
-        account_balance, entry_price, stop_loss,
-        StrategyType.TREND_FOLLOWING
+        account_balance, entry_price, stop_loss, StrategyType.TREND_FOLLOWING
     )
     # Default is 1% risk: (100000 * 0.01) / 2 = 500 shares
     assert shares == 500.0
@@ -772,8 +786,7 @@ def test_centralized_config_default_values():
     # Use 400 shares to stay within 20% position size limit
     # 400 shares * $50 = $20,000 = 20% of account (exactly at limit)
     result, reason = validate_position_level_risk(
-        account_balance, entry_price, stop_loss, 400,
-        StrategyType.TREND_FOLLOWING
+        account_balance, entry_price, stop_loss, 400, StrategyType.TREND_FOLLOWING
     )
     assert result == RiskCheckResult.APPROVED
 

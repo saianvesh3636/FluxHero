@@ -126,11 +126,7 @@ def calculate_rsi(prices: np.ndarray, period: int = 14) -> np.ndarray:
 
 
 @njit(cache=True)
-def calculate_true_range(
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray
-) -> np.ndarray:
+def calculate_true_range(high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
     """
     Calculate True Range for volatility measurement.
 
@@ -175,10 +171,7 @@ def calculate_true_range(
 
 @njit(cache=True)
 def calculate_atr(
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray,
-    period: int = 14
+    high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
 ) -> np.ndarray:
     """
     Calculate Average True Range using Numba JIT compilation.
@@ -269,11 +262,7 @@ def calculate_sma(prices: np.ndarray, period: int) -> np.ndarray:
 
 
 @njit(cache=True)
-def calculate_bollinger_bands(
-    prices: np.ndarray,
-    period: int = 20,
-    num_std: float = 2.0
-) -> tuple:
+def calculate_bollinger_bands(prices: np.ndarray, period: int = 20, num_std: float = 2.0) -> tuple:
     """
     Calculate Bollinger Bands using Numba JIT compilation.
 

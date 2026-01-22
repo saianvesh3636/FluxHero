@@ -24,12 +24,10 @@ from numba import njit
 # Spread-to-Volatility Ratio Functions
 # ============================================================================
 
+
 @njit(cache=True)
 def calculate_spread_to_volatility_ratio(
-    bid: np.ndarray,
-    ask: np.ndarray,
-    close: np.ndarray,
-    volatility_period: int = 20
+    bid: np.ndarray, ask: np.ndarray, close: np.ndarray, volatility_period: int = 20
 ) -> np.ndarray:
     """
     Calculate spread-to-volatility ratio for noise detection.
@@ -67,7 +65,7 @@ def calculate_spread_to_volatility_ratio(
     # Calculate rolling standard deviation of close prices
     for i in range(volatility_period - 1, n):
         # Get window of close prices
-        window = close[i - volatility_period + 1:i + 1]
+        window = close[i - volatility_period + 1 : i + 1]
 
         # Calculate standard deviation (volatility)
         volatility = np.std(window)
@@ -84,9 +82,7 @@ def calculate_spread_to_volatility_ratio(
 
 @njit(cache=True)
 def validate_spread_ratio(
-    sv_ratio: np.ndarray,
-    threshold: float = 0.05,
-    illiquid_threshold: float = 0.025
+    sv_ratio: np.ndarray, threshold: float = 0.05, illiquid_threshold: float = 0.025
 ) -> np.ndarray:
     """
     Validate signals based on spread-to-volatility ratio.
@@ -114,11 +110,9 @@ def validate_spread_ratio(
 # Volume Validation Functions
 # ============================================================================
 
+
 @njit(cache=True)
-def calculate_average_volume(
-    volume: np.ndarray,
-    period: int = 20
-) -> np.ndarray:
+def calculate_average_volume(volume: np.ndarray, period: int = 20) -> np.ndarray:
     """
     Calculate rolling average volume.
 
@@ -143,7 +137,7 @@ def calculate_average_volume(
         return avg_volume
 
     for i in range(period - 1, n):
-        window = volume[i - period + 1:i + 1]
+        window = volume[i - period + 1 : i + 1]
         avg_volume[i] = np.mean(window)
 
     return avg_volume
@@ -155,7 +149,7 @@ def validate_volume(
     avg_volume: np.ndarray,
     is_breakout: np.ndarray,
     normal_threshold: float = 0.5,
-    breakout_threshold: float = 1.5
+    breakout_threshold: float = 1.5,
 ) -> np.ndarray:
     """
     Validate signals based on volume requirements.
@@ -202,6 +196,7 @@ def validate_volume(
 # ============================================================================
 # Time-of-Day Filter Functions
 # ============================================================================
+
 
 def is_illiquid_hour(timestamp: datetime) -> bool:
     """
@@ -283,6 +278,7 @@ def is_near_close(timestamp: datetime, minutes_before_close: int = 15) -> bool:
 # Combined Noise Filter
 # ============================================================================
 
+
 @njit(cache=True)
 def apply_noise_filter(
     sv_ratio: np.ndarray,
@@ -293,7 +289,7 @@ def apply_noise_filter(
     sv_threshold_normal: float = 0.05,
     sv_threshold_illiquid: float = 0.025,
     volume_threshold_normal: float = 0.5,
-    volume_threshold_breakout: float = 1.5
+    volume_threshold_breakout: float = 1.5,
 ) -> np.ndarray:
     """
     Apply comprehensive noise filter to signals.
@@ -375,7 +371,7 @@ def calculate_rejection_reason(
     sv_threshold_normal: float = 0.05,
     sv_threshold_illiquid: float = 0.025,
     volume_threshold_normal: float = 0.5,
-    volume_threshold_breakout: float = 1.5
+    volume_threshold_breakout: float = 1.5,
 ) -> np.ndarray:
     """
     Calculate rejection reason codes for debugging.
@@ -446,11 +442,9 @@ def calculate_rejection_reason(
 # Price Gap Filter Functions
 # ============================================================================
 
+
 @njit(cache=True)
-def calculate_price_gap_ratio(
-    open_prices: np.ndarray,
-    close_prices: np.ndarray
-) -> np.ndarray:
+def calculate_price_gap_ratio(open_prices: np.ndarray, close_prices: np.ndarray) -> np.ndarray:
     """
     Calculate price gap ratio between open and previous close.
 
@@ -495,10 +489,7 @@ def calculate_price_gap_ratio(
 
 
 @njit(cache=True)
-def validate_price_gap(
-    gap_ratio: np.ndarray,
-    threshold: float = 0.02
-) -> np.ndarray:
+def validate_price_gap(gap_ratio: np.ndarray, threshold: float = 0.02) -> np.ndarray:
     """
     Validate signals based on price gap ratio.
 

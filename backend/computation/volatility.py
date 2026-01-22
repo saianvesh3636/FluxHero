@@ -66,10 +66,7 @@ def calculate_atr_ma(atr: np.ndarray, period: int = 50) -> np.ndarray:
 
 @njit(cache=True)
 def classify_volatility_state(
-    atr: np.ndarray,
-    atr_ma: np.ndarray,
-    low_threshold: float = 0.5,
-    high_threshold: float = 1.5
+    atr: np.ndarray, atr_ma: np.ndarray, low_threshold: float = 0.5, high_threshold: float = 1.5
 ) -> np.ndarray:
     """
     Classify volatility state for each bar based on ATR vs ATR_MA ratio.
@@ -121,7 +118,7 @@ def adjust_period_for_volatility(
     base_period: int,
     vol_state: int,
     low_vol_multiplier: float = 1.3,
-    high_vol_multiplier: float = 0.7
+    high_vol_multiplier: float = 0.7,
 ) -> int:
     """
     Adjust indicator lookback period based on volatility state.
@@ -162,9 +159,7 @@ def adjust_period_for_volatility(
 
 @njit(cache=True)
 def detect_volatility_spike(
-    atr_short: np.ndarray,
-    atr_long: np.ndarray,
-    spike_threshold: float = 2.0
+    atr_short: np.ndarray, atr_long: np.ndarray, spike_threshold: float = 2.0
 ) -> np.ndarray:
     """
     Detect volatility spikes by comparing short and long timeframe ATR.
@@ -211,10 +206,7 @@ def detect_volatility_spike(
 
 @njit(cache=True)
 def calculate_volatility_alpha(
-    atr: np.ndarray,
-    atr_ma: np.ndarray,
-    min_alpha: float = 0.1,
-    max_alpha: float = 0.6
+    atr: np.ndarray, atr_ma: np.ndarray, min_alpha: float = 0.1, max_alpha: float = 0.6
 ) -> np.ndarray:
     """
     Calculate adaptive alpha (smoothing constant) based on ATR.
@@ -277,10 +269,7 @@ def calculate_volatility_alpha(
 
 @njit(cache=True)
 def calculate_adaptive_ema_with_volatility(
-    prices: np.ndarray,
-    atr: np.ndarray,
-    atr_ma: np.ndarray,
-    base_period: int = 20
+    prices: np.ndarray, atr: np.ndarray, atr_ma: np.ndarray, base_period: int = 20
 ) -> np.ndarray:
     """
     Calculate EMA with volatility-adaptive alpha.

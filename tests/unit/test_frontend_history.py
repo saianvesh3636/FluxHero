@@ -70,8 +70,9 @@ def test_pagination_configuration():
     """Test that pagination is configured for 20 trades per page"""
     history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
-    assert "tradesPerPage = 20" in content or "tradesPerPage: 20" in content, \
+    assert "tradesPerPage = 20" in content or "tradesPerPage: 20" in content, (
         "Should have 20 trades per page"
+    )
 
 
 def test_pagination_controls():
@@ -81,8 +82,7 @@ def test_pagination_controls():
 
     # Check for pagination UI elements
     assert "pagination" in content.lower(), "Should have pagination section"
-    assert "Previous" in content or "previous" in content.lower(), \
-        "Should have previous button"
+    assert "Previous" in content or "previous" in content.lower(), "Should have previous button"
     assert "Next" in content or "next" in content.lower(), "Should have next button"
     assert "currentPage" in content, "Should track current page"
 
@@ -93,10 +93,10 @@ def test_csv_export_function():
     content = history_file.read_text()
 
     assert "convertToCSV" in content or "CSV" in content, "Should have CSV export"
-    assert "downloadCSV" in content or "download" in content.lower(), \
+    assert "downloadCSV" in content or "download" in content.lower(), (
         "Should have download function"
-    assert "Export" in content or "export" in content.lower(), \
-        "Should have export button"
+    )
+    assert "Export" in content or "export" in content.lower(), "Should have export button"
 
 
 def test_csv_export_includes_headers():
@@ -107,10 +107,8 @@ def test_csv_export_includes_headers():
     # Check for key CSV headers
     assert "Symbol" in content, "CSV should include Symbol"
     assert "Side" in content, "CSV should include Side"
-    assert "Entry Price" in content or "entry_price" in content, \
-        "CSV should include Entry Price"
-    assert "Exit Price" in content or "exit_price" in content, \
-        "CSV should include Exit Price"
+    assert "Entry Price" in content or "entry_price" in content, "CSV should include Entry Price"
+    assert "Exit Price" in content or "exit_price" in content, "CSV should include Exit Price"
     assert "P&L" in content or "pnl" in content.lower(), "CSV should include P&L"
 
 
@@ -132,10 +130,8 @@ def test_tooltip_shows_trade_details():
     assert "Signal Reason" in content, "Tooltip should show signal reason"
     assert "Strategy" in content, "Tooltip should show strategy"
     assert "regime" in content.lower(), "Tooltip should show regime"
-    assert "Stop Loss" in content or "stop_loss" in content, \
-        "Tooltip should show stop loss"
-    assert "Take Profit" in content or "take_profit" in content, \
-        "Tooltip should show take profit"
+    assert "Stop Loss" in content or "stop_loss" in content, "Tooltip should show stop loss"
+    assert "Take Profit" in content or "take_profit" in content, "Tooltip should show take profit"
 
 
 def test_table_structure():
@@ -168,8 +164,7 @@ def test_loading_state():
     content = history_file.read_text()
 
     assert "loading" in content.lower(), "Should have loading state"
-    assert "Loading" in content or "loading" in content.lower(), \
-        "Should show loading message"
+    assert "Loading" in content or "loading" in content.lower(), "Should show loading message"
 
 
 def test_error_handling():
@@ -190,9 +185,12 @@ def test_color_coded_pnl():
     # Check for color coding logic
     assert "pnl" in content.lower(), "Should have P&L field"
     # Look for color classes or conditional styling
-    assert ("positive" in content.lower() or "negative" in content.lower() or
-            "green" in content.lower() or "red" in content.lower()), \
-        "Should have color-coded P&L"
+    assert (
+        "positive" in content.lower()
+        or "negative" in content.lower()
+        or "green" in content.lower()
+        or "red" in content.lower()
+    ), "Should have color-coded P&L"
 
 
 def test_format_currency_helper():
@@ -200,8 +198,9 @@ def test_format_currency_helper():
     history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
-    assert "formatCurrency" in content or "currency" in content.lower(), \
+    assert "formatCurrency" in content or "currency" in content.lower(), (
         "Should have currency formatting"
+    )
     assert "USD" in content or "$" in content, "Should format as USD"
 
 
@@ -219,10 +218,8 @@ def test_format_percent_helper():
     history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
-    assert "formatPercent" in content or "%" in content, \
-        "Should have percentage formatting"
-    assert "Return" in content or "return" in content.lower(), \
-        "Should show return percentage"
+    assert "formatPercent" in content or "%" in content, "Should have percentage formatting"
+    assert "Return" in content or "return" in content.lower(), "Should show return percentage"
 
 
 def test_empty_trades_handling():
@@ -230,8 +227,7 @@ def test_empty_trades_handling():
     history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
-    assert "length === 0" in content or "No trades" in content, \
-        "Should handle empty trades"
+    assert "length === 0" in content or "No trades" in content, "Should handle empty trades"
 
 
 def test_responsive_design():
@@ -240,8 +236,7 @@ def test_responsive_design():
     content = history_file.read_text()
 
     # Check for responsive CSS
-    assert "@media" in content or "responsive" in content.lower(), \
-        "Should have responsive design"
+    assert "@media" in content or "responsive" in content.lower(), "Should have responsive design"
 
 
 def test_page_header():
@@ -250,8 +245,9 @@ def test_page_header():
     content = history_file.read_text()
 
     assert "Trade History" in content, "Should have page title"
-    assert "page-header" in content.lower() or "header" in content.lower(), \
+    assert "page-header" in content.lower() or "header" in content.lower(), (
         "Should have page header"
+    )
     assert "export" in content.lower(), "Should have export button in header"
 
 
@@ -281,8 +277,9 @@ def test_pagination_page_change_handler():
     history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
-    assert "handlePageChange" in content or "setCurrentPage" in content, \
+    assert "handlePageChange" in content or "setCurrentPage" in content, (
         "Should handle page changes"
+    )
 
 
 def test_export_button_handler():
@@ -290,8 +287,7 @@ def test_export_button_handler():
     history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
-    assert "handleExport" in content or "onClick" in content, \
-        "Should have export handler"
+    assert "handleExport" in content or "onClick" in content, "Should have export handler"
 
 
 def test_trade_id_key():
@@ -309,8 +305,7 @@ def test_styled_jsx():
     content = history_file.read_text()
 
     # Check for styling (either styled-jsx or CSS modules)
-    assert "<style" in content or "className=" in content, \
-        "Should include styling"
+    assert "<style" in content or "className=" in content, "Should include styling"
 
 
 def test_pagination_disabled_states():
@@ -327,9 +322,9 @@ def test_csv_filename_with_timestamp():
     content = history_file.read_text()
 
     # Check for timestamp or date in filename
-    assert ("timestamp" in content.lower() or "date" in content.lower() or
-            "trades_" in content.lower()), \
-        "CSV filename should include timestamp"
+    assert (
+        "timestamp" in content.lower() or "date" in content.lower() or "trades_" in content.lower()
+    ), "CSV filename should include timestamp"
 
 
 def test_return_percentage_calculation():
@@ -340,8 +335,7 @@ def test_return_percentage_calculation():
     assert "realized_pnl" in content, "Should use realized P&L"
     assert "entry_price" in content, "Should use entry price"
     # Look for percentage calculation logic
-    assert ("* 100" in content or "toFixed(2)" in content), \
-        "Should calculate return percentage"
+    assert "* 100" in content or "toFixed(2)" in content, "Should calculate return percentage"
 
 
 def test_side_styling():
@@ -351,8 +345,9 @@ def test_side_styling():
 
     assert "side" in content.lower(), "Should display trade side"
     # Check for side-specific styling
-    assert ("long" in content.lower() or "short" in content.lower()), \
+    assert "long" in content.lower() or "short" in content.lower(), (
         "Should style LONG/SHORT differently"
+    )
 
 
 def test_all_required_features():
@@ -369,8 +364,9 @@ def test_all_required_features():
     ]
 
     for feature in required_features:
-        assert feature in content or feature.upper() in content or feature.lower() in content, \
+        assert feature in content or feature.upper() in content or feature.lower() in content, (
             f"Should include {feature} feature"
+        )
 
 
 def test_component_structure():

@@ -38,7 +38,7 @@ def generate_trend_following_signals(
     kama: np.ndarray,
     atr: np.ndarray,
     entry_multiplier: float = 0.5,
-    exit_multiplier: float = 0.3
+    exit_multiplier: float = 0.3,
 ) -> np.ndarray:
     """
     Generate trend-following entry and exit signals.
@@ -94,29 +94,29 @@ def generate_trend_following_signals(
         # Skip if any indicator is NaN
         if np.isnan(prices[i]) or np.isnan(kama[i]) or np.isnan(atr[i]):
             continue
-        if np.isnan(prices[i-1]) or np.isnan(kama[i-1]) or np.isnan(atr[i-1]):
+        if np.isnan(prices[i - 1]) or np.isnan(kama[i - 1]) or np.isnan(atr[i - 1]):
             continue
 
         # ENTRY SIGNALS (only if not in position)
         if not in_long and not in_short:
             # Long entry: Price crosses above KAMA + (0.5 × ATR)
-            if prices[i-1] <= upper_entry[i-1] and prices[i] > upper_entry[i]:
+            if prices[i - 1] <= upper_entry[i - 1] and prices[i] > upper_entry[i]:
                 signals[i] = SIGNAL_LONG
                 in_long = True
             # Short entry: Price crosses below KAMA - (0.5 × ATR)
-            elif prices[i-1] >= lower_entry[i-1] and prices[i] < lower_entry[i]:
+            elif prices[i - 1] >= lower_entry[i - 1] and prices[i] < lower_entry[i]:
                 signals[i] = SIGNAL_SHORT
                 in_short = True
 
         # EXIT SIGNALS
         elif in_long:
             # Exit long: Price crosses below KAMA - (0.3 × ATR)
-            if prices[i-1] >= lower_exit[i-1] and prices[i] < lower_exit[i]:
+            if prices[i - 1] >= lower_exit[i - 1] and prices[i] < lower_exit[i]:
                 signals[i] = SIGNAL_EXIT_LONG
                 in_long = False
         elif in_short:
             # Exit short: Price crosses above KAMA + (0.3 × ATR)
-            if prices[i-1] <= upper_exit[i-1] and prices[i] > upper_exit[i]:
+            if prices[i - 1] <= upper_exit[i - 1] and prices[i] > upper_exit[i]:
                 signals[i] = SIGNAL_EXIT_SHORT
                 in_short = False
 
@@ -125,11 +125,7 @@ def generate_trend_following_signals(
 
 @njit(cache=True)
 def calculate_trailing_stop(
-    prices: np.ndarray,
-    atr: np.ndarray,
-    entry_idx: int,
-    is_long: bool,
-    atr_multiplier: float = 2.5
+    prices: np.ndarray, atr: np.ndarray, entry_idx: int, is_long: bool, atr_multiplier: float = 2.5
 ) -> np.ndarray:
     """
     Calculate trailing stop levels based on ATR.
@@ -189,7 +185,7 @@ def generate_mean_reversion_signals(
     bollinger_lower: np.ndarray,
     bollinger_middle: np.ndarray,
     rsi_oversold: float = 30.0,
-    rsi_overbought: float = 70.0
+    rsi_overbought: float = 70.0,
 ) -> np.ndarray:
     """
     Generate mean-reversion entry and exit signals.
@@ -265,11 +261,7 @@ def generate_mean_reversion_signals(
 
 
 @njit(cache=True)
-def calculate_fixed_stop_loss(
-    entry_price: float,
-    is_long: bool,
-    stop_pct: float = 0.03
-) -> float:
+def calculate_fixed_stop_loss(entry_price: float, is_long: bool, stop_pct: float = 0.03) -> float:
     """
     Calculate fixed stop loss level for mean-reversion trades.
 
@@ -299,11 +291,7 @@ def calculate_fixed_stop_loss(
 
 @njit(cache=True)
 def calculate_position_size(
-    capital: float,
-    entry_price: float,
-    stop_price: float,
-    risk_pct: float,
-    is_long: bool
+    capital: float, entry_price: float, stop_price: float, risk_pct: float, is_long: bool
 ) -> float:
     """
     Calculate position size based on risk percentage.
@@ -347,9 +335,7 @@ def calculate_position_size(
 
 @njit(cache=True)
 def blend_signals(
-    trend_signals: np.ndarray,
-    mr_signals: np.ndarray,
-    require_agreement: bool = True
+    trend_signals: np.ndarray, mr_signals: np.ndarray, require_agreement: bool = True
 ) -> np.ndarray:
     """
     Blend trend-following and mean-reversion signals for neutral regime.
@@ -391,10 +377,7 @@ def blend_signals(
 
 
 @njit(cache=True)
-def adjust_size_for_regime(
-    base_size: float,
-    regime: int
-) -> float:
+def adjust_size_for_regime(base_size: float, regime: int) -> float:
     """
     Adjust position size based on market regime.
 
@@ -421,6 +404,7 @@ def adjust_size_for_regime(
 
 
 # Python-only functions (not JIT-compiled due to data structures)
+
 
 class StrategyPerformance:
     """
@@ -588,28 +572,28 @@ class DualModeStrategy:
     def get_performance_summary(self) -> dict:
         """Get comprehensive performance summary for all modes."""
         return {
-            'trend_following': {
-                'total_trades': self.trend_perf.wins + self.trend_perf.losses,
-                'win_rate': self.trend_perf.get_win_rate(),
-                'sharpe_ratio': self.trend_perf.get_sharpe_ratio(),
-                'max_drawdown': self.trend_perf.get_max_drawdown(),
-                'total_return': self.trend_perf.get_total_return(),
-                'weight': self.trend_weight
+            "trend_following": {
+                "total_trades": self.trend_perf.wins + self.trend_perf.losses,
+                "win_rate": self.trend_perf.get_win_rate(),
+                "sharpe_ratio": self.trend_perf.get_sharpe_ratio(),
+                "max_drawdown": self.trend_perf.get_max_drawdown(),
+                "total_return": self.trend_perf.get_total_return(),
+                "weight": self.trend_weight,
             },
-            'mean_reversion': {
-                'total_trades': self.mr_perf.wins + self.mr_perf.losses,
-                'win_rate': self.mr_perf.get_win_rate(),
-                'sharpe_ratio': self.mr_perf.get_sharpe_ratio(),
-                'max_drawdown': self.mr_perf.get_max_drawdown(),
-                'total_return': self.mr_perf.get_total_return(),
-                'weight': self.mr_weight
+            "mean_reversion": {
+                "total_trades": self.mr_perf.wins + self.mr_perf.losses,
+                "win_rate": self.mr_perf.get_win_rate(),
+                "sharpe_ratio": self.mr_perf.get_sharpe_ratio(),
+                "max_drawdown": self.mr_perf.get_max_drawdown(),
+                "total_return": self.mr_perf.get_total_return(),
+                "weight": self.mr_weight,
             },
-            'neutral': {
-                'total_trades': self.neutral_perf.wins + self.neutral_perf.losses,
-                'win_rate': self.neutral_perf.get_win_rate(),
-                'sharpe_ratio': self.neutral_perf.get_sharpe_ratio(),
-                'max_drawdown': self.neutral_perf.get_max_drawdown(),
-                'total_return': self.neutral_perf.get_total_return(),
-                'weight': 1.0
-            }
+            "neutral": {
+                "total_trades": self.neutral_perf.wins + self.neutral_perf.losses,
+                "win_rate": self.neutral_perf.get_win_rate(),
+                "sharpe_ratio": self.neutral_perf.get_sharpe_ratio(),
+                "max_drawdown": self.neutral_perf.get_max_drawdown(),
+                "total_return": self.neutral_perf.get_total_return(),
+                "weight": 1.0,
+            },
         }

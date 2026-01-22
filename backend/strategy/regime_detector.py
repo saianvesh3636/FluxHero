@@ -157,7 +157,9 @@ def calculate_directional_indicators(
     # Calculate first DI values
     if not np.isnan(atr[first_valid + period - 1]) and atr[first_valid + period - 1] > 0:
         plus_di[first_valid + period - 1] = 100.0 * smoothed_plus_dm / atr[first_valid + period - 1]
-        minus_di[first_valid + period - 1] = 100.0 * smoothed_minus_dm / atr[first_valid + period - 1]
+        minus_di[first_valid + period - 1] = (
+            100.0 * smoothed_minus_dm / atr[first_valid + period - 1]
+        )
 
     # Calculate subsequent values using Wilder's smoothing
     for i in range(first_valid + period, n):
@@ -319,11 +321,11 @@ def calculate_linear_regression(
     x = np.arange(period, dtype=np.float64)
     x_mean = np.mean(x)
     x_diff = x - x_mean
-    x_diff_sq_sum = np.sum(x_diff ** 2)
+    x_diff_sq_sum = np.sum(x_diff**2)
 
     # Rolling window calculation
     for i in range(period - 1, n):
-        window = prices[i - period + 1:i + 1]
+        window = prices[i - period + 1 : i + 1]
 
         # Skip if any NaN in window
         if np.any(np.isnan(window)):
@@ -345,7 +347,7 @@ def calculate_linear_regression(
 
         # Sum of squares
         ss_res = np.sum((y - y_pred) ** 2)  # Residual
-        ss_tot = np.sum(y_diff ** 2)  # Total
+        ss_tot = np.sum(y_diff**2)  # Total
 
         # R² calculation (handle edge case where ss_tot = 0)
         if ss_tot > 0:
@@ -601,7 +603,7 @@ def calculate_correlation_matrix(
                     count += 1
 
             if count > 1:
-                cov /= (count - 1)  # Sample covariance
+                cov /= count - 1  # Sample covariance
 
                 # Calculate standard deviations
                 std1 = 0.0
@@ -691,10 +693,10 @@ def detect_regime(
     volatility_regime = classify_volatility_regime(atr, atr_ma)
 
     return {
-        'adx': adx,
-        'r_squared': r_squared,
-        'regression_slope': regression_slope,
-        'trend_regime': trend_regime,
-        'trend_regime_confirmed': trend_regime_confirmed,
-        'volatility_regime': volatility_regime,
+        "adx": adx,
+        "r_squared": r_squared,
+        "regression_slope": regression_slope,
+        "trend_regime": trend_regime,
+        "trend_regime_confirmed": trend_regime_confirmed,
+        "volatility_regime": volatility_regime,
     }

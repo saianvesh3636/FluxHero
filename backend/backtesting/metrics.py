@@ -52,19 +52,17 @@ def calculate_returns(equity_curve: np.ndarray) -> np.ndarray:
     returns = np.zeros(len(equity_curve) - 1, dtype=np.float64)
 
     for i in range(1, len(equity_curve)):
-        if equity_curve[i-1] > 0:
-            returns[i-1] = (equity_curve[i] - equity_curve[i-1]) / equity_curve[i-1]
+        if equity_curve[i - 1] > 0:
+            returns[i - 1] = (equity_curve[i] - equity_curve[i - 1]) / equity_curve[i - 1]
         else:
-            returns[i-1] = 0.0
+            returns[i - 1] = 0.0
 
     return returns
 
 
 @njit(cache=True)
 def calculate_sharpe_ratio(
-    returns: np.ndarray,
-    risk_free_rate: float = 0.04,
-    periods_per_year: int = 252
+    returns: np.ndarray, risk_free_rate: float = 0.04, periods_per_year: int = 252
 ) -> float:
     """
     Calculate annualized Sharpe ratio (R9.3.1).
@@ -255,10 +253,7 @@ def calculate_avg_win_loss_ratio(pnls: np.ndarray) -> float:
 
 
 @njit(cache=True)
-def calculate_total_return(
-    initial_capital: float,
-    final_equity: float
-) -> tuple:
+def calculate_total_return(initial_capital: float, final_equity: float) -> tuple:
     """
     Calculate total and percentage return.
 
@@ -287,10 +282,7 @@ def calculate_total_return(
 
 
 @njit(cache=True)
-def calculate_annualized_return(
-    total_return_pct: float,
-    num_days: int
-) -> float:
+def calculate_annualized_return(total_return_pct: float, num_days: int) -> float:
     """
     Calculate annualized return (CAGR).
 
@@ -325,7 +317,7 @@ def calculate_annualized_return(
 
     # Annualize
     exponent = 365.0 / num_days
-    annualized_ratio = ratio ** exponent
+    annualized_ratio = ratio**exponent
 
     # Convert back to percentage
     annualized_return_pct = (annualized_ratio - 1.0) * 100.0
@@ -375,7 +367,7 @@ class PerformanceMetrics:
         trades_holding_periods: NDArray,
         initial_capital: float,
         risk_free_rate: float = 0.04,
-        periods_per_year: int = 252
+        periods_per_year: int = 252,
     ) -> dict[str, Any]:
         """
         Calculate all performance metrics.
@@ -435,30 +427,27 @@ class PerformanceMetrics:
 
         return {
             # Return metrics
-            'total_return': float(total_return),
-            'total_return_pct': float(total_return_pct),
-            'annualized_return_pct': float(annualized_return_pct),
-            'final_equity': float(final_equity),
-            'initial_capital': float(initial_capital),
-
+            "total_return": float(total_return),
+            "total_return_pct": float(total_return_pct),
+            "annualized_return_pct": float(annualized_return_pct),
+            "final_equity": float(final_equity),
+            "initial_capital": float(initial_capital),
             # Risk metrics
-            'sharpe_ratio': float(sharpe),
-            'max_drawdown_pct': float(max_dd_pct),
-            'max_drawdown_peak_idx': int(peak_idx),
-            'max_drawdown_trough_idx': int(trough_idx),
-
+            "sharpe_ratio": float(sharpe),
+            "max_drawdown_pct": float(max_dd_pct),
+            "max_drawdown_peak_idx": int(peak_idx),
+            "max_drawdown_trough_idx": int(trough_idx),
             # Trade statistics
-            'total_trades': len(trades_pnl),
-            'winning_trades': len(winning_trades),
-            'losing_trades': len(losing_trades),
-            'win_rate': float(win_rate),
-            'avg_win': float(avg_win),
-            'avg_loss': float(avg_loss),
-            'avg_win_loss_ratio': float(win_loss_ratio),
-            'avg_holding_period': float(avg_holding),
-
+            "total_trades": len(trades_pnl),
+            "winning_trades": len(winning_trades),
+            "losing_trades": len(losing_trades),
+            "win_rate": float(win_rate),
+            "avg_win": float(avg_win),
+            "avg_loss": float(avg_loss),
+            "avg_win_loss_ratio": float(win_loss_ratio),
+            "avg_holding_period": float(avg_holding),
             # Risk-free rate used
-            'risk_free_rate': float(risk_free_rate)
+            "risk_free_rate": float(risk_free_rate),
         }
 
     @staticmethod
@@ -483,19 +472,22 @@ class PerformanceMetrics:
         report += "RETURN METRICS:\n"
         report += f"  Initial Capital:      ${metrics['initial_capital']:,.2f}\n"
         report += f"  Final Equity:         ${metrics['final_equity']:,.2f}\n"
-        report += f"  Total Return:         ${metrics['total_return']:,.2f} ({metrics['total_return_pct']:.2f}%)\n"
+        report += (
+            f"  Total Return:         ${metrics['total_return']:,.2f} "
+            f"({metrics['total_return_pct']:.2f}%)\n"
+        )
         report += f"  Annualized Return:    {metrics['annualized_return_pct']:.2f}%\n\n"
 
         report += "RISK METRICS:\n"
         report += f"  Sharpe Ratio:         {metrics['sharpe_ratio']:.2f}\n"
         report += f"  Max Drawdown:         {metrics['max_drawdown_pct']:.2f}%\n"
-        report += f"  Risk-Free Rate:       {metrics['risk_free_rate']*100:.1f}%\n\n"
+        report += f"  Risk-Free Rate:       {metrics['risk_free_rate'] * 100:.1f}%\n\n"
 
         report += "TRADE STATISTICS:\n"
         report += f"  Total Trades:         {metrics['total_trades']}\n"
         report += f"  Winning Trades:       {metrics['winning_trades']}\n"
         report += f"  Losing Trades:        {metrics['losing_trades']}\n"
-        report += f"  Win Rate:             {metrics['win_rate']*100:.2f}%\n"
+        report += f"  Win Rate:             {metrics['win_rate'] * 100:.2f}%\n"
         report += f"  Avg Win:              ${metrics['avg_win']:.2f}\n"
         report += f"  Avg Loss:             ${metrics['avg_loss']:.2f}\n"
         report += f"  Avg Win/Loss Ratio:   {metrics['avg_win_loss_ratio']:.2f}\n"
@@ -527,14 +519,14 @@ class PerformanceMetrics:
             Pass/fail for each criterion
         """
         return {
-            'sharpe_ratio_ok': metrics['sharpe_ratio'] > 0.8,
-            'max_drawdown_ok': metrics['max_drawdown_pct'] > -25.0,  # Negative value
-            'win_rate_ok': metrics['win_rate'] > 0.45,
-            'win_loss_ratio_ok': metrics['avg_win_loss_ratio'] > 1.5,
-            'all_criteria_met': (
-                metrics['sharpe_ratio'] > 0.8 and
-                metrics['max_drawdown_pct'] > -25.0 and
-                metrics['win_rate'] > 0.45 and
-                metrics['avg_win_loss_ratio'] > 1.5
-            )
+            "sharpe_ratio_ok": metrics["sharpe_ratio"] > 0.8,
+            "max_drawdown_ok": metrics["max_drawdown_pct"] > -25.0,  # Negative value
+            "win_rate_ok": metrics["win_rate"] > 0.45,
+            "win_loss_ratio_ok": metrics["avg_win_loss_ratio"] > 1.5,
+            "all_criteria_met": (
+                metrics["sharpe_ratio"] > 0.8
+                and metrics["max_drawdown_pct"] > -25.0
+                and metrics["win_rate"] > 0.45
+                and metrics["avg_win_loss_ratio"] > 1.5
+            ),
         }

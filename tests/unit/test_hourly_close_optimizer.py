@@ -36,9 +36,7 @@ class TestHourlyCloseOptimizerInitialization:
     def test_custom_initialization(self):
         """Test initialization with custom values."""
         optimizer = HourlyCloseOptimizer(
-            signal_check_minute=55,
-            order_submit_minute=56,
-            max_history_size=50
+            signal_check_minute=55, order_submit_minute=56, max_history_size=50
         )
 
         assert optimizer.signal_check_minute == 55
@@ -159,10 +157,7 @@ class TestOrderScheduling:
         time_10_59_30 = datetime(2024, 1, 15, 10, 59, 30)
 
         order = ScheduledOrder(
-            symbol='SPY',
-            side=OrderSide.BUY,
-            quantity=100,
-            order_type=OrderType.MARKET
+            symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
         )
 
         scheduled = optimizer.schedule_order(order, time_10_59_30)
@@ -178,16 +173,29 @@ class TestOrderScheduling:
         time_10_59 = datetime(2024, 1, 15, 10, 59, 0)
 
         orders = [
-            ScheduledOrder(symbol='SPY', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET),
-            ScheduledOrder(symbol='AAPL', side=OrderSide.BUY, quantity=50, order_type=OrderType.LIMIT, limit_price=150.0),
-            ScheduledOrder(symbol='MSFT', side=OrderSide.SELL, quantity=25, order_type=OrderType.MARKET),
+            ScheduledOrder(
+                symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+            ),
+            ScheduledOrder(
+                symbol="AAPL",
+                side=OrderSide.BUY,
+                quantity=50,
+                order_type=OrderType.LIMIT,
+                limit_price=150.0,
+            ),
+            ScheduledOrder(
+                symbol="MSFT", side=OrderSide.SELL, quantity=25, order_type=OrderType.MARKET
+            ),
         ]
 
         for order in orders:
             optimizer.schedule_order(order, time_10_59)
 
         assert len(optimizer.scheduled_orders) == 3
-        assert all(order.scheduled_time == datetime(2024, 1, 15, 11, 0, 0) for order in optimizer.scheduled_orders)
+        assert all(
+            order.scheduled_time == datetime(2024, 1, 15, 11, 0, 0)
+            for order in optimizer.scheduled_orders
+        )
 
     def test_schedule_order_with_metadata(self):
         """Test scheduling order with additional metadata."""
@@ -195,19 +203,19 @@ class TestOrderScheduling:
         time_10_59 = datetime(2024, 1, 15, 10, 59, 0)
 
         order = ScheduledOrder(
-            symbol='SPY',
+            symbol="SPY",
             side=OrderSide.BUY,
             quantity=100,
             order_type=OrderType.MARKET,
             signal_reason="KAMA crossover + high ER",
-            metadata={'regime': 'STRONG_TREND', 'atr': 2.5}
+            metadata={"regime": "STRONG_TREND", "atr": 2.5},
         )
 
         scheduled = optimizer.schedule_order(order, time_10_59)
 
         assert scheduled.signal_reason == "KAMA crossover + high ER"
-        assert scheduled.metadata['regime'] == 'STRONG_TREND'
-        assert scheduled.metadata['atr'] == 2.5
+        assert scheduled.metadata["regime"] == "STRONG_TREND"
+        assert scheduled.metadata["atr"] == 2.5
 
     def test_schedule_order_not_at_minute_59(self):
         """Test scheduling order at times other than minute 59."""
@@ -215,14 +223,18 @@ class TestOrderScheduling:
 
         # Before submit minute (minute 0)
         time_10_45 = datetime(2024, 1, 15, 10, 45, 0)
-        order1 = ScheduledOrder(symbol='SPY', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+        order1 = ScheduledOrder(
+            symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+        )
         scheduled1 = optimizer.schedule_order(order1, time_10_45)
         # Should schedule for next hour since 45 > 0
         assert scheduled1.scheduled_time == datetime(2024, 1, 15, 11, 0, 0)
 
         # After submit minute
         time_10_30 = datetime(2024, 1, 15, 10, 30, 0)
-        order2 = ScheduledOrder(symbol='AAPL', side=OrderSide.BUY, quantity=50, order_type=OrderType.MARKET)
+        order2 = ScheduledOrder(
+            symbol="AAPL", side=OrderSide.BUY, quantity=50, order_type=OrderType.MARKET
+        )
         scheduled2 = optimizer.schedule_order(order2, time_10_30)
         # Should schedule for next hour
         assert scheduled2.scheduled_time == datetime(2024, 1, 15, 11, 0, 0)
@@ -237,12 +249,12 @@ class TestPendingOrders:
         time_10_59 = datetime(2024, 1, 15, 10, 59, 0)
 
         # Schedule 3 orders
-        for i, symbol in enumerate(['SPY', 'AAPL', 'MSFT']):
+        for i, symbol in enumerate(["SPY", "AAPL", "MSFT"]):
             order = ScheduledOrder(
                 symbol=symbol,
                 side=OrderSide.BUY,
                 quantity=100 * (i + 1),
-                order_type=OrderType.MARKET
+                order_type=OrderType.MARKET,
             )
             optimizer.schedule_order(order, time_10_59)
 
@@ -258,7 +270,9 @@ class TestPendingOrders:
         optimizer = HourlyCloseOptimizer()
         time_10_59 = datetime(2024, 1, 15, 10, 59, 0)
 
-        order = ScheduledOrder(symbol='SPY', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+        order = ScheduledOrder(
+            symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+        )
         optimizer.schedule_order(order, time_10_59)
 
         # 15 seconds after scheduled time (within default 60s window)
@@ -272,7 +286,9 @@ class TestPendingOrders:
         optimizer = HourlyCloseOptimizer()
         time_10_59 = datetime(2024, 1, 15, 10, 59, 0)
 
-        order = ScheduledOrder(symbol='SPY', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+        order = ScheduledOrder(
+            symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+        )
         optimizer.schedule_order(order, time_10_59)
 
         # 2 minutes after scheduled time (outside 60s window)
@@ -286,7 +302,9 @@ class TestPendingOrders:
         optimizer = HourlyCloseOptimizer()
         time_10_59 = datetime(2024, 1, 15, 10, 59, 0)
 
-        order = ScheduledOrder(symbol='SPY', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+        order = ScheduledOrder(
+            symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+        )
         optimizer.schedule_order(order, time_10_59)
 
         # 90 seconds after scheduled time
@@ -317,7 +335,9 @@ class TestOrderSubmission:
         optimizer = HourlyCloseOptimizer()
         time_10_59 = datetime(2024, 1, 15, 10, 59, 0)
 
-        order = ScheduledOrder(symbol='SPY', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+        order = ScheduledOrder(
+            symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+        )
         optimizer.schedule_order(order, time_10_59)
 
         assert len(optimizer.scheduled_orders) == 1
@@ -335,8 +355,10 @@ class TestOrderSubmission:
         time_10_59 = datetime(2024, 1, 15, 10, 59, 0)
 
         orders = []
-        for symbol in ['SPY', 'AAPL', 'MSFT']:
-            order = ScheduledOrder(symbol=symbol, side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+        for symbol in ["SPY", "AAPL", "MSFT"]:
+            order = ScheduledOrder(
+                symbol=symbol, side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+            )
             optimizer.schedule_order(order, time_10_59)
             orders.append(order)
 
@@ -354,18 +376,15 @@ class TestOrderSubmission:
         # Submit 10 orders (exceeds max_history_size of 5)
         for i in range(10):
             order = ScheduledOrder(
-                symbol=f'SYM{i}',
-                side=OrderSide.BUY,
-                quantity=100,
-                order_type=OrderType.MARKET
+                symbol=f"SYM{i}", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
             )
             optimizer.schedule_order(order, time_10_59)
             optimizer.mark_order_submitted(order)
 
         # Only last 5 should be kept
         assert len(optimizer.submitted_orders_history) == 5
-        assert optimizer.submitted_orders_history[0].symbol == 'SYM5'
-        assert optimizer.submitted_orders_history[4].symbol == 'SYM9'
+        assert optimizer.submitted_orders_history[0].symbol == "SYM5"
+        assert optimizer.submitted_orders_history[4].symbol == "SYM9"
 
 
 class TestOrderCancellation:
@@ -376,7 +395,9 @@ class TestOrderCancellation:
         optimizer = HourlyCloseOptimizer()
         time_10_59 = datetime(2024, 1, 15, 10, 59, 0)
 
-        order = ScheduledOrder(symbol='SPY', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+        order = ScheduledOrder(
+            symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+        )
         optimizer.schedule_order(order, time_10_59)
 
         assert len(optimizer.scheduled_orders) == 1
@@ -390,7 +411,9 @@ class TestOrderCancellation:
         """Test cancelling an order that doesn't exist."""
         optimizer = HourlyCloseOptimizer()
 
-        order = ScheduledOrder(symbol='SPY', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+        order = ScheduledOrder(
+            symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+        )
         success = optimizer.cancel_order(order)
 
         assert success is False
@@ -403,10 +426,7 @@ class TestOrderCancellation:
         # Schedule 5 orders
         for i in range(5):
             order = ScheduledOrder(
-                symbol=f'SYM{i}',
-                side=OrderSide.BUY,
-                quantity=100,
-                order_type=OrderType.MARKET
+                symbol=f"SYM{i}", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
             )
             optimizer.schedule_order(order, time_10_59)
 
@@ -436,7 +456,9 @@ class TestUtilityMethods:
         assert optimizer.get_scheduled_order_count() == 0
 
         for i in range(3):
-            order = ScheduledOrder(symbol=f'SYM{i}', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+            order = ScheduledOrder(
+                symbol=f"SYM{i}", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+            )
             optimizer.schedule_order(order, time_10_59)
 
         assert optimizer.get_scheduled_order_count() == 3
@@ -449,7 +471,9 @@ class TestUtilityMethods:
         assert optimizer.get_submission_history_count() == 0
 
         for i in range(3):
-            order = ScheduledOrder(symbol=f'SYM{i}', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+            order = ScheduledOrder(
+                symbol=f"SYM{i}", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+            )
             optimizer.schedule_order(order, time_10_59)
             optimizer.mark_order_submitted(order)
 
@@ -462,7 +486,9 @@ class TestUtilityMethods:
 
         # Submit some orders
         for i in range(3):
-            order = ScheduledOrder(symbol=f'SYM{i}', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+            order = ScheduledOrder(
+                symbol=f"SYM{i}", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+            )
             optimizer.schedule_order(order, time_10_59)
             optimizer.mark_order_submitted(order)
 
@@ -550,8 +576,12 @@ class TestIntegrationScenarios:
 
         # 2. Schedule orders based on signals
         orders = [
-            ScheduledOrder(symbol='SPY', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET),
-            ScheduledOrder(symbol='AAPL', side=OrderSide.SELL, quantity=50, order_type=OrderType.MARKET),
+            ScheduledOrder(
+                symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+            ),
+            ScheduledOrder(
+                symbol="AAPL", side=OrderSide.SELL, quantity=50, order_type=OrderType.MARKET
+            ),
         ]
 
         for order in orders:
@@ -581,7 +611,9 @@ class TestIntegrationScenarios:
 
         # Hour 1: 10:59 → 11:00
         time_10_59 = datetime(2024, 1, 15, 10, 59, 0)
-        order1 = ScheduledOrder(symbol='SPY', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+        order1 = ScheduledOrder(
+            symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+        )
         optimizer.schedule_order(order1, time_10_59)
 
         time_11_00 = datetime(2024, 1, 15, 11, 0, 0)
@@ -591,7 +623,9 @@ class TestIntegrationScenarios:
 
         # Hour 2: 11:59 → 12:00
         time_11_59 = datetime(2024, 1, 15, 11, 59, 0)
-        order2 = ScheduledOrder(symbol='AAPL', side=OrderSide.BUY, quantity=50, order_type=OrderType.MARKET)
+        order2 = ScheduledOrder(
+            symbol="AAPL", side=OrderSide.BUY, quantity=50, order_type=OrderType.MARKET
+        )
         optimizer.schedule_order(order2, time_11_59)
 
         time_12_00 = datetime(2024, 1, 15, 12, 0, 0)
@@ -608,7 +642,9 @@ class TestIntegrationScenarios:
 
         # Schedule order at 10:59
         time_10_59 = datetime(2024, 1, 15, 10, 59, 0)
-        order = ScheduledOrder(symbol='SPY', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+        order = ScheduledOrder(
+            symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+        )
         optimizer.schedule_order(order, time_10_59)
 
         # Check much later (11:05, outside 60s window)
@@ -627,7 +663,9 @@ class TestIntegrationScenarios:
 
         # Schedule order at 10:59
         time_10_59 = datetime(2024, 1, 15, 10, 59, 0)
-        order = ScheduledOrder(symbol='SPY', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+        order = ScheduledOrder(
+            symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+        )
         optimizer.schedule_order(order, time_10_59)
 
         # Cancel before 11:00
@@ -648,7 +686,9 @@ class TestEdgeCases:
         optimizer = HourlyCloseOptimizer()
         time_11_00 = datetime(2024, 1, 15, 11, 0, 0)
 
-        order = ScheduledOrder(symbol='SPY', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+        order = ScheduledOrder(
+            symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+        )
         scheduled = optimizer.schedule_order(order, time_11_00)
 
         # Should schedule for next hour
@@ -660,26 +700,26 @@ class TestEdgeCases:
         time_10_59 = datetime(2024, 1, 15, 10, 59, 0)
 
         order = ScheduledOrder(
-            symbol='AAPL',
+            symbol="AAPL",
             side=OrderSide.BUY,
             quantity=50,
             order_type=OrderType.STOP_LIMIT,
             limit_price=150.0,
             stop_price=148.0,
             signal_reason="Strong breakout with high volume",
-            metadata={'atr': 2.5, 'regime': 'STRONG_TREND', 'volatility': 'NORMAL'}
+            metadata={"atr": 2.5, "regime": "STRONG_TREND", "volatility": "NORMAL"},
         )
 
         scheduled = optimizer.schedule_order(order, time_10_59)
 
-        assert scheduled.symbol == 'AAPL'
+        assert scheduled.symbol == "AAPL"
         assert scheduled.side == OrderSide.BUY
         assert scheduled.quantity == 50
         assert scheduled.order_type == OrderType.STOP_LIMIT
         assert scheduled.limit_price == 150.0
         assert scheduled.stop_price == 148.0
         assert scheduled.signal_reason == "Strong breakout with high volume"
-        assert scheduled.metadata['atr'] == 2.5
+        assert scheduled.metadata["atr"] == 2.5
 
     def test_short_order(self):
         """Test scheduling short (sell) order."""
@@ -687,10 +727,7 @@ class TestEdgeCases:
         time_10_59 = datetime(2024, 1, 15, 10, 59, 0)
 
         order = ScheduledOrder(
-            symbol='SPY',
-            side=OrderSide.SELL,
-            quantity=100,
-            order_type=OrderType.MARKET
+            symbol="SPY", side=OrderSide.SELL, quantity=100, order_type=OrderType.MARKET
         )
 
         scheduled = optimizer.schedule_order(order, time_10_59)
@@ -703,7 +740,9 @@ class TestEdgeCases:
         optimizer = HourlyCloseOptimizer()
         time_23_59 = datetime(2024, 1, 15, 23, 59, 0)
 
-        order = ScheduledOrder(symbol='SPY', side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET)
+        order = ScheduledOrder(
+            symbol="SPY", side=OrderSide.BUY, quantity=100, order_type=OrderType.MARKET
+        )
         scheduled = optimizer.schedule_order(order, time_23_59)
 
         # Should schedule for next day at 00:00

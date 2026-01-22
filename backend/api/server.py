@@ -60,8 +60,10 @@ logger = logging.getLogger(__name__)
 # Pydantic Models (Request/Response schemas)
 # ============================================================================
 
+
 class PositionResponse(BaseModel):
     """Response model for a position"""
+
     id: int | None
     symbol: str
     side: int  # 1 = LONG, -1 = SHORT
@@ -77,6 +79,7 @@ class PositionResponse(BaseModel):
 
 class TradeResponse(BaseModel):
     """Response model for a trade"""
+
     id: int | None
     symbol: str
     side: int
@@ -96,6 +99,7 @@ class TradeResponse(BaseModel):
 
 class TradeHistoryResponse(BaseModel):
     """Paginated trade history response"""
+
     trades: list[TradeResponse]
     total_count: int
     page: int
@@ -105,6 +109,7 @@ class TradeHistoryResponse(BaseModel):
 
 class AccountInfoResponse(BaseModel):
     """Account information response"""
+
     equity: float
     cash: float
     buying_power: float
@@ -115,6 +120,7 @@ class AccountInfoResponse(BaseModel):
 
 class SystemStatusResponse(BaseModel):
     """System health status response"""
+
     status: str  # "ACTIVE", "DELAYED", "OFFLINE"
     uptime_seconds: float
     last_update: str
@@ -125,6 +131,7 @@ class SystemStatusResponse(BaseModel):
 
 class BacktestRequest(BaseModel):
     """Backtest configuration request"""
+
     symbol: str = Field(..., description="Symbol to backtest (e.g., SPY)")
     start_date: str = Field(..., description="Start date (YYYY-MM-DD)")
     end_date: str = Field(..., description="End date (YYYY-MM-DD)")
@@ -137,6 +144,7 @@ class BacktestRequest(BaseModel):
 
 class BacktestResultResponse(BaseModel):
     """Backtest results response"""
+
     symbol: str
     start_date: str
     end_date: str
@@ -157,6 +165,7 @@ class BacktestResultResponse(BaseModel):
 
 class PriceUpdate(BaseModel):
     """WebSocket price update message"""
+
     symbol: str
     price: float
     timestamp: str
@@ -167,8 +176,10 @@ class PriceUpdate(BaseModel):
 # Global State Management
 # ============================================================================
 
+
 class AppState:
     """Global application state"""
+
     def __init__(self):
         self.sqlite_store: SQLiteStore | None = None
         self.websocket_clients: list[WebSocket] = []
@@ -203,6 +214,7 @@ app_state = AppState()
 # ============================================================================
 # Lifespan Context Manager (Startup/Shutdown)
 # ============================================================================
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -250,14 +262,16 @@ async def lifespan(app: FastAPI):
                 app_state.test_spy_data = []
                 for _, row in df.iterrows():
                     try:
-                        app_state.test_spy_data.append({
-                            "timestamp": str(row["Date"]),
-                            "open": float(row["open"]),
-                            "high": float(row["high"]),
-                            "low": float(row["low"]),
-                            "close": float(row["close"]),
-                            "volume": int(row["volume"]),
-                        })
+                        app_state.test_spy_data.append(
+                            {
+                                "timestamp": str(row["Date"]),
+                                "open": float(row["open"]),
+                                "high": float(row["high"]),
+                                "low": float(row["low"]),
+                                "close": float(row["close"]),
+                                "volume": int(row["volume"]),
+                            }
+                        )
                     except (ValueError, KeyError):
                         continue  # Skip invalid rows
 
@@ -332,6 +346,7 @@ app.add_middleware(
 # Request/Response Logging Middleware
 # ============================================================================
 
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     """
@@ -355,7 +370,7 @@ async def log_requests(request: Request, call_next):
             "path": request.url.path,
             "query_params": str(request.query_params),
             "client_ip": request.client.host if request.client else "unknown",
-        }
+        },
     )
 
     # Process request
@@ -372,7 +387,7 @@ async def log_requests(request: Request, call_next):
                 "path": request.url.path,
                 "status_code": response.status_code,
                 "process_time_ms": round(process_time * 1000, 2),
-            }
+            },
         )
 
         # Record metrics
@@ -395,7 +410,7 @@ async def log_requests(request: Request, call_next):
                 "process_time_ms": round(process_time * 1000, 2),
                 "error": str(e),
             },
-            exc_info=True
+            exc_info=True,
         )
         raise
 
@@ -403,6 +418,7 @@ async def log_requests(request: Request, call_next):
 # ============================================================================
 # REST API Endpoints
 # ============================================================================
+
 
 @app.get("/")
 async def root():
@@ -418,7 +434,7 @@ async def root():
             "status": "/api/status",
             "backtest": "/api/backtest",
             "websocket": "/ws/prices",
-        }
+        },
     }
 
 
@@ -439,19 +455,21 @@ async def get_positions():
     # Convert to response models
     response = []
     for pos in positions:
-        response.append(PositionResponse(
-            id=pos.id,
-            symbol=pos.symbol,
-            side=pos.side,
-            shares=pos.shares,
-            entry_price=pos.entry_price,
-            current_price=pos.current_price,
-            unrealized_pnl=pos.unrealized_pnl,
-            stop_loss=pos.stop_loss,
-            take_profit=pos.take_profit,
-            entry_time=pos.entry_time,
-            updated_at=pos.updated_at,
-        ))
+        response.append(
+            PositionResponse(
+                id=pos.id,
+                symbol=pos.symbol,
+                side=pos.side,
+                shares=pos.shares,
+                entry_price=pos.entry_price,
+                current_price=pos.current_price,
+                unrealized_pnl=pos.unrealized_pnl,
+                stop_loss=pos.stop_loss,
+                take_profit=pos.take_profit,
+                entry_time=pos.entry_time,
+                updated_at=pos.updated_at,
+            )
+        )
 
     app_state.update_timestamp()
     return response
@@ -461,7 +479,9 @@ async def get_positions():
 async def get_trades(
     page: int = Query(default=1, ge=1, description="Page number (1-indexed)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Trades per page"),
-    status: str | None = Query(default=None, description="Filter by status (OPEN, CLOSED, CANCELLED)"),
+    status: str | None = Query(
+        default=None, description="Filter by status (OPEN, CLOSED, CANCELLED)"
+    ),
 ):
     """
     Get trade history with pagination.
@@ -482,7 +502,11 @@ async def get_trades(
 
     # Apply status filter if provided
     if status:
-        status_map = {"OPEN": TradeStatus.OPEN, "CLOSED": TradeStatus.CLOSED, "CANCELLED": TradeStatus.CANCELLED}
+        status_map = {
+            "OPEN": TradeStatus.OPEN,
+            "CLOSED": TradeStatus.CLOSED,
+            "CANCELLED": TradeStatus.CANCELLED,
+        }
         if status.upper() not in status_map:
             raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
 
@@ -499,23 +523,25 @@ async def get_trades(
     # Convert to response models
     trades_response = []
     for trade in page_trades:
-        trades_response.append(TradeResponse(
-            id=trade.id,
-            symbol=trade.symbol,
-            side=trade.side,
-            entry_price=trade.entry_price,
-            entry_time=trade.entry_time,
-            exit_price=trade.exit_price,
-            exit_time=trade.exit_time,
-            shares=trade.shares,
-            stop_loss=trade.stop_loss,
-            take_profit=trade.take_profit,
-            realized_pnl=trade.realized_pnl,
-            status=trade.status,
-            strategy=trade.strategy,
-            regime=trade.regime,
-            signal_reason=trade.signal_reason,
-        ))
+        trades_response.append(
+            TradeResponse(
+                id=trade.id,
+                symbol=trade.symbol,
+                side=trade.side,
+                entry_price=trade.entry_price,
+                entry_time=trade.entry_time,
+                exit_price=trade.exit_price,
+                exit_time=trade.exit_time,
+                shares=trade.shares,
+                stop_loss=trade.stop_loss,
+                take_profit=trade.take_profit,
+                realized_pnl=trade.realized_pnl,
+                status=trade.status,
+                strategy=trade.strategy,
+                regime=trade.regime,
+                signal_reason=trade.signal_reason,
+            )
+        )
 
     app_state.update_timestamp()
 
@@ -547,7 +573,9 @@ async def get_account_info():
 
     # Get closed trades to calculate realized P&L
     recent_trades = await app_state.sqlite_store.get_recent_trades(limit=1000)
-    closed_trades = [t for t in recent_trades if t.status == TradeStatus.CLOSED and t.realized_pnl is not None]
+    closed_trades = [
+        t for t in recent_trades if t.status == TradeStatus.CLOSED and t.realized_pnl is not None
+    ]
     total_realized_pnl = sum(t.realized_pnl for t in closed_trades)
 
     # Calculate daily P&L (trades closed today)
@@ -560,7 +588,9 @@ async def get_account_info():
                 daily_pnl += trade.realized_pnl
 
     # Get initial capital from settings (default: $10,000)
-    initial_capital_setting = await app_state.sqlite_store.get_setting("initial_capital", default="10000.0")
+    initial_capital_setting = await app_state.sqlite_store.get_setting(
+        "initial_capital", default="10000.0"
+    )
     initial_capital = float(initial_capital_setting)
 
     # Calculate equity: initial capital + realized P&L + unrealized P&L
@@ -666,7 +696,7 @@ async def run_backtest(config: BacktestRequest):
     # Generate timestamps
     timestamps = [start_dt.strftime("%Y-%m-%d")]
     for i in range(1, num_bars):
-        timestamps.append((start_dt + np.timedelta64(i, 'D')).strftime("%Y-%m-%d"))
+        timestamps.append((start_dt + np.timedelta64(i, "D")).strftime("%Y-%m-%d"))
 
     # Create BacktestConfig
     bt_config = BacktestConfig(
@@ -737,6 +767,7 @@ async def run_backtest(config: BacktestRequest):
 # WebSocket Endpoint
 # ============================================================================
 
+
 @app.websocket("/ws/prices")
 async def websocket_prices(websocket: WebSocket):
     """
@@ -753,7 +784,7 @@ async def websocket_prices(websocket: WebSocket):
     if not validate_websocket_auth(websocket.headers):
         logger.warning(
             "WebSocket connection rejected: invalid authentication",
-            extra={"client": websocket.client}
+            extra={"client": websocket.client},
         )
         await websocket.close(code=4001, reason="Authentication failed")
         return
@@ -762,16 +793,20 @@ async def websocket_prices(websocket: WebSocket):
     app_state.websocket_clients.append(websocket)
     app_state.data_feed_active = True
 
-    logger.info("WebSocket client connected", extra={"total_clients": len(app_state.websocket_clients)})
+    logger.info(
+        "WebSocket client connected", extra={"total_clients": len(app_state.websocket_clients)}
+    )
 
     try:
         # Send initial connection message
-        await websocket.send_json({
-            "type": "connection",
-            "status": "connected",
-            "message": "WebSocket connection established",
-            "timestamp": datetime.now().isoformat(),
-        })
+        await websocket.send_json(
+            {
+                "type": "connection",
+                "status": "connected",
+                "message": "WebSocket connection established",
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
         # Simulate price updates (in production, connect to real data feed)
         # For demonstration, send synthetic price updates every 5 seconds
@@ -804,12 +839,15 @@ async def websocket_prices(websocket: WebSocket):
         if len(app_state.websocket_clients) == 0:
             app_state.data_feed_active = False
 
-        logger.info("WebSocket client removed", extra={"total_clients": len(app_state.websocket_clients)})
+        logger.info(
+            "WebSocket client removed", extra={"total_clients": len(app_state.websocket_clients)}
+        )
 
 
 # ============================================================================
 # Health Check Endpoint
 # ============================================================================
+
 
 @app.get("/metrics")
 async def metrics():
@@ -839,7 +877,12 @@ async def metrics():
     add_metric("fluxhero_uptime_seconds", uptime_seconds, "System uptime in seconds", "counter")
 
     # Request metrics
-    add_metric("fluxhero_requests_total", app_state.request_count, "Total number of HTTP requests", "counter")
+    add_metric(
+        "fluxhero_requests_total",
+        app_state.request_count,
+        "Total number of HTTP requests",
+        "counter",
+    )
 
     # Request latency percentiles
     if app_state.request_latencies:
@@ -849,10 +892,26 @@ async def metrics():
         p95 = float(np.percentile(latencies, 95))
         p99 = float(np.percentile(latencies, 99))
 
-        add_metric("fluxhero_request_latency_p50_ms", p50, "Request latency 50th percentile in milliseconds")
-        add_metric("fluxhero_request_latency_p90_ms", p90, "Request latency 90th percentile in milliseconds")
-        add_metric("fluxhero_request_latency_p95_ms", p95, "Request latency 95th percentile in milliseconds")
-        add_metric("fluxhero_request_latency_p99_ms", p99, "Request latency 99th percentile in milliseconds")
+        add_metric(
+            "fluxhero_request_latency_p50_ms",
+            p50,
+            "Request latency 50th percentile in milliseconds",
+        )
+        add_metric(
+            "fluxhero_request_latency_p90_ms",
+            p90,
+            "Request latency 90th percentile in milliseconds",
+        )
+        add_metric(
+            "fluxhero_request_latency_p95_ms",
+            p95,
+            "Request latency 95th percentile in milliseconds",
+        )
+        add_metric(
+            "fluxhero_request_latency_p99_ms",
+            p99,
+            "Request latency 99th percentile in milliseconds",
+        )
 
     # Order/Trade counts from database
     if app_state.sqlite_store:
@@ -860,7 +919,9 @@ async def metrics():
             # Get recent trades to calculate metrics (limit to last 1000 for performance)
             all_trades = await app_state.sqlite_store.get_recent_trades(limit=1000)
             total_trades = len(all_trades)
-            add_metric("fluxhero_orders_total", total_trades, "Total number of orders/trades", "counter")
+            add_metric(
+                "fluxhero_orders_total", total_trades, "Total number of orders/trades", "counter"
+            )
 
             # Calculate current drawdown from trades
             if all_trades:
@@ -877,7 +938,9 @@ async def metrics():
                         elif peak_equity > 0:
                             current_drawdown_pct = ((peak_equity - equity) / peak_equity) * 100.0
 
-                add_metric("fluxhero_drawdown_percent", current_drawdown_pct, "Current drawdown percentage")
+                add_metric(
+                    "fluxhero_drawdown_percent", current_drawdown_pct, "Current drawdown percentage"
+                )
                 add_metric("fluxhero_equity", equity, "Current equity value")
 
             # Win rate
@@ -894,16 +957,24 @@ async def metrics():
         # Sanitize path for Prometheus label
         safe_path = path.replace("/", "_").replace("-", "_").strip("_")
         if safe_path:
-            lines.append('# HELP fluxhero_requests_by_path_total Requests by endpoint path')
-            lines.append('# TYPE fluxhero_requests_by_path_total counter')
+            lines.append("# HELP fluxhero_requests_by_path_total Requests by endpoint path")
+            lines.append("# TYPE fluxhero_requests_by_path_total counter")
             lines.append(f'fluxhero_requests_by_path_total{{path="{path}"}} {count}')
             lines.append("")
 
     # WebSocket connections
-    add_metric("fluxhero_websocket_connections", len(app_state.websocket_clients), "Active WebSocket connections")
+    add_metric(
+        "fluxhero_websocket_connections",
+        len(app_state.websocket_clients),
+        "Active WebSocket connections",
+    )
 
     # Data feed status
-    add_metric("fluxhero_data_feed_active", 1.0 if app_state.data_feed_active else 0.0, "Data feed active status (1=active, 0=inactive)")
+    add_metric(
+        "fluxhero_data_feed_active",
+        1.0 if app_state.data_feed_active else 0.0,
+        "Data feed active status (1=active, 0=inactive)",
+    )
 
     # Return as plain text with Prometheus content type
     return Response(content="\n".join(lines), media_type="text/plain; version=0.0.4")
@@ -914,7 +985,7 @@ async def get_test_candles(
     symbol: str = Query(
         default="SPY",
         description="Symbol to fetch (currently only SPY is supported)",
-    )
+    ),
 ):
     """
     TEST ENDPOINT: Get historical candle data for development.

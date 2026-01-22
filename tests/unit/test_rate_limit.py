@@ -40,7 +40,7 @@ async def test_rate_limiter_allows_requests_under_limit():
     # First 5 requests should be allowed
     for i in range(5):
         allowed = await limiter.is_allowed("test_client")
-        assert allowed, f"Request {i+1} should be allowed"
+        assert allowed, f"Request {i + 1} should be allowed"
 
 
 @pytest.mark.asyncio
@@ -148,11 +148,7 @@ async def test_rate_limiter_reset_all():
 # ============================================================================
 
 
-def create_test_app(
-    max_requests: int = 5,
-    window_seconds: int = 60,
-    exclude_paths: list = None
-):
+def create_test_app(max_requests: int = 5, window_seconds: int = 60, exclude_paths: list = None):
     """Helper to create FastAPI app with rate limiting middleware."""
     app = FastAPI()
 
@@ -183,7 +179,7 @@ def test_middleware_allows_requests_under_limit():
     # First 3 requests should succeed
     for i in range(3):
         response = client.get("/api/test")
-        assert response.status_code == 200, f"Request {i+1} should succeed"
+        assert response.status_code == 200, f"Request {i + 1} should succeed"
         assert "X-RateLimit-Limit" in response.headers
         assert response.headers["X-RateLimit-Limit"] == "3"
 
@@ -224,11 +220,7 @@ def test_middleware_retry_after_header():
 
 def test_middleware_excluded_paths():
     """Test that excluded paths bypass rate limiting."""
-    app = create_test_app(
-        max_requests=1,
-        window_seconds=60,
-        exclude_paths=["/health"]
-    )
+    app = create_test_app(max_requests=1, window_seconds=60, exclude_paths=["/health"])
     client = TestClient(app)
 
     # Use up limit on API endpoint

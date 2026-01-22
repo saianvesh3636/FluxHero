@@ -45,8 +45,6 @@ def cleanup_logging():
     root.setLevel(logging.WARNING)
 
 
-
-
 class TestStructuredFormatter:
     """Tests for StructuredFormatter."""
 
@@ -105,6 +103,7 @@ class TestStructuredFormatter:
             raise ValueError("Test error")
         except ValueError:
             import sys
+
             exc_info = sys.exc_info()
 
             record = logging.LogRecord(

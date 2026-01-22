@@ -74,6 +74,7 @@ def client(test_db):
 # Root Endpoint Tests
 # ============================================================================
 
+
 def test_root_endpoint(client):
     """Test root endpoint returns API info"""
     response = client.get("/")
@@ -97,6 +98,7 @@ def test_health_check(client):
 # ============================================================================
 # Positions Endpoint Tests
 # ============================================================================
+
 
 def test_get_positions_empty(client):
     """Test getting positions when none exist"""
@@ -154,6 +156,7 @@ def test_get_positions_with_data(client, test_db):
 # ============================================================================
 # Trades Endpoint Tests
 # ============================================================================
+
 
 def test_get_trades_empty(client):
     """Test getting trades when none exist"""
@@ -303,6 +306,7 @@ def test_get_trades_invalid_status(client):
 # Account Endpoint Tests
 # ============================================================================
 
+
 def test_get_account_info_empty(client):
     """Test getting account info with no trades/positions"""
     response = client.get("/api/account")
@@ -373,6 +377,7 @@ def test_get_account_info_with_trades(client, test_db):
 # System Status Endpoint Tests
 # ============================================================================
 
+
 def test_get_system_status_active(client):
     """Test system status when active"""
     # Update timestamp to simulate recent activity
@@ -415,6 +420,7 @@ def test_get_system_status_offline(client):
 # Backtest Endpoint Tests
 # ============================================================================
 
+
 def test_run_backtest_invalid_dates(client):
     """Test backtest with invalid date format"""
     backtest_config = {
@@ -446,6 +452,7 @@ def test_run_backtest_end_before_start(client):
 # ============================================================================
 # WebSocket Endpoint Tests
 # ============================================================================
+
 
 def test_websocket_connection(client):
     """Test WebSocket connection and message reception"""
@@ -479,6 +486,7 @@ def test_websocket_multiple_clients(client):
 # ============================================================================
 # Edge Case Tests
 # ============================================================================
+
 
 def test_pagination_invalid_page(client):
     """Test pagination with invalid page number"""
@@ -524,6 +532,7 @@ def test_server_uses_config_settings():
 # Test Data Endpoint Tests
 # ============================================================================
 
+
 def test_get_test_candles_spy(client):
     """Test getting SPY test candle data"""
     # Ensure we're not in production mode
@@ -534,12 +543,7 @@ def test_get_test_candles_spy(client):
     os.environ["ENV"] = "development"
 
     # Load test data manually for the test
-    spy_csv_path = (
-        Path(__file__).parent.parent.parent
-        / "backend"
-        / "test_data"
-        / "spy_daily.csv"
-    )
+    spy_csv_path = Path(__file__).parent.parent.parent / "backend" / "test_data" / "spy_daily.csv"
 
     if spy_csv_path.exists():
         df = pd.read_csv(spy_csv_path, skiprows=[1])
@@ -556,14 +560,16 @@ def test_get_test_candles_spy(client):
         app_state.test_spy_data = []
         for _, row in df.iterrows():
             try:
-                app_state.test_spy_data.append({
-                    "timestamp": str(row["Date"]),
-                    "open": float(row["open"]),
-                    "high": float(row["high"]),
-                    "low": float(row["low"]),
-                    "close": float(row["close"]),
-                    "volume": int(row["volume"]),
-                })
+                app_state.test_spy_data.append(
+                    {
+                        "timestamp": str(row["Date"]),
+                        "open": float(row["open"]),
+                        "high": float(row["high"]),
+                        "low": float(row["low"]),
+                        "close": float(row["close"]),
+                        "volume": int(row["volume"]),
+                    }
+                )
             except (ValueError, KeyError):
                 continue
 
@@ -593,6 +599,7 @@ def test_get_test_candles_spy(client):
 def test_get_test_candles_production_disabled(client):
     """Test that test endpoint is disabled in production"""
     import os
+
     os.environ["ENV"] = "production"
 
     response = client.get("/api/test/candles?symbol=SPY")
@@ -606,6 +613,7 @@ def test_get_test_candles_production_disabled(client):
 def test_get_test_candles_invalid_symbol(client):
     """Test that only SPY symbol is supported"""
     import os
+
     os.environ["ENV"] = "development"
 
     response = client.get("/api/test/candles?symbol=AAPL")
@@ -616,6 +624,7 @@ def test_get_test_candles_invalid_symbol(client):
 def test_get_test_candles_no_data_loaded(client):
     """Test endpoint when test data is not loaded"""
     import os
+
     os.environ["ENV"] = "development"
 
     # Clear test data
@@ -629,6 +638,7 @@ def test_get_test_candles_no_data_loaded(client):
 # ============================================================================
 # Success Criteria Tests
 # ============================================================================
+
 
 def test_all_endpoints_accessible(client):
     """Test that all documented endpoints are accessible"""
@@ -659,6 +669,7 @@ def test_api_documentation(client):
 # ============================================================================
 # Logging Tests
 # ============================================================================
+
 
 def test_server_startup_logging(test_db, caplog):
     """Test that server startup logs are generated correctly"""
@@ -734,12 +745,15 @@ def test_websocket_disconnection_logging(client, caplog):
 
         # Give it a moment to process the disconnect
         import time
+
         time.sleep(0.1)
 
     # Verify disconnection logs (either explicit disconnect or client removal)
-    assert ("WebSocket client disconnected" in caplog.text or
-            "WebSocket client removed" in caplog.text or
-            "total_clients" in caplog.text)
+    assert (
+        "WebSocket client disconnected" in caplog.text
+        or "WebSocket client removed" in caplog.text
+        or "total_clients" in caplog.text
+    )
 
 
 def test_websocket_error_logging(client, caplog):
@@ -750,7 +764,8 @@ def test_websocket_error_logging(client, caplog):
         # WebSocket errors would be logged at ERROR level with exc_info=True
         # We verify the logger is configured correctly
         from backend.api import server
-        assert hasattr(server, 'logger')
+
+        assert hasattr(server, "logger")
         assert isinstance(server.logger, logging.Logger)
 
 
@@ -762,15 +777,15 @@ def test_no_print_statements_in_server():
 
     # Check that no print( statements exist in the code
     # (excluding comments and docstrings)
-    lines = content.split('\n')
+    lines = content.split("\n")
     for line_num, line in enumerate(lines, 1):
         # Skip comments and docstrings
         stripped = line.strip()
-        if stripped.startswith('#') or stripped.startswith('"""') or stripped.startswith("'''"):
+        if stripped.startswith("#") or stripped.startswith('"""') or stripped.startswith("'''"):
             continue
 
         # Check for print statements
-        if 'print(' in line:
+        if "print(" in line:
             pytest.fail(f"Found print() statement at line {line_num}: {line}")
 
 
@@ -779,16 +794,17 @@ def test_logger_exists():
     from backend.api import server
 
     # Verify logger exists
-    assert hasattr(server, 'logger')
+    assert hasattr(server, "logger")
     assert isinstance(server.logger, logging.Logger)
 
     # Verify logger name follows the pattern
-    assert server.logger.name == 'backend.api.server'
+    assert server.logger.name == "backend.api.server"
 
 
 # ============================================================================
 # Request/Response Logging Middleware Tests
 # ============================================================================
+
 
 def test_request_logging_middleware(client, caplog):
     """Test that requests are logged with proper context"""
@@ -803,9 +819,9 @@ def test_request_logging_middleware(client, caplog):
     incoming_logs = [r for r in caplog.records if "Incoming request" in r.message]
     assert len(incoming_logs) > 0
     incoming_log = incoming_logs[0]
-    assert hasattr(incoming_log, 'method')
+    assert hasattr(incoming_log, "method")
     assert incoming_log.method == "GET"
-    assert hasattr(incoming_log, 'path')
+    assert hasattr(incoming_log, "path")
     assert incoming_log.path == "/api/status"
 
     # Verify request completed log
@@ -813,7 +829,7 @@ def test_request_logging_middleware(client, caplog):
     completed_logs = [r for r in caplog.records if "Request completed" in r.message]
     assert len(completed_logs) > 0
     completed_log = completed_logs[0]
-    assert hasattr(completed_log, 'status_code')
+    assert hasattr(completed_log, "status_code")
     assert completed_log.status_code == 200
 
 
@@ -832,7 +848,7 @@ def test_request_logging_includes_request_id(client, caplog):
     # Verify request ID appears in log records
     incoming_logs = [r for r in caplog.records if "Incoming request" in r.message]
     assert len(incoming_logs) > 0
-    assert hasattr(incoming_logs[0], 'request_id')
+    assert hasattr(incoming_logs[0], "request_id")
     assert incoming_logs[0].request_id == request_id
 
 
@@ -850,7 +866,7 @@ def test_request_logging_includes_process_time(client, caplog):
     # Verify process time in log records
     completed_logs = [r for r in caplog.records if "Request completed" in r.message]
     assert len(completed_logs) > 0
-    assert hasattr(completed_logs[0], 'process_time_ms')
+    assert hasattr(completed_logs[0], "process_time_ms")
     assert completed_logs[0].process_time_ms >= 0
 
 
@@ -863,9 +879,9 @@ def test_request_logging_with_query_params(client, caplog):
     # Verify query params in log records
     incoming_logs = [r for r in caplog.records if "Incoming request" in r.message]
     assert len(incoming_logs) > 0
-    assert hasattr(incoming_logs[0], 'query_params')
+    assert hasattr(incoming_logs[0], "query_params")
     # Query params are logged as string
-    assert 'page' in incoming_logs[0].query_params
+    assert "page" in incoming_logs[0].query_params
 
 
 def test_request_logging_on_error(client, caplog):
@@ -889,7 +905,7 @@ def test_request_logging_different_methods(client, caplog):
     # Verify GET method is logged in log records
     incoming_logs = [r for r in caplog.records if "Incoming request" in r.message]
     assert len(incoming_logs) >= 1
-    methods = [r.method for r in incoming_logs if hasattr(r, 'method')]
+    methods = [r.method for r in incoming_logs if hasattr(r, "method")]
     assert "GET" in methods
 
 
@@ -928,12 +944,13 @@ def test_middleware_logs_client_ip(client, caplog):
     # Verify client IP field exists in log records (may be testclient or unknown)
     incoming_logs = [r for r in caplog.records if "Incoming request" in r.message]
     assert len(incoming_logs) > 0
-    assert hasattr(incoming_logs[0], 'client_ip')
+    assert hasattr(incoming_logs[0], "client_ip")
 
 
 # ============================================================================
 # Metrics Endpoint Tests
 # ============================================================================
+
 
 def test_metrics_endpoint_format(client):
     """Test that /metrics endpoint returns Prometheus-compatible format"""

@@ -39,7 +39,7 @@ async def test_rate_limiter_allows_requests_under_limit():
     # Should allow 5 requests
     for i in range(5):
         allowed = await limiter.is_allowed("client1")
-        assert allowed is True, f"Request {i+1} should be allowed"
+        assert allowed is True, f"Request {i + 1} should be allowed"
 
 
 @pytest.mark.asyncio
@@ -194,7 +194,7 @@ def create_test_app_with_rate_limiting(max_requests=5, window_seconds=60, exclud
         RateLimitMiddleware,
         max_requests=max_requests,
         window_seconds=window_seconds,
-        exclude_paths=exclude_paths or []
+        exclude_paths=exclude_paths or [],
     )
 
     @app.get("/api/test")
@@ -220,7 +220,7 @@ def test_middleware_allows_requests_under_limit():
         # Make 5 requests - all should succeed
         for i in range(5):
             response = client.get("/api/test")
-            assert response.status_code == 200, f"Request {i+1} should succeed"
+            assert response.status_code == 200, f"Request {i + 1} should succeed"
             assert "X-RateLimit-Limit" in response.headers
             assert response.headers["X-RateLimit-Limit"] == "5"
             assert response.headers["X-RateLimit-Window"] == "60"
@@ -268,9 +268,7 @@ def test_middleware_retry_after_header():
 def test_middleware_excludes_paths():
     """Test that excluded paths bypass rate limiting"""
     app = create_test_app_with_rate_limiting(
-        max_requests=2,
-        window_seconds=60,
-        exclude_paths=["/health"]
+        max_requests=2, window_seconds=60, exclude_paths=["/health"]
     )
 
     with TestClient(app) as client:
@@ -364,9 +362,7 @@ def test_middleware_works_with_multiple_endpoints():
 def test_middleware_configuration():
     """Test middleware with custom configuration"""
     app = create_test_app_with_rate_limiting(
-        max_requests=10,
-        window_seconds=30,
-        exclude_paths=["/health", "/metrics"]
+        max_requests=10, window_seconds=30, exclude_paths=["/health", "/metrics"]
     )
 
     with TestClient(app) as client:
@@ -436,9 +432,7 @@ def test_rate_limiting_success_criteria():
     5. Adds rate limit headers
     """
     app = create_test_app_with_rate_limiting(
-        max_requests=3,
-        window_seconds=60,
-        exclude_paths=["/health"]
+        max_requests=3, window_seconds=60, exclude_paths=["/health"]
     )
 
     with TestClient(app) as client:

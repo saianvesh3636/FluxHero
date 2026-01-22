@@ -28,9 +28,9 @@ def test_spy_backtest_completes_successfully():
     """Test that 1-year SPY backtest completes without errors."""
     # Generate synthetic data
     data = generate_synthetic_spy_data(252)
-    bars = data['bars']
-    timestamps = data['timestamps']
-    volumes = data['volumes']
+    bars = data["bars"]
+    timestamps = data["timestamps"]
+    volumes = data["volumes"]
 
     # Verify data is valid
     assert bars.shape[0] == 252
@@ -56,7 +56,7 @@ def test_spy_backtest_completes_successfully():
     state = engine.run(
         bars=bars,
         strategy_func=strategy.get_orders,
-        symbol='SPY',
+        symbol="SPY",
         timestamps=timestamps,
         volumes=volumes,
     )
@@ -69,7 +69,9 @@ def test_spy_backtest_completes_successfully():
     # Calculate metrics
     equity_curve = np.array(state.equity_curve)
     trades_pnl = np.array([t.pnl for t in state.trades]) if state.trades else np.array([])
-    trades_holding_periods = np.array([t.holding_bars for t in state.trades]) if state.trades else np.array([])
+    trades_holding_periods = (
+        np.array([t.holding_bars for t in state.trades]) if state.trades else np.array([])
+    )
 
     metrics = PerformanceMetrics.calculate_all_metrics(
         equity_curve=equity_curve,
@@ -80,20 +82,20 @@ def test_spy_backtest_completes_successfully():
     )
 
     # Verify metrics are calculated
-    assert 'total_return_pct' in metrics
-    assert 'sharpe_ratio' in metrics
-    assert 'max_drawdown_pct' in metrics
-    assert 'win_rate' in metrics
-    assert 'total_trades' in metrics
+    assert "total_return_pct" in metrics
+    assert "sharpe_ratio" in metrics
+    assert "max_drawdown_pct" in metrics
+    assert "win_rate" in metrics
+    assert "total_trades" in metrics
 
     # Verify metrics are reasonable (not NaN or infinite)
-    assert not np.isnan(metrics['total_return_pct'])
-    assert not np.isnan(metrics['sharpe_ratio'])
-    assert not np.isnan(metrics['max_drawdown_pct'])
-    assert not np.isnan(metrics['win_rate'])
+    assert not np.isnan(metrics["total_return_pct"])
+    assert not np.isnan(metrics["sharpe_ratio"])
+    assert not np.isnan(metrics["max_drawdown_pct"])
+    assert not np.isnan(metrics["win_rate"])
 
     # Verify final equity is positive
-    assert metrics['final_equity'] > 0
+    assert metrics["final_equity"] > 0
 
     # Print summary for debugging
     print("\n" + "=" * 60)
@@ -112,7 +114,7 @@ def test_strategy_generates_signals():
     """Test that the strategy generates signals on synthetic data."""
     # Generate data with clear trends
     data = generate_synthetic_spy_data(252)
-    bars = data['bars']
+    bars = data["bars"]
 
     # Initialize strategy
     strategy = DualModeStrategy(bars)
@@ -126,6 +128,7 @@ def test_strategy_generates_signals():
 
     # Count signals
     from backend.strategy.dual_mode import SIGNAL_NONE
+
     trend_signal_count = np.sum(strategy.trend_signals != SIGNAL_NONE)
     mr_signal_count = np.sum(strategy.mr_signals != SIGNAL_NONE)
 
@@ -146,9 +149,9 @@ def test_backtest_metrics_meet_minimum_thresholds():
     """
     # Generate data
     data = generate_synthetic_spy_data(252)
-    bars = data['bars']
-    timestamps = data['timestamps']
-    volumes = data['volumes']
+    bars = data["bars"]
+    timestamps = data["timestamps"]
+    volumes = data["volumes"]
 
     # Configure backtest
     config = BacktestConfig(
@@ -166,7 +169,7 @@ def test_backtest_metrics_meet_minimum_thresholds():
     state = engine.run(
         bars=bars,
         strategy_func=strategy.get_orders,
-        symbol='SPY',
+        symbol="SPY",
         timestamps=timestamps,
         volumes=volumes,
     )
@@ -174,7 +177,9 @@ def test_backtest_metrics_meet_minimum_thresholds():
     # Calculate metrics
     equity_curve = np.array(state.equity_curve)
     trades_pnl = np.array([t.pnl for t in state.trades]) if state.trades else np.array([])
-    trades_holding_periods = np.array([t.holding_bars for t in state.trades]) if state.trades else np.array([])
+    trades_holding_periods = (
+        np.array([t.holding_bars for t in state.trades]) if state.trades else np.array([])
+    )
 
     metrics = PerformanceMetrics.calculate_all_metrics(
         equity_curve=equity_curve,
@@ -190,16 +195,28 @@ def test_backtest_metrics_meet_minimum_thresholds():
     print("\n" + "=" * 60)
     print("SUCCESS CRITERIA CHECK")
     print("=" * 60)
-    print(f"Sharpe > 0.8: {'✅' if criteria['sharpe_ratio_ok'] else '❌'} ({metrics['sharpe_ratio']:.2f})")
-    print(f"Max DD < 25%: {'✅' if criteria['max_drawdown_ok'] else '❌'} ({metrics['max_drawdown_pct']:.2f}%)")
-    print(f"Win Rate > 45%: {'✅' if criteria['win_rate_ok'] else '❌'} ({metrics['win_rate'] * 100:.2f}%)")
-    print(f"Win/Loss > 1.5: {'✅' if criteria['win_loss_ratio_ok'] else '❌'} ({metrics['avg_win_loss_ratio']:.2f})")
+    print(
+        f"Sharpe > 0.8: {'✅' if criteria['sharpe_ratio_ok'] else '❌'} "
+        f"({metrics['sharpe_ratio']:.2f})"
+    )
+    print(
+        f"Max DD < 25%: {'✅' if criteria['max_drawdown_ok'] else '❌'} "
+        f"({metrics['max_drawdown_pct']:.2f}%)"
+    )
+    print(
+        f"Win Rate > 45%: {'✅' if criteria['win_rate_ok'] else '❌'} "
+        f"({metrics['win_rate'] * 100:.2f}%)"
+    )
+    print(
+        f"Win/Loss > 1.5: {'✅' if criteria['win_loss_ratio_ok'] else '❌'} "
+        f"({metrics['avg_win_loss_ratio']:.2f})"
+    )
     print(f"All criteria met: {'✅' if criteria['all_criteria_met'] else '❌'}")
     print("=" * 60)
 
     # For this integration test, we just verify that metrics are calculable
     # Success criteria validation is informational but not required to pass
-    assert 'all_criteria_met' in criteria
+    assert "all_criteria_met" in criteria
 
 
 if __name__ == "__main__":

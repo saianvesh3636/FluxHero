@@ -53,7 +53,9 @@ class TestAuthSecretConfiguration:
             content = f.read()
 
         assert "FLUXHERO_AUTH_SECRET" in content, ".env.example must document FLUXHERO_AUTH_SECRET"
-        assert "authentication" in content.lower(), ".env.example must explain authentication configuration"
+        assert "authentication" in content.lower(), (
+            ".env.example must explain authentication configuration"
+        )
 
     def test_default_secret_when_env_not_set(self):
         """Test that default secret is used when environment variable is not set."""

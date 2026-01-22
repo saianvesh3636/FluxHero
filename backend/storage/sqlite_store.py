@@ -33,12 +33,14 @@ logger = logging.getLogger(__name__)
 
 class PositionSide(IntEnum):
     """Position side enum"""
+
     LONG = 1
     SHORT = -1
 
 
 class TradeStatus(IntEnum):
     """Trade status enum"""
+
     OPEN = 0
     CLOSED = 1
     CANCELLED = 2
@@ -47,6 +49,7 @@ class TradeStatus(IntEnum):
 @dataclass
 class Trade:
     """Trade record data class"""
+
     id: int | None = None
     symbol: str = ""
     side: int = PositionSide.LONG  # 1 = LONG, -1 = SHORT
@@ -62,7 +65,9 @@ class Trade:
     strategy: str = ""  # "TREND" or "MEAN_REVERSION"
     regime: str = ""  # "STRONG_TREND", "MEAN_REVERSION", "NEUTRAL"
     signal_reason: str = ""  # Explanation for signal
-    signal_explanation: str | None = None  # JSON signal explanation from SignalExplanation.to_dict()
+    signal_explanation: str | None = (
+        None  # JSON signal explanation from SignalExplanation.to_dict()
+    )
     created_at: str = ""
     updated_at: str = ""
 
@@ -70,6 +75,7 @@ class Trade:
 @dataclass
 class Position:
     """Current position data class"""
+
     id: int | None = None
     symbol: str = ""
     side: int = PositionSide.LONG
@@ -86,6 +92,7 @@ class Position:
 @dataclass
 class Setting:
     """System setting data class"""
+
     key: str = ""
     value: str = ""
     description: str = ""
@@ -130,7 +137,7 @@ class SQLiteStore:
             self._connection = sqlite3.connect(
                 str(self.db_path),
                 check_same_thread=False,
-                isolation_level=None  # Autocommit mode
+                isolation_level=None,  # Autocommit mode
             )
             self._connection.row_factory = sqlite3.Row
         return self._connection
@@ -176,7 +183,7 @@ class SQLiteStore:
         try:
             cursor = conn.execute("PRAGMA table_info(trades)")
             columns = [row[1] for row in cursor.fetchall()]
-            if 'signal_explanation' not in columns:
+            if "signal_explanation" not in columns:
                 conn.execute("ALTER TABLE trades ADD COLUMN signal_explanation TEXT")
         except sqlite3.OperationalError:
             # Table doesn't exist yet, will be created above
@@ -252,7 +259,7 @@ class SQLiteStore:
                 logger.error(
                     f"SQLite error in write worker: {e}",
                     extra={"error_type": type(e).__name__},
-                    exc_info=True
+                    exc_info=True,
                 )
                 self._write_queue.task_done()
 
@@ -286,22 +293,38 @@ class SQLiteStore:
                 "side": trade.side,
                 "entry_price": trade.entry_price,
                 "shares": trade.shares,
-                "strategy": trade.strategy
-            }
+                "strategy": trade.strategy,
+            },
         )
 
-        cursor = conn.execute("""
+        cursor = conn.execute(
+            """
             INSERT INTO trades (
                 symbol, side, entry_price, entry_time, exit_price, exit_time,
                 shares, stop_loss, take_profit, realized_pnl, status,
                 strategy, regime, signal_reason, signal_explanation, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            trade.symbol, trade.side, trade.entry_price, trade.entry_time,
-            trade.exit_price, trade.exit_time, trade.shares, trade.stop_loss,
-            trade.take_profit, trade.realized_pnl, trade.status,
-            trade.strategy, trade.regime, trade.signal_reason, trade.signal_explanation, now, now
-        ))
+        """,
+            (
+                trade.symbol,
+                trade.side,
+                trade.entry_price,
+                trade.entry_time,
+                trade.exit_price,
+                trade.exit_time,
+                trade.shares,
+                trade.stop_loss,
+                trade.take_profit,
+                trade.realized_pnl,
+                trade.status,
+                trade.strategy,
+                trade.regime,
+                trade.signal_reason,
+                trade.signal_explanation,
+                now,
+                now,
+            ),
+        )
         trade_id = cursor.lastrowid
 
         logger.info(
@@ -310,8 +333,8 @@ class SQLiteStore:
                 "trade_id": trade_id,
                 "symbol": trade.symbol,
                 "side": trade.side,
-                "shares": trade.shares
-            }
+                "shares": trade.shares,
+            },
         )
 
         return trade_id
@@ -337,13 +360,7 @@ class SQLiteStore:
         conn = self._get_connection()
         now = datetime.utcnow().isoformat()
 
-        logger.debug(
-            "Updating trade",
-            extra={
-                "trade_id": trade_id,
-                "fields": list(updates.keys())
-            }
-        )
+        logger.debug("Updating trade", extra={"trade_id": trade_id, "fields": list(updates.keys())})
 
         # Build update query dynamically
         fields = []
@@ -361,10 +378,7 @@ class SQLiteStore:
 
         logger.info(
             "Trade updated successfully",
-            extra={
-                "trade_id": trade_id,
-                "fields_updated": list(updates.keys())
-            }
+            extra={"trade_id": trade_id, "fields_updated": list(updates.keys())},
         )
 
     async def update_trade(self, trade_id: int, **kwargs) -> None:
@@ -376,7 +390,9 @@ class SQLiteStore:
             **kwargs: Fields to update (e.g., exit_price=420.0, status=TradeStatus.CLOSED)
 
         Example:
-            >>> await store.update_trade(1, exit_price=425.0, realized_pnl=500.0, status=TradeStatus.CLOSED)
+            >>> await store.update_trade(
+            ...     1, exit_price=425.0, realized_pnl=500.0, status=TradeStatus.CLOSED
+            ... )
         """
         await self._async_write(self._update_trade_sync, trade_id, kwargs)
 
@@ -413,8 +429,7 @@ class SQLiteStore:
         logger.debug("Fetching all open trades")
         conn = self._get_connection()
         cursor = conn.execute(
-            "SELECT * FROM trades WHERE status = ? ORDER BY entry_time DESC",
-            (TradeStatus.OPEN,)
+            "SELECT * FROM trades WHERE status = ? ORDER BY entry_time DESC", (TradeStatus.OPEN,)
         )
         trades = [Trade(**dict(row)) for row in cursor.fetchall()]
         logger.debug("Open trades fetched", extra={"count": len(trades)})
@@ -432,10 +447,7 @@ class SQLiteStore:
         """
         logger.debug("Fetching recent trades", extra={"limit": limit})
         conn = self._get_connection()
-        cursor = conn.execute(
-            "SELECT * FROM trades ORDER BY entry_time DESC LIMIT ?",
-            (limit,)
-        )
+        cursor = conn.execute("SELECT * FROM trades ORDER BY entry_time DESC LIMIT ?", (limit,))
         trades = [Trade(**dict(row)) for row in cursor.fetchall()]
         logger.debug("Recent trades fetched", extra={"count": len(trades), "limit": limit})
         return trades
@@ -452,18 +464,17 @@ class SQLiteStore:
             List of Trade objects
         """
         logger.debug(
-            "Fetching trades by date range",
-            extra={"start_date": start_date, "end_date": end_date}
+            "Fetching trades by date range", extra={"start_date": start_date, "end_date": end_date}
         )
         conn = self._get_connection()
         cursor = conn.execute(
             "SELECT * FROM trades WHERE entry_time >= ? AND entry_time <= ? ORDER BY entry_time",
-            (start_date, end_date)
+            (start_date, end_date),
         )
         trades = [Trade(**dict(row)) for row in cursor.fetchall()]
         logger.debug(
             "Trades fetched by date range",
-            extra={"count": len(trades), "start_date": start_date, "end_date": end_date}
+            extra={"count": len(trades), "start_date": start_date, "end_date": end_date},
         )
         return trades
 
@@ -480,11 +491,12 @@ class SQLiteStore:
                 "symbol": position.symbol,
                 "side": position.side,
                 "shares": position.shares,
-                "unrealized_pnl": position.unrealized_pnl
-            }
+                "unrealized_pnl": position.unrealized_pnl,
+            },
         )
 
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO positions (
                 symbol, side, shares, entry_price, current_price, unrealized_pnl,
                 stop_loss, take_profit, entry_time, updated_at
@@ -498,19 +510,24 @@ class SQLiteStore:
                 stop_loss = excluded.stop_loss,
                 take_profit = excluded.take_profit,
                 updated_at = excluded.updated_at
-        """, (
-            position.symbol, position.side, position.shares, position.entry_price,
-            position.current_price, position.unrealized_pnl, position.stop_loss,
-            position.take_profit, position.entry_time, now
-        ))
+        """,
+            (
+                position.symbol,
+                position.side,
+                position.shares,
+                position.entry_price,
+                position.current_price,
+                position.unrealized_pnl,
+                position.stop_loss,
+                position.take_profit,
+                position.entry_time,
+                now,
+            ),
+        )
 
         logger.info(
             "Position upserted successfully",
-            extra={
-                "symbol": position.symbol,
-                "side": position.side,
-                "shares": position.shares
-            }
+            extra={"symbol": position.symbol, "side": position.side, "shares": position.shares},
         )
 
     async def upsert_position(self, position: Position) -> None:
@@ -593,14 +610,17 @@ class SQLiteStore:
         conn = self._get_connection()
         now = datetime.utcnow().isoformat()
 
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO settings (key, value, description, updated_at)
             VALUES (?, ?, ?, ?)
             ON CONFLICT(key) DO UPDATE SET
                 value = excluded.value,
                 description = excluded.description,
                 updated_at = excluded.updated_at
-        """, (key, value, description, now))
+        """,
+            (key, value, description, now),
+        )
 
         logger.info("Setting updated successfully", extra={"key": key})
 
@@ -685,7 +705,7 @@ class SQLiteStore:
             """SELECT * FROM trades
                WHERE entry_time < ? AND status != ?
                ORDER BY entry_time ASC""",
-            (cutoff_date, TradeStatus.OPEN)
+            (cutoff_date, TradeStatus.OPEN),
         )
         trades_to_archive = cursor.fetchall()
         count = len(trades_to_archive)
@@ -704,46 +724,40 @@ class SQLiteStore:
             df = pd.DataFrame([dict(row) for row in trades_to_archive])
 
             # Generate archive filename with timestamp
-            archive_filename = f"trades_archive_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.parquet"
+            archive_filename = (
+                f"trades_archive_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.parquet"
+            )
             archive_path = archive_dir / archive_filename
 
             # Write to Parquet with Snappy compression
-            df.to_parquet(
-                archive_path,
-                engine='pyarrow',
-                compression='snappy',
-                index=False
-            )
+            df.to_parquet(archive_path, engine="pyarrow", compression="snappy", index=False)
 
             logger.info(
                 f"Exported {count} trades to archive",
                 extra={
                     "count": count,
                     "archive_path": str(archive_path),
-                    "cutoff_date": cutoff_date
-                }
+                    "cutoff_date": cutoff_date,
+                },
             )
 
             # Delete archived trades from SQLite
             conn.execute(
                 "DELETE FROM trades WHERE entry_time < ? AND status != ?",
-                (cutoff_date, TradeStatus.OPEN)
+                (cutoff_date, TradeStatus.OPEN),
             )
             conn.commit()
 
             logger.info(
                 f"Deleted {count} archived trades from SQLite",
-                extra={
-                    "count": count,
-                    "cutoff_date": cutoff_date
-                }
+                extra={"count": count, "cutoff_date": cutoff_date},
             )
 
         except Exception as e:
             logger.error(
                 f"Failed to archive trades: {e}",
                 extra={"cutoff_date": cutoff_date, "trades_count": count},
-                exc_info=True
+                exc_info=True,
             )
             # Don't delete if export failed
             raise
@@ -758,7 +772,9 @@ class SQLiteStore:
             Size in bytes
         """
         size = self.db_path.stat().st_size if self.db_path.exists() else 0
-        logger.debug("Database size retrieved", extra={"size_bytes": size, "db_path": str(self.db_path)})
+        logger.debug(
+            "Database size retrieved", extra={"size_bytes": size, "db_path": str(self.db_path)}
+        )
         return size
 
     async def close(self) -> None:

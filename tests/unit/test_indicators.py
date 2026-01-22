@@ -88,10 +88,27 @@ class TestRSI:
     def test_rsi_basic_calculation(self):
         """Test RSI calculation with known sequence."""
         # Create simple uptrend
-        prices = np.array([
-            100.0, 101.0, 102.0, 103.0, 104.0, 105.0, 106.0, 107.0,
-            108.0, 109.0, 110.0, 111.0, 112.0, 113.0, 114.0, 115.0
-        ], dtype=np.float64)
+        prices = np.array(
+            [
+                100.0,
+                101.0,
+                102.0,
+                103.0,
+                104.0,
+                105.0,
+                106.0,
+                107.0,
+                108.0,
+                109.0,
+                110.0,
+                111.0,
+                112.0,
+                113.0,
+                114.0,
+                115.0,
+            ],
+            dtype=np.float64,
+        )
         rsi = calculate_rsi(prices, period=14)
 
         # First 14 values should be NaN
@@ -104,10 +121,26 @@ class TestRSI:
     def test_rsi_overbought_oversold(self):
         """Test RSI in overbought and oversold conditions."""
         # Strong downtrend (oversold)
-        prices_down = np.array([
-            100.0, 99.0, 98.0, 97.0, 96.0, 95.0, 94.0, 93.0,
-            92.0, 91.0, 90.0, 89.0, 88.0, 87.0, 86.0
-        ], dtype=np.float64)
+        prices_down = np.array(
+            [
+                100.0,
+                99.0,
+                98.0,
+                97.0,
+                96.0,
+                95.0,
+                94.0,
+                93.0,
+                92.0,
+                91.0,
+                90.0,
+                89.0,
+                88.0,
+                87.0,
+                86.0,
+            ],
+            dtype=np.float64,
+        )
         rsi_down = calculate_rsi(prices_down, period=14)
 
         # RSI in downtrend should be low (<30)
@@ -268,12 +301,31 @@ class TestBollingerBands:
 
     def test_bollinger_bands_basic(self):
         """Test Bollinger Bands calculation."""
-        prices = np.array([
-            100.0, 101.0, 102.0, 101.0, 100.0,
-            99.0, 100.0, 101.0, 102.0, 103.0,
-            104.0, 103.0, 102.0, 101.0, 100.0,
-            101.0, 102.0, 103.0, 104.0, 105.0
-        ], dtype=np.float64)
+        prices = np.array(
+            [
+                100.0,
+                101.0,
+                102.0,
+                101.0,
+                100.0,
+                99.0,
+                100.0,
+                101.0,
+                102.0,
+                103.0,
+                104.0,
+                103.0,
+                102.0,
+                101.0,
+                100.0,
+                101.0,
+                102.0,
+                103.0,
+                104.0,
+                105.0,
+            ],
+            dtype=np.float64,
+        )
 
         upper, middle, lower = calculate_bollinger_bands(prices, period=20, num_std=2.0)
 

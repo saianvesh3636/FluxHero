@@ -51,6 +51,7 @@ from backend.storage.sqlite_store import (
 # Test Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def test_db(tmp_path):
     """Create a temporary test database"""
@@ -86,6 +87,7 @@ def client(test_db):
 # ============================================================================
 # Test 1: REST API Positions Data Flow
 # ============================================================================
+
 
 def test_positions_api_response_schema(client, test_db):
     """
@@ -212,7 +214,9 @@ def test_positions_pnl_calculations(client, test_db):
 
     # Calculate P&L % as frontend would
     expected_pnl_pct = ((455.00 - 450.00) / 450.00) * 100
-    calculated_pnl_pct = (spy_pos["unrealized_pnl"] / (spy_pos["entry_price"] * spy_pos["shares"])) * 100
+    calculated_pnl_pct = (
+        spy_pos["unrealized_pnl"] / (spy_pos["entry_price"] * spy_pos["shares"])
+    ) * 100
     assert abs(calculated_pnl_pct - expected_pnl_pct) < 0.01  # Within 0.01%
 
     # QQQ position: 50 shares @ $380 entry, $378.50 current (loss)
@@ -224,6 +228,7 @@ def test_positions_pnl_calculations(client, test_db):
 # ============================================================================
 # Test 2: REST API Trades Data Flow (with Pagination)
 # ============================================================================
+
 
 def test_trades_api_pagination(client, test_db):
     """
@@ -403,6 +408,7 @@ def test_trades_status_filtering(client, test_db):
 # Test 3: REST API Account Info Data Flow
 # ============================================================================
 
+
 def test_account_info_calculations(client, test_db):
     """
     Validate account info calculations match frontend expectations.
@@ -484,6 +490,7 @@ def test_account_info_calculations(client, test_db):
 # Test 4: REST API System Status (Heartbeat)
 # ============================================================================
 
+
 def test_system_status_heartbeat(client):
     """
     Validate /api/status provides accurate system health information.
@@ -533,6 +540,7 @@ def test_system_status_delayed_detection(client):
 # Test 5: Error Handling and Edge Cases
 # ============================================================================
 
+
 def test_api_error_handling_invalid_status_filter(client):
     """
     Validate API returns error for invalid trade status filter.
@@ -559,6 +567,7 @@ def test_empty_positions_response(client):
 # ============================================================================
 # Test 6: Real-Time Data Consistency
 # ============================================================================
+
 
 def test_realtime_position_updates(client, test_db):
     """
@@ -606,6 +615,7 @@ def test_realtime_position_updates(client, test_db):
 # ============================================================================
 # Test 7: Performance and Response Times
 # ============================================================================
+
 
 def test_api_response_times(client, test_db):
     """
@@ -660,6 +670,7 @@ def test_api_response_times(client, test_db):
 # ============================================================================
 # Test Summary
 # ============================================================================
+
 
 def test_integration_summary():
     """

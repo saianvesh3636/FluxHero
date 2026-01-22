@@ -13,16 +13,13 @@ Reference:
 - FLUXHERO_REQUIREMENTS.md Feature 9.1: Next-Bar Fill Logic
 """
 
-
 import numpy as np
 from numba import njit
 
 
 @njit(cache=True)
 def get_next_bar_fill_price(
-    signal_bar_index: int,
-    open_prices: np.ndarray,
-    delay_bars: int = 1
+    signal_bar_index: int, open_prices: np.ndarray, delay_bars: int = 1
 ) -> tuple[float, int]:
     """
     Get fill price at next bar's open.
@@ -71,11 +68,7 @@ def get_next_bar_fill_price(
 
 @njit(cache=True)
 def simulate_intrabar_stop_execution(
-    high: float,
-    low: float,
-    close: float,
-    stop_price: float,
-    is_long: bool
+    high: float, low: float, close: float, stop_price: float, is_long: bool
 ) -> tuple[bool, float]:
     """
     Simulate stop loss execution within a bar.
@@ -128,11 +121,7 @@ def simulate_intrabar_stop_execution(
 
 @njit(cache=True)
 def simulate_intrabar_target_execution(
-    high: float,
-    low: float,
-    close: float,
-    target_price: float,
-    is_long: bool
+    high: float, low: float, close: float, target_price: float, is_long: bool
 ) -> tuple[bool, float]:
     """
     Simulate take profit execution within a bar.
@@ -190,7 +179,7 @@ def check_stop_and_target(
     close: float,
     stop_price: float | None,
     target_price: float | None,
-    is_long: bool
+    is_long: bool,
 ) -> tuple[bool, float, str]:
     """
     Check both stop loss and take profit in order of execution.
@@ -241,7 +230,7 @@ def check_stop_and_target(
             high, low, close, stop_price, is_long
         )
         if stop_hit:
-            return True, stop_exit_price, 'stop'
+            return True, stop_exit_price, "stop"
 
     # Check take profit second
     if target_price is not None and not np.isnan(target_price):
@@ -249,17 +238,14 @@ def check_stop_and_target(
             high, low, close, target_price, is_long
         )
         if target_hit:
-            return True, target_exit_price, 'target'
+            return True, target_exit_price, "target"
 
     # Neither hit
-    return False, close, 'none'
+    return False, close, "none"
 
 
 @njit(cache=True)
-def validate_no_lookahead(
-    signal_indices: np.ndarray,
-    fill_indices: np.ndarray
-) -> bool:
+def validate_no_lookahead(signal_indices: np.ndarray, fill_indices: np.ndarray) -> bool:
     """
     Validate that no look-ahead bias exists (R9.1.4).
 

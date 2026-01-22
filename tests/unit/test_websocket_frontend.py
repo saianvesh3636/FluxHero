@@ -352,8 +352,9 @@ class TestWebSocketDocumentation:
         for file_path in files:
             with open(file_path) as f:
                 first_lines = "".join(f.readline() for _ in range(5))
-                assert "/**" in first_lines or "//" in first_lines, \
+                assert "/**" in first_lines or "//" in first_lines, (
                     f"File {file_path} missing header comment"
+                )
 
 
 if __name__ == "__main__":

@@ -45,6 +45,7 @@ from backend.strategy.dual_mode import (
 # Trend-Following Signal Tests
 # ============================================================================
 
+
 def test_trend_following_long_entry():
     """Test trend-following long entry signal (R6.1.1)."""
     # Create price data that crosses above KAMA + 0.5*ATR
@@ -119,6 +120,7 @@ def test_trend_following_nan_handling():
 # Mean-Reversion Signal Tests
 # ============================================================================
 
+
 def test_mean_reversion_long_entry():
     """Test mean-reversion long entry (R6.2.1)."""
     # RSI < 30 and price at lower Bollinger Band
@@ -127,9 +129,7 @@ def test_mean_reversion_long_entry():
     bb_lower = np.array([96.0, 96.0, 96.0, 96.0, 96.0])
     bb_middle = np.array([100.0, 100.0, 100.0, 100.0, 100.0])
 
-    signals = generate_mean_reversion_signals(
-        prices, rsi, bb_lower, bb_middle
-    )
+    signals = generate_mean_reversion_signals(prices, rsi, bb_lower, bb_middle)
 
     # Should generate long signal when RSI < 30 and price <= lower band
     assert np.any(signals == SIGNAL_LONG)
@@ -143,9 +143,7 @@ def test_mean_reversion_long_exit_middle_band():
     bb_lower = np.array([96.0, 96.0, 96.0, 96.0, 96.0])
     bb_middle = np.array([100.0, 100.0, 100.0, 100.0, 100.0])
 
-    signals = generate_mean_reversion_signals(
-        prices, rsi, bb_lower, bb_middle
-    )
+    signals = generate_mean_reversion_signals(prices, rsi, bb_lower, bb_middle)
 
     # Should have entry and exit signals
     assert np.any(signals == SIGNAL_LONG)
@@ -160,9 +158,7 @@ def test_mean_reversion_long_exit_rsi_overbought():
     bb_lower = np.array([96.0, 96.0, 96.0, 96.0, 96.0])
     bb_middle = np.array([100.0, 100.0, 100.0, 100.0, 100.0])
 
-    signals = generate_mean_reversion_signals(
-        prices, rsi, bb_lower, bb_middle
-    )
+    signals = generate_mean_reversion_signals(prices, rsi, bb_lower, bb_middle)
 
     # Should exit when RSI > 70
     assert np.any(signals == SIGNAL_EXIT_LONG)
@@ -176,9 +172,7 @@ def test_mean_reversion_no_entry_without_both_conditions():
     bb_lower = np.array([95.0, 95.0, 95.0, 95.0])
     bb_middle = np.array([100.0, 100.0, 100.0, 100.0])
 
-    signals = generate_mean_reversion_signals(
-        prices, rsi, bb_lower, bb_middle
-    )
+    signals = generate_mean_reversion_signals(prices, rsi, bb_lower, bb_middle)
 
     # No entry signal should be generated
     assert not np.any(signals == SIGNAL_LONG)
@@ -187,6 +181,7 @@ def test_mean_reversion_no_entry_without_both_conditions():
 # ============================================================================
 # Trailing Stop Tests
 # ============================================================================
+
 
 def test_trailing_stop_long():
     """Test trailing stop for long position (R6.1.3)."""
@@ -206,8 +201,8 @@ def test_trailing_stop_long():
 
     # Stop should never decrease for long
     for i in range(1, len(stops)):
-        if not np.isnan(stops[i]) and not np.isnan(stops[i-1]):
-            assert stops[i] >= stops[i-1]
+        if not np.isnan(stops[i]) and not np.isnan(stops[i - 1]):
+            assert stops[i] >= stops[i - 1]
 
 
 def test_trailing_stop_short():
@@ -228,8 +223,8 @@ def test_trailing_stop_short():
 
     # Stop should never increase for short
     for i in range(1, len(stops)):
-        if not np.isnan(stops[i]) and not np.isnan(stops[i-1]):
-            assert stops[i] <= stops[i-1]
+        if not np.isnan(stops[i]) and not np.isnan(stops[i - 1]):
+            assert stops[i] <= stops[i - 1]
 
 
 def test_trailing_stop_invalid_entry_idx():
@@ -245,6 +240,7 @@ def test_trailing_stop_invalid_entry_idx():
 # ============================================================================
 # Fixed Stop Loss Tests
 # ============================================================================
+
 
 def test_fixed_stop_loss_long():
     """Test fixed stop loss for long position (R6.2.3)."""
@@ -277,6 +273,7 @@ def test_fixed_stop_loss_custom_percentage():
 # Position Sizing Tests
 # ============================================================================
 
+
 def test_position_size_trend_following():
     """Test position sizing for trend-following (1% risk, R6.1.4)."""
     capital = 10000.0
@@ -284,9 +281,7 @@ def test_position_size_trend_following():
     stop_price = 97.0  # 3% stop
     risk_pct = 0.01  # 1% risk
 
-    size = calculate_position_size(
-        capital, entry_price, stop_price, risk_pct, is_long=True
-    )
+    size = calculate_position_size(capital, entry_price, stop_price, risk_pct, is_long=True)
 
     # Risk amount = 10000 * 0.01 = 100
     # Price risk = 100 - 97 = 3
@@ -301,9 +296,7 @@ def test_position_size_mean_reversion():
     stop_price = 97.0  # 3% stop
     risk_pct = 0.0075  # 0.75% risk
 
-    size = calculate_position_size(
-        capital, entry_price, stop_price, risk_pct, is_long=True
-    )
+    size = calculate_position_size(capital, entry_price, stop_price, risk_pct, is_long=True)
 
     # Risk amount = 10000 * 0.0075 = 75
     # Price risk = 100 - 97 = 3
@@ -318,9 +311,7 @@ def test_position_size_zero_risk():
     stop_price = 100.0  # No risk
     risk_pct = 0.01
 
-    size = calculate_position_size(
-        capital, entry_price, stop_price, risk_pct, is_long=True
-    )
+    size = calculate_position_size(capital, entry_price, stop_price, risk_pct, is_long=True)
 
     # Should return 0 to avoid division by zero
     assert size == 0.0
@@ -333,9 +324,7 @@ def test_position_size_short():
     stop_price = 103.0  # 3% stop
     risk_pct = 0.01
 
-    size = calculate_position_size(
-        capital, entry_price, stop_price, risk_pct, is_long=False
-    )
+    size = calculate_position_size(capital, entry_price, stop_price, risk_pct, is_long=False)
 
     # Risk amount = 10000 * 0.01 = 100
     # Price risk = |100 - 103| = 3
@@ -346,6 +335,7 @@ def test_position_size_short():
 # ============================================================================
 # Signal Blending Tests
 # ============================================================================
+
 
 def test_blend_signals_agreement_required():
     """Test signal blending with agreement requirement (R6.3.3)."""
@@ -389,6 +379,7 @@ def test_blend_signals_all_none():
 # Regime-Based Size Adjustment Tests
 # ============================================================================
 
+
 def test_adjust_size_neutral_regime():
     """Test size reduction for neutral regime (R6.3.2)."""
     base_size = 100.0
@@ -419,6 +410,7 @@ def test_adjust_size_mean_reversion_regime():
 # ============================================================================
 # Performance Tracking Tests
 # ============================================================================
+
 
 def test_strategy_performance_win_rate():
     """Test win rate calculation (R6.4.1)."""
@@ -474,6 +466,7 @@ def test_strategy_performance_no_trades():
 # ============================================================================
 # DualModeStrategy Tests
 # ============================================================================
+
 
 def test_dual_mode_get_active_mode():
     """Test mode selection based on regime (R6.1.5, R6.2.5)."""
@@ -536,23 +529,24 @@ def test_dual_mode_performance_summary():
     summary = strategy.get_performance_summary()
 
     # Check structure
-    assert 'trend_following' in summary
-    assert 'mean_reversion' in summary
-    assert 'neutral' in summary
+    assert "trend_following" in summary
+    assert "mean_reversion" in summary
+    assert "neutral" in summary
 
     # Check trend-following stats
-    assert summary['trend_following']['total_trades'] == 2
-    assert summary['trend_following']['win_rate'] == 0.5
-    assert summary['trend_following']['total_return'] == 50.0
+    assert summary["trend_following"]["total_trades"] == 2
+    assert summary["trend_following"]["win_rate"] == 0.5
+    assert summary["trend_following"]["total_return"] == 50.0
 
     # Check mean-reversion stats
-    assert summary['mean_reversion']['total_trades'] == 1
-    assert summary['mean_reversion']['win_rate'] == 1.0
+    assert summary["mean_reversion"]["total_trades"] == 1
+    assert summary["mean_reversion"]["win_rate"] == 1.0
 
 
 # ============================================================================
 # Integration Tests
 # ============================================================================
+
 
 def test_full_trend_following_workflow():
     """Test complete trend-following workflow."""
@@ -560,7 +554,7 @@ def test_full_trend_following_workflow():
     np.random.seed(42)
     n = 100
     prices = np.cumsum(np.random.randn(n) * 0.5 + 0.1) + 100
-    kama = np.convolve(prices, np.ones(10)/10, mode='same')
+    kama = np.convolve(prices, np.ones(10) / 10, mode="same")
     atr = np.ones(n) * 2.0
 
     # Generate signals
@@ -586,7 +580,7 @@ def test_full_trend_following_workflow():
             entry_price=prices[entry_idx],
             stop_price=stops[entry_idx],
             risk_pct=0.01,
-            is_long=True
+            is_long=True,
         )
 
         assert size > 0
@@ -603,16 +597,14 @@ def test_full_mean_reversion_workflow():
 
     # Create oversold condition: price drops to lower band, RSI < 30
     prices[20] = 95.0  # Touch lower band
-    rsi[20] = 25.0     # Oversold
+    rsi[20] = 25.0  # Oversold
 
     # Then price recovers to middle band
     prices[25] = 100.0  # Back to middle
     rsi[25] = 50.0
 
     # Generate signals
-    signals = generate_mean_reversion_signals(
-        prices, rsi, bb_lower, bb_middle
-    )
+    signals = generate_mean_reversion_signals(prices, rsi, bb_lower, bb_middle)
 
     # Should have entry signal
     assert signals[20] == SIGNAL_LONG or np.any(signals == SIGNAL_LONG)
@@ -641,6 +633,7 @@ def test_regime_switching():
 # ============================================================================
 # Edge Case Tests
 # ============================================================================
+
 
 def test_empty_arrays():
     """Test handling of empty input arrays."""
@@ -674,13 +667,14 @@ def test_all_nan_arrays():
 # Performance Benchmarks
 # ============================================================================
 
+
 def test_performance_trend_signals_10k_candles():
     """Test trend signal generation performance on 10k candles."""
     import time
 
     n = 10000
     prices = np.cumsum(np.random.randn(n) * 0.5) + 100
-    kama = np.convolve(prices, np.ones(20)/20, mode='same')
+    kama = np.convolve(prices, np.ones(20) / 20, mode="same")
     atr = np.ones(n) * 2.0
 
     # Warmup JIT
@@ -701,21 +695,17 @@ def test_performance_mr_signals_10k_candles():
     import time
 
     n = 10000
-    prices = 100 + 10 * np.sin(np.linspace(0, 100*np.pi, n))
-    rsi = 50 + 20 * np.sin(np.linspace(0, 100*np.pi, n))
+    prices = 100 + 10 * np.sin(np.linspace(0, 100 * np.pi, n))
+    rsi = 50 + 20 * np.sin(np.linspace(0, 100 * np.pi, n))
     bb_lower = np.ones(n) * 90
     bb_middle = np.ones(n) * 100
 
     # Warmup JIT
-    generate_mean_reversion_signals(
-        prices[:100], rsi[:100], bb_lower[:100], bb_middle[:100]
-    )
+    generate_mean_reversion_signals(prices[:100], rsi[:100], bb_lower[:100], bb_middle[:100])
 
     # Benchmark
     start = time.time()
-    signals = generate_mean_reversion_signals(
-        prices, rsi, bb_lower, bb_middle
-    )
+    signals = generate_mean_reversion_signals(prices, rsi, bb_lower, bb_middle)
     elapsed = time.time() - start
 
     # Should complete in <100ms

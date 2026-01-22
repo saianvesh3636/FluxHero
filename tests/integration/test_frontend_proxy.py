@@ -7,7 +7,6 @@ Tests verify that:
 3. CORS is not an issue (handled by Next.js proxy)
 """
 
-
 import httpx
 import pytest
 

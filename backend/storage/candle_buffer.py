@@ -35,6 +35,7 @@ class Candle:
         atr: Optional average true range
         rsi: Optional relative strength index
     """
+
     timestamp: float  # Unix timestamp
     open: float
     high: float
@@ -59,7 +60,9 @@ class CandleBuffer:
 
     Example:
         >>> buffer = CandleBuffer(max_size=500)
-        >>> buffer.add_candle(timestamp=1234567890, open=100, high=101, low=99, close=100.5, volume=1000)
+        >>> buffer.add_candle(
+        ...     timestamp=1234567890, open=100, high=101, low=99, close=100.5, volume=1000
+        ... )
         >>> print(buffer.size())
         1
         >>> closes = buffer.get_close_array()
@@ -247,7 +250,9 @@ class CandleBuffer:
             return np.array([], dtype=np.float64)
         return np.array([c.volume for c in self._buffer], dtype=np.float64)
 
-    def get_ohlcv_arrays(self) -> tuple[
+    def get_ohlcv_arrays(
+        self,
+    ) -> tuple[
         NDArray[np.float64],
         NDArray[np.float64],
         NDArray[np.float64],

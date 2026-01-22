@@ -49,10 +49,12 @@ def chase_config():
 @pytest.fixture
 def mock_get_mid_price():
     """Mock function to get mid-price."""
+
     async def get_mid_price(symbol: str) -> float:
         # Simulate price movement
         prices = {"SPY": 451.0, "AAPL": 175.0}
         return prices.get(symbol, 450.0)
+
     return get_mid_price
 
 
@@ -402,7 +404,6 @@ async def test_chase_updates_limit_price(paper_broker, chase_config, mock_get_mi
         order_type=OrderType.LIMIT,
         limit_price=440.0,
     )
-
 
     # Wait for chase
     await asyncio.sleep(0.7)

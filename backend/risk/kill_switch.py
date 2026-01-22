@@ -28,21 +28,24 @@ import numpy as np
 
 class DrawdownLevel(IntEnum):
     """Drawdown severity levels for circuit breakers."""
-    NORMAL = 0          # Below 15% drawdown
-    WARNING = 1         # 15-20% drawdown (reduce sizes)
-    CRITICAL = 2        # 20%+ drawdown (stop trading)
+
+    NORMAL = 0  # Below 15% drawdown
+    WARNING = 1  # 15-20% drawdown (reduce sizes)
+    CRITICAL = 2  # 20%+ drawdown (stop trading)
 
 
 class TradingStatus(IntEnum):
     """Trading system status."""
-    ACTIVE = 0          # Normal trading
-    REDUCED = 1         # Reduced size mode (15% DD)
-    DISABLED = 2        # Trading disabled (20% DD)
+
+    ACTIVE = 0  # Normal trading
+    REDUCED = 1  # Reduced size mode (15% DD)
+    DISABLED = 2  # Trading disabled (20% DD)
 
 
 @dataclass
 class Position:
     """Represents an open position for risk calculations."""
+
     symbol: str
     shares: float
     entry_price: float
@@ -68,14 +71,15 @@ class Position:
 @dataclass
 class DrawdownCircuitBreakerConfig:
     """Configuration for drawdown circuit breakers."""
+
     # Drawdown thresholds (R11.3)
-    warning_drawdown_pct: float = 0.15      # 15% drawdown warning
-    critical_drawdown_pct: float = 0.20     # 20% drawdown critical
+    warning_drawdown_pct: float = 0.15  # 15% drawdown warning
+    critical_drawdown_pct: float = 0.20  # 20% drawdown critical
 
     # Actions at warning level (R11.3.2)
-    warning_size_reduction: float = 0.50    # Reduce sizes by 50%
-    warning_stop_multiplier: float = 2.0    # Tighten stops to 2.0× ATR
-    normal_stop_multiplier: float = 2.5     # Normal stops at 2.5× ATR
+    warning_size_reduction: float = 0.50  # Reduce sizes by 50%
+    warning_stop_multiplier: float = 2.0  # Tighten stops to 2.0× ATR
+    normal_stop_multiplier: float = 2.5  # Normal stops at 2.5× ATR
 
     # Manual review required at critical level (R11.3.3)
     require_manual_review: bool = True
@@ -84,6 +88,7 @@ class DrawdownCircuitBreakerConfig:
 @dataclass
 class RiskMetrics:
     """Real-time risk metrics for monitoring."""
+
     # Drawdown tracking (R11.3.1, R11.4.1)
     equity_peak: float
     current_equity: float
@@ -109,6 +114,7 @@ class RiskMetrics:
 @dataclass
 class DailyRiskReport:
     """Daily risk report summary."""
+
     date: datetime
     account_balance: float
     equity_peak: float
@@ -127,6 +133,7 @@ class DailyRiskReport:
 # ============================================================================
 # Drawdown Tracking (R11.3.1)
 # ============================================================================
+
 
 class EquityTracker:
     """
@@ -219,6 +226,7 @@ class EquityTracker:
 # Circuit Breaker Logic (R11.3.2, R11.3.3)
 # ============================================================================
 
+
 class DrawdownCircuitBreaker:
     """
     Implements drawdown-based circuit breakers.
@@ -266,9 +274,7 @@ class DrawdownCircuitBreaker:
             return DrawdownLevel.NORMAL
 
     def update_trading_status(
-        self,
-        drawdown_pct: float,
-        timestamp: datetime | None = None
+        self, drawdown_pct: float, timestamp: datetime | None = None
     ) -> tuple[TradingStatus, list[str]]:
         """
         Update trading status based on drawdown.
@@ -302,8 +308,10 @@ class DrawdownCircuitBreaker:
                 self.trading_status = TradingStatus.DISABLED
                 self.manual_review_required = self.config.require_manual_review
 
-                alert = (f"CRITICAL: 20% drawdown reached ({drawdown_pct*100:.1f}%). "
-                        "All trading disabled. Manual review required.")
+                alert = (
+                    f"CRITICAL: 20% drawdown reached ({drawdown_pct * 100:.1f}%). "
+                    "All trading disabled. Manual review required."
+                )
                 new_alerts.append(alert)
                 self.alerts.append((timestamp, alert))
 
@@ -312,8 +320,10 @@ class DrawdownCircuitBreaker:
             if self.trading_status == TradingStatus.ACTIVE:
                 self.trading_status = TradingStatus.REDUCED
 
-                alert = (f"WARNING: 15% drawdown reached ({drawdown_pct*100:.1f}%). "
-                        "Position sizes reduced 50%, stops tightened to 2.0× ATR.")
+                alert = (
+                    f"WARNING: 15% drawdown reached ({drawdown_pct * 100:.1f}%). "
+                    "Position sizes reduced 50%, stops tightened to 2.0× ATR."
+                )
                 new_alerts.append(alert)
                 self.alerts.append((timestamp, alert))
 
@@ -321,8 +331,10 @@ class DrawdownCircuitBreaker:
         else:
             if self.trading_status == TradingStatus.REDUCED:
                 # Recovery from warning level
-                alert = (f"INFO: Drawdown recovered to {drawdown_pct*100:.1f}%. "
-                        "Normal trading resumed.")
+                alert = (
+                    f"INFO: Drawdown recovered to {drawdown_pct * 100:.1f}%. "
+                    "Normal trading resumed."
+                )
                 new_alerts.append(alert)
                 self.alerts.append((timestamp, alert))
 
@@ -437,12 +449,13 @@ class DrawdownCircuitBreaker:
 # Real-Time Risk Monitoring (R11.4.1)
 # ============================================================================
 
+
 def calculate_risk_metrics(
     account_balance: float,
     equity_peak: float,
     current_equity: float,
     open_positions: list[Position],
-    config: DrawdownCircuitBreakerConfig | None = None
+    config: DrawdownCircuitBreakerConfig | None = None,
 ) -> RiskMetrics:
     """
     Calculate comprehensive risk metrics for monitoring.
@@ -514,7 +527,7 @@ def calculate_risk_metrics(
 
 
 def calculate_correlation_matrix(
-    position_prices_map: dict[str, np.ndarray]
+    position_prices_map: dict[str, np.ndarray],
 ) -> dict[tuple[str, str], float]:
     """
     Calculate correlation matrix for all open positions.
@@ -569,12 +582,13 @@ def calculate_correlation_matrix(
 # Daily Risk Report (R11.4.2)
 # ============================================================================
 
+
 def generate_daily_risk_report(
     account_balance: float,
     equity_tracker: EquityTracker,
     open_positions: list[Position],
     circuit_breaker: DrawdownCircuitBreaker,
-    timestamp: datetime | None = None
+    timestamp: datetime | None = None,
 ) -> DailyRiskReport:
     """
     Generate comprehensive daily risk report.
@@ -605,10 +619,7 @@ def generate_daily_risk_report(
 
     # Calculate metrics
     metrics = calculate_risk_metrics(
-        account_balance,
-        equity_tracker.equity_peak,
-        equity_tracker.current_equity,
-        open_positions
+        account_balance, equity_tracker.equity_peak, equity_tracker.current_equity, open_positions
     )
 
     # Get recent alerts
@@ -657,12 +668,12 @@ def format_daily_risk_report(report: DailyRiskReport) -> str:
         "Account Status:",
         f"  Balance:           ${report.account_balance:,.2f}",
         f"  Equity Peak:       ${report.equity_peak:,.2f}",
-        f"  Current Drawdown:  {report.current_drawdown_pct*100:.2f}%",
+        f"  Current Drawdown:  {report.current_drawdown_pct * 100:.2f}%",
         f"  Trading Status:    {report.trading_status.name}",
         "",
         "Portfolio Exposure:",
         f"  Open Positions:    {report.num_positions}",
-        f"  Total Exposure:    ${report.total_exposure:,.2f} ({report.exposure_pct*100:.1f}%)",
+        f"  Total Exposure:    ${report.total_exposure:,.2f} ({report.exposure_pct * 100:.1f}%)",
         "",
         "Risk Metrics:",
         f"  Total Risk:        ${report.total_risk_deployed:,.2f}",
@@ -670,7 +681,10 @@ def format_daily_risk_report(report: DailyRiskReport) -> str:
     ]
 
     if report.largest_position:
-        lines.append(f"  Largest Position:  {report.largest_position} (${report.largest_position_value:,.2f})")
+        lines.append(
+            f"  Largest Position:  {report.largest_position} "
+            f"(${report.largest_position_value:,.2f})"
+        )
     else:
         lines.append("  Largest Position:  None")
 

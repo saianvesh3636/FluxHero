@@ -15,12 +15,14 @@ from enum import IntEnum
 
 class OrderSide(IntEnum):
     """Order side enumeration."""
+
     BUY = 1
     SELL = -1
 
 
 class OrderType(IntEnum):
     """Order type enumeration."""
+
     MARKET = 0
     LIMIT = 1
     STOP = 2
@@ -29,6 +31,7 @@ class OrderType(IntEnum):
 
 class OrderStatus(IntEnum):
     """Order status enumeration."""
+
     PENDING = 0
     FILLED = 1
     PARTIALLY_FILLED = 2
@@ -55,6 +58,7 @@ class Order:
         created_at: Order creation timestamp
         updated_at: Last update timestamp
     """
+
     order_id: str
     symbol: str
     qty: int
@@ -82,6 +86,7 @@ class Position:
         unrealized_pnl: Unrealized profit/loss
         market_value: Current market value of position
     """
+
     symbol: str
     qty: int
     entry_price: float
@@ -108,6 +113,7 @@ class Account:
         cash: Available cash
         positions_value: Total value of open positions
     """
+
     account_id: str
     balance: float
     buying_power: float
@@ -354,9 +360,7 @@ class PaperBroker(BrokerInterface):
 
     def _update_equity(self):
         """Update total equity based on cash and positions."""
-        positions_value = sum(
-            abs(p.qty) * p.current_price for p in self.positions.values()
-        )
+        positions_value = sum(abs(p.qty) * p.current_price for p in self.positions.values())
         unrealized_pnl = sum(p.unrealized_pnl for p in self.positions.values())
         self.equity = self.cash + positions_value + unrealized_pnl
 
@@ -437,9 +441,7 @@ class PaperBroker(BrokerInterface):
         """Get account information."""
         self._update_equity()
 
-        positions_value = sum(
-            abs(p.qty) * p.current_price for p in self.positions.values()
-        )
+        positions_value = sum(abs(p.qty) * p.current_price for p in self.positions.values())
 
         return Account(
             account_id="PAPER_001",

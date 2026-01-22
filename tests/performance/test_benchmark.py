@@ -58,6 +58,7 @@ class TestPerformanceBenchmark:
         calculate_kama(warmup_close, 10, 2, 30)
 
         from backend.computation.volatility import calculate_atr_ma
+
         warmup_atr = calculate_atr(warmup_high, warmup_low, warmup_close, 14)
         warmup_atr_ma = calculate_atr_ma(warmup_atr, 50)
         calculate_adx(warmup_high, warmup_low, warmup_close, warmup_atr, 14)
@@ -181,6 +182,7 @@ class TestPerformanceBenchmark:
         # Pre-calculate ATR and ATR_MA as required by classify_volatility_state
         atr = calculate_atr(high_prices, low_prices, close_prices, 14)
         from backend.computation.volatility import calculate_atr_ma
+
         atr_ma = calculate_atr_ma(atr, 50)
 
         result, exec_time, passed = self.benchmark_function(
@@ -190,9 +192,7 @@ class TestPerformanceBenchmark:
             target_ms=500,
         )
 
-        assert (
-            passed
-        ), f"Volatility state calculation took {exec_time:.2f}ms (target: <500ms)"
+        assert passed, f"Volatility state calculation took {exec_time:.2f}ms (target: <500ms)"
         assert len(result) == len(close_prices), "Result length mismatch"
         print(f"✅ Volatility State (10k candles): {exec_time:.2f}ms")
 
@@ -205,15 +205,14 @@ class TestPerformanceBenchmark:
         # Pre-calculate ATR and ATR_MA as required by detect_regime
         atr = calculate_atr(high_prices, low_prices, close_prices, 14)
         from backend.computation.volatility import calculate_atr_ma
+
         atr_ma = calculate_atr_ma(atr, 50)
 
         result, exec_time, passed = self.benchmark_function(
             detect_regime, high_prices, low_prices, close_prices, atr, atr_ma, target_ms=500
         )
 
-        assert (
-            passed
-        ), f"Regime detection took {exec_time:.2f}ms (target: <500ms)"
+        assert passed, f"Regime detection took {exec_time:.2f}ms (target: <500ms)"
         # detect_regime returns a dict, not an array
         assert isinstance(result, dict), "Result should be a dictionary"
         print(f"✅ Regime Detection (10k candles): {exec_time:.2f}ms")
@@ -245,13 +244,9 @@ class TestPerformanceBenchmark:
             return ema, rsi, atr, kama, adx, vol_state, regime
 
         # Target: all indicators combined should complete in <500ms
-        result, exec_time, passed = self.benchmark_function(
-            composite_calculation, target_ms=500
-        )
+        result, exec_time, passed = self.benchmark_function(composite_calculation, target_ms=500)
 
-        assert (
-            passed
-        ), f"Composite calculation took {exec_time:.2f}ms (target: <500ms)"
+        assert passed, f"Composite calculation took {exec_time:.2f}ms (target: <500ms)"
         print(f"✅ Composite (all indicators, 10k candles): {exec_time:.2f}ms")
 
     def test_warmup_jit_compilation(self, large_dataset):

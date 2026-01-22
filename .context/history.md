@@ -292,3 +292,41 @@
 - All linting checks passing (ruff)
 
 **Result:** Task 5.2 complete. Test data seeding script fully functional with realistic positions, comprehensive tests, and Makefile integration.
+
+## 2026-01-22 - Code Formatting: Fix All Linting Errors
+
+**Task:** Fix all E501 line length linting errors (147 total)
+**Files Changed:**
+- backend/api/server.py
+- backend/backtesting/engine.py
+- backend/backtesting/metrics.py
+- backend/execution/order_manager.py
+- backend/execution/position_sizer.py
+- backend/maintenance/daily_reboot.py
+- backend/risk/kill_switch.py
+- backend/storage/candle_buffer.py
+- backend/storage/sqlite_store.py
+- backend/strategy/regime_detector.py
+- tests/documentation/test_user_guide.py
+- tests/integration/test_frontend_backend_validation.py
+- tests/integration/test_full_integration.py
+- tests/integration/test_spy_backtest.py
+- tests/integration/test_trade_archival.py
+- tests/test_backtest_validation.py
+- tests/test_regime_accuracy.py
+- tests/unit/test_regime_detector.py
+- tests/unit/test_signal_archive.py
+- tests/unit/test_sqlite_store.py
+
+**Summary:**
+- Ran `ruff format` to auto-fix formatting issues (reduced from 147 to 35 errors)
+- Manually fixed remaining 35 E501 line length violations by:
+  - Breaking long f-strings across multiple lines using implicit string concatenation
+  - Breaking long function calls in docstring examples across multiple lines
+  - Splitting long print statements with formatted strings
+  - Wrapping long reason strings in PositionSize and PositionLimit results
+- All linting checks now pass (ruff check backend/ tests/)
+- All tests still pass after formatting changes
+- No functional changes, only code style improvements
+
+**Result:** All 147 linting errors fixed. Code now follows 100-character line length limit. All tests passing.

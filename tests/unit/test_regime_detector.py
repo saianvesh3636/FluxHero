@@ -48,6 +48,7 @@ from backend.strategy.regime_detector import (  # noqa: E402
 # Directional Movement Tests
 # ============================================================================
 
+
 def test_directional_movement_uptrend():
     """Test +DM and -DM calculation during uptrend."""
     high = np.array([100.0, 102.0, 105.0, 107.0, 110.0])
@@ -109,13 +110,16 @@ def test_directional_movement_equal():
 # Directional Indicator Tests
 # ============================================================================
 
+
 def test_directional_indicators_basic():
     """Test +DI and -DI calculation with known values."""
     # Create simple trend with known DM and ATR
-    plus_dm = np.array([np.nan, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0,
-                        2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0])
-    minus_dm = np.array([np.nan, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    plus_dm = np.array(
+        [np.nan, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0]
+    )
+    minus_dm = np.array(
+        [np.nan, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    )
     atr = np.full(15, 10.0)
 
     plus_di, minus_di = calculate_directional_indicators(plus_dm, minus_dm, atr, period=14)
@@ -143,6 +147,7 @@ def test_directional_indicators_insufficient_data():
 # ============================================================================
 # ADX Tests
 # ============================================================================
+
 
 def test_adx_strong_uptrend():
     """Test ADX calculation during strong uptrend."""
@@ -219,6 +224,7 @@ def test_adx_insufficient_data():
 # Linear Regression Tests
 # ============================================================================
 
+
 def test_linear_regression_perfect_uptrend():
     """Test linear regression with perfect uptrend (R² ≈ 1)."""
     prices = np.linspace(100, 150, 100)  # Perfect linear trend
@@ -293,6 +299,7 @@ def test_linear_regression_constant_prices():
 # Trend Regime Classification Tests
 # ============================================================================
 
+
 def test_classify_trend_regime_strong_trend():
     """Test regime classification for strong trend."""
     adx = np.array([32.0, 35.0, 40.0, 38.0])
@@ -333,12 +340,14 @@ def test_classify_trend_regime_mixed():
 
     regime = classify_trend_regime(adx, r_squared)
 
-    expected = np.array([
-        REGIME_STRONG_TREND,    # ADX=35, R²=0.75
-        REGIME_MEAN_REVERSION,  # ADX=18, R²=0.25
-        REGIME_NEUTRAL,          # ADX=23, R²=0.50
-        REGIME_STRONG_TREND,    # ADX=40, R²=0.80
-    ])
+    expected = np.array(
+        [
+            REGIME_STRONG_TREND,  # ADX=35, R²=0.75
+            REGIME_MEAN_REVERSION,  # ADX=18, R²=0.25
+            REGIME_NEUTRAL,  # ADX=23, R²=0.50
+            REGIME_STRONG_TREND,  # ADX=40, R²=0.80
+        ]
+    )
 
     assert np.array_equal(regime, expected)
 
@@ -359,6 +368,7 @@ def test_classify_trend_regime_nan_handling():
 # ============================================================================
 # Volatility Regime Tests
 # ============================================================================
+
 
 def test_classify_volatility_regime_high():
     """Test volatility regime classification for high volatility."""
@@ -403,9 +413,7 @@ def test_classify_volatility_regime_custom_thresholds():
 
     # Custom thresholds: 1.2 (high), 0.8 (low)
     vol_regime = classify_volatility_regime(
-        atr, atr_ma,
-        high_vol_threshold=1.2,
-        low_vol_threshold=0.8
+        atr, atr_ma, high_vol_threshold=1.2, low_vol_threshold=0.8
     )
 
     # Ratio 1.25 > 1.2 → HIGH_VOL
@@ -415,6 +423,7 @@ def test_classify_volatility_regime_custom_thresholds():
 # ============================================================================
 # Regime Persistence Tests
 # ============================================================================
+
 
 def test_regime_persistence_prevents_whipsaw():
     """Test that regime persistence prevents rapid switching."""
@@ -472,16 +481,19 @@ def test_regime_persistence_insufficient_data():
 # Correlation Matrix Tests
 # ============================================================================
 
+
 def test_correlation_matrix_perfect_positive():
     """Test correlation matrix with perfectly correlated assets."""
     # 3 assets, 10 bars, all moving identically
-    returns = np.array([
-        [0.01, 0.01, 0.01],
-        [0.02, 0.02, 0.02],
-        [-0.01, -0.01, -0.01],
-        [0.03, 0.03, 0.03],
-        [-0.02, -0.02, -0.02],
-    ])
+    returns = np.array(
+        [
+            [0.01, 0.01, 0.01],
+            [0.02, 0.02, 0.02],
+            [-0.01, -0.01, -0.01],
+            [0.03, 0.03, 0.03],
+            [-0.02, -0.02, -0.02],
+        ]
+    )
 
     corr = calculate_correlation_matrix(returns)
 
@@ -492,13 +504,15 @@ def test_correlation_matrix_perfect_positive():
 def test_correlation_matrix_perfect_negative():
     """Test correlation matrix with perfectly negatively correlated assets."""
     # Asset 1 and 2 move opposite
-    returns = np.array([
-        [0.01, -0.01],
-        [0.02, -0.02],
-        [-0.01, 0.01],
-        [0.03, -0.03],
-        [-0.02, 0.02],
-    ])
+    returns = np.array(
+        [
+            [0.01, -0.01],
+            [0.02, -0.02],
+            [-0.01, 0.01],
+            [0.03, -0.03],
+            [-0.02, 0.02],
+        ]
+    )
 
     corr = calculate_correlation_matrix(returns)
 
@@ -542,6 +556,7 @@ def test_correlation_matrix_symmetry():
 # Integration Tests
 # ============================================================================
 
+
 def test_detect_regime_full_pipeline():
     """Test complete regime detection pipeline."""
     n = 200
@@ -558,23 +573,23 @@ def test_detect_regime_full_pipeline():
     result = detect_regime(high, low, close, atr, atr_ma)
 
     # Check all outputs are present
-    assert 'adx' in result
-    assert 'r_squared' in result
-    assert 'regression_slope' in result
-    assert 'trend_regime' in result
-    assert 'trend_regime_confirmed' in result
-    assert 'volatility_regime' in result
+    assert "adx" in result
+    assert "r_squared" in result
+    assert "regression_slope" in result
+    assert "trend_regime" in result
+    assert "trend_regime_confirmed" in result
+    assert "volatility_regime" in result
 
     # Check outputs have correct length
-    assert len(result['adx']) == n
-    assert len(result['trend_regime']) == n
-    assert len(result['volatility_regime']) == n
+    assert len(result["adx"]) == n
+    assert len(result["trend_regime"]) == n
+    assert len(result["volatility_regime"]) == n
 
     # Strong trend should be detected
-    valid_idx = ~np.isnan(result['adx'])
+    valid_idx = ~np.isnan(result["adx"])
     if np.any(valid_idx):
         # At least some bars should show trend
-        assert np.any(result['trend_regime_confirmed'][valid_idx] == REGIME_STRONG_TREND)
+        assert np.any(result["trend_regime_confirmed"][valid_idx] == REGIME_STRONG_TREND)
 
 
 def test_detect_regime_choppy_market():
@@ -591,8 +606,8 @@ def test_detect_regime_choppy_market():
     result = detect_regime(high, low, close, atr, atr_ma)
 
     # Choppy market should show mean reversion or neutral
-    valid_idx = ~np.isnan(result['trend_regime_confirmed'])
-    regimes = result['trend_regime_confirmed'][valid_idx]
+    valid_idx = ~np.isnan(result["trend_regime_confirmed"])
+    regimes = result["trend_regime_confirmed"][valid_idx]
 
     # Should have some mean reversion detection
     mr_pct = np.sum(regimes == REGIME_MEAN_REVERSION) / len(regimes)
@@ -615,18 +630,17 @@ def test_detect_regime_no_persistence():
     result = detect_regime(high, low, close, atr, atr_ma, apply_persistence=False)
 
     # Without persistence, confirmed should equal raw
-    valid_idx = (~np.isnan(result['trend_regime']) &
-                 ~np.isnan(result['trend_regime_confirmed']))
+    valid_idx = ~np.isnan(result["trend_regime"]) & ~np.isnan(result["trend_regime_confirmed"])
 
     assert np.array_equal(
-        result['trend_regime'][valid_idx],
-        result['trend_regime_confirmed'][valid_idx]
+        result["trend_regime"][valid_idx], result["trend_regime_confirmed"][valid_idx]
     ), "Without persistence, raw and confirmed should match"
 
 
 # ============================================================================
 # Edge Case Tests
 # ============================================================================
+
 
 def test_regime_detection_empty_arrays():
     """Test regime detection with empty arrays."""
@@ -639,8 +653,8 @@ def test_regime_detection_empty_arrays():
     result = detect_regime(high, low, close, atr, atr_ma)
 
     # Should return empty arrays
-    assert len(result['adx']) == 0
-    assert len(result['trend_regime']) == 0
+    assert len(result["adx"]) == 0
+    assert len(result["trend_regime"]) == 0
 
 
 def test_regime_detection_single_value():
@@ -654,8 +668,8 @@ def test_regime_detection_single_value():
     result = detect_regime(high, low, close, atr, atr_ma)
 
     # Should return arrays with NaN/default values
-    assert len(result['adx']) == 1
-    assert np.isnan(result['adx'][0])
+    assert len(result["adx"]) == 1
+    assert np.isnan(result["adx"][0])
 
 
 def test_regime_detection_constant_prices():
@@ -671,7 +685,7 @@ def test_regime_detection_constant_prices():
     result = detect_regime(high, low, close, atr, atr_ma)
 
     # Should handle constant prices gracefully (no errors)
-    assert len(result['adx']) == n
+    assert len(result["adx"]) == n
 
 
 def test_regime_detection_with_nan_values():
@@ -692,12 +706,13 @@ def test_regime_detection_with_nan_values():
     result = detect_regime(high, low, close, atr, atr_ma)
 
     # Should handle NaN gracefully
-    assert len(result['adx']) == n
+    assert len(result["adx"]) == n
 
 
 # ============================================================================
 # Performance Benchmarks
 # ============================================================================
+
 
 def test_performance_adx_10k_candles():
     """Benchmark: ADX calculation on 10k candles should complete in <100ms."""
@@ -763,7 +778,7 @@ def test_performance_full_regime_detection():
     result = detect_regime(high, low, close, atr, atr_ma)
     elapsed = (time.time() - start) * 1000
 
-    assert len(result['adx']) == n
+    assert len(result["adx"]) == n
     assert elapsed < 200, f"Full regime detection took {elapsed:.2f}ms, target <200ms"
 
     print(f"✓ Full regime detection on 10k candles: {elapsed:.2f}ms")
@@ -772,6 +787,7 @@ def test_performance_full_regime_detection():
 # ============================================================================
 # Success Criteria Tests (from requirements)
 # ============================================================================
+
 
 def test_success_criteria_2020_bull_run():
     """Test regime detection on 2020-2021 bull run simulation (strong trend)."""
@@ -787,16 +803,16 @@ def test_success_criteria_2020_bull_run():
     result = detect_regime(high, low, close, atr, atr_ma)
 
     # Calculate percentage of days classified as STRONG_TREND
-    valid_idx = ~np.isnan(result['trend_regime_confirmed'])
-    regimes = result['trend_regime_confirmed'][valid_idx]
+    valid_idx = ~np.isnan(result["trend_regime_confirmed"])
+    regimes = result["trend_regime_confirmed"][valid_idx]
 
     trend_pct = np.sum(regimes == REGIME_STRONG_TREND) / len(regimes)
 
     # Target: >85% of days classified as TREND
     # Using >70% as threshold since we're simulating (requirements say >70%)
-    assert trend_pct > 0.70, f"Strong trend detection: {trend_pct*100:.1f}%, target >70%"
+    assert trend_pct > 0.70, f"Strong trend detection: {trend_pct * 100:.1f}%, target >70%"
 
-    print(f"\n✓ Bull run trend detection: {trend_pct*100:.1f}% (target >70%)")
+    print(f"\n✓ Bull run trend detection: {trend_pct * 100:.1f}% (target >70%)")
 
 
 def test_success_criteria_sideways_market():
@@ -808,7 +824,7 @@ def test_success_criteria_sideways_market():
     close[0] = 100
     for i in range(1, n):
         # Mean reverting process: pull towards 100
-        close[i] = close[i-1] + np.random.randn() * 2 + (100 - close[i-1]) * 0.1
+        close[i] = close[i - 1] + np.random.randn() * 2 + (100 - close[i - 1]) * 0.1
 
     high = close + np.abs(np.random.randn(n))
     low = close - np.abs(np.random.randn(n))
@@ -818,8 +834,8 @@ def test_success_criteria_sideways_market():
 
     result = detect_regime(high, low, close, atr, atr_ma)
 
-    valid_idx = ~np.isnan(result['trend_regime_confirmed'])
-    regimes = result['trend_regime_confirmed'][valid_idx]
+    valid_idx = ~np.isnan(result["trend_regime_confirmed"])
+    regimes = result["trend_regime_confirmed"][valid_idx]
 
     mr_pct = np.sum(regimes == REGIME_MEAN_REVERSION) / len(regimes)
     neutral_pct = np.sum(regimes == REGIME_NEUTRAL) / len(regimes)
@@ -828,9 +844,14 @@ def test_success_criteria_sideways_market():
     # Either MEAN_REVERSION or NEUTRAL (not STRONG_TREND)
     non_trend_pct = mr_pct + neutral_pct
 
-    assert non_trend_pct > 0.60, f"Mean reverting market detection: {non_trend_pct*100:.1f}% non-trend, target >60%"
+    assert non_trend_pct > 0.60, (
+        f"Mean reverting market detection: {non_trend_pct * 100:.1f}% non-trend, target >60%"
+    )
 
-    print(f"✓ Sideways market detection: {mr_pct*100:.1f}% MR, {neutral_pct*100:.1f}% neutral = {non_trend_pct*100:.1f}% non-trend (target >60%)")
+    print(
+        f"✓ Sideways market detection: {mr_pct * 100:.1f}% MR, {neutral_pct * 100:.1f}% neutral = "
+        f"{non_trend_pct * 100:.1f}% non-trend (target >60%)"
+    )
 
 
 def test_success_criteria_low_whipsaws():
@@ -857,18 +878,22 @@ def test_success_criteria_low_whipsaws():
         changes = np.sum(valid[1:] != valid[:-1])
         return changes
 
-    changes_no_persist = count_changes(result_no_persist['trend_regime'].astype(float))
-    changes_persist = count_changes(result_persist['trend_regime_confirmed'].astype(float))
+    changes_no_persist = count_changes(result_no_persist["trend_regime"].astype(float))
+    changes_persist = count_changes(result_persist["trend_regime_confirmed"].astype(float))
 
     # With persistence should have fewer changes
-    reduction = (changes_no_persist - changes_persist) / changes_no_persist if changes_no_persist > 0 else 0
+    reduction = (
+        (changes_no_persist - changes_persist) / changes_no_persist if changes_no_persist > 0 else 0
+    )
 
-    print(f"\n✓ Whipsaw reduction: {reduction*100:.1f}% fewer regime changes with persistence")
+    print(f"\n✓ Whipsaw reduction: {reduction * 100:.1f}% fewer regime changes with persistence")
     print(f"  Without persistence: {changes_no_persist} changes")
     print(f"  With persistence: {changes_persist} changes")
 
     # Should have at least some reduction in whipsaws
-    assert changes_persist <= changes_no_persist, "Persistence should reduce or maintain regime changes"
+    assert changes_persist <= changes_no_persist, (
+        "Persistence should reduce or maintain regime changes"
+    )
 
 
 if __name__ == "__main__":

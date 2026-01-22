@@ -22,6 +22,7 @@ from enum import IntEnum
 
 class PositionSizeResult(IntEnum):
     """Result codes for position sizing calculations."""
+
     SUCCESS = 0
     INSUFFICIENT_CAPITAL = 1
     EXCEEDS_POSITION_LIMIT = 2
@@ -33,6 +34,7 @@ class PositionSizeResult(IntEnum):
 @dataclass
 class PositionSize:
     """Result of position sizing calculation."""
+
     shares: int  # Number of shares to trade (0 if rejected)
     risk_amount: float  # Dollar risk per trade
     position_value: float  # Total position value ($)
@@ -43,6 +45,7 @@ class PositionSize:
 @dataclass
 class AccountState:
     """Current account state for position sizing."""
+
     balance: float  # Total account value ($)
     cash: float  # Available cash ($)
     deployed_value: float  # Total value of open positions ($)
@@ -107,7 +110,7 @@ class PositionSizer:
         account: AccountState,
         entry_price: float,
         stop_loss_price: float,
-        strategy: str = 'trend',
+        strategy: str = "trend",
     ) -> PositionSize:
         """
         Calculate position size based on 1% risk rule with account-level limits.
@@ -134,7 +137,10 @@ class PositionSizer:
                 risk_amount=0.0,
                 position_value=0.0,
                 result_code=PositionSizeResult.KILL_SWITCH_ACTIVE,
-                reason=f"Kill-switch active: Daily loss {account.daily_pnl:.2f} exceeds -{self.kill_switch_pct*100:.1f}%"
+                reason=(
+                    f"Kill-switch active: Daily loss {account.daily_pnl:.2f} "
+                    f"exceeds -{self.kill_switch_pct * 100:.1f}%"
+                ),
             )
 
         # Validate inputs
@@ -144,7 +150,7 @@ class PositionSizer:
                 risk_amount=0.0,
                 position_value=0.0,
                 result_code=PositionSizeResult.INVALID_RISK,
-                reason="Invalid entry or stop loss price (must be > 0)"
+                reason="Invalid entry or stop loss price (must be > 0)",
             )
 
         # Calculate risk per share
@@ -156,7 +162,7 @@ class PositionSizer:
                 risk_amount=0.0,
                 position_value=0.0,
                 result_code=PositionSizeResult.INVALID_RISK,
-                reason="Invalid risk: entry price equals stop loss price"
+                reason="Invalid risk: entry price equals stop loss price",
             )
 
         # R10.3.1: 1% Risk Rule
@@ -181,7 +187,10 @@ class PositionSizer:
                 risk_amount=0.0,
                 position_value=0.0,
                 result_code=PositionSizeResult.INSUFFICIENT_CAPITAL,
-                reason=f"Position too small: Risk-based calculation yielded {shares_by_risk:.2f} shares"
+                reason=(
+                    f"Position too small: Risk-based calculation "
+                    f"yielded {shares_by_risk:.2f} shares"
+                ),
             )
 
         # Calculate position value
@@ -199,7 +208,10 @@ class PositionSizer:
                     risk_amount=0.0,
                     position_value=0.0,
                     result_code=PositionSizeResult.INSUFFICIENT_CAPITAL,
-                    reason=f"Insufficient cash: Need ${position_value:.2f}, have ${account.cash:.2f}"
+                    reason=(
+                        f"Insufficient cash: Need ${position_value:.2f}, "
+                        f"have ${account.cash:.2f}"
+                    ),
                 )
 
         # R10.3.2: Check total deployment limit (50% of account)
@@ -216,7 +228,10 @@ class PositionSizer:
                     risk_amount=0.0,
                     position_value=0.0,
                     result_code=PositionSizeResult.EXCEEDS_TOTAL_DEPLOYMENT,
-                    reason=f"Total deployment limit reached: {account.deployed_value:.2f}/{max_deployed_value:.2f}"
+                    reason=(
+                        f"Total deployment limit reached: "
+                        f"{account.deployed_value:.2f}/{max_deployed_value:.2f}"
+                    ),
                 )
 
             # Reduce shares to fit within deployment limit
@@ -229,7 +244,10 @@ class PositionSizer:
                     risk_amount=0.0,
                     position_value=0.0,
                     result_code=PositionSizeResult.EXCEEDS_TOTAL_DEPLOYMENT,
-                    reason=f"Position would exceed deployment limit: Current {account.deployed_value:.2f}, Max {max_deployed_value:.2f}"
+                    reason=(
+                        f"Position would exceed deployment limit: "
+                        f"Current {account.deployed_value:.2f}, Max {max_deployed_value:.2f}"
+                    ),
                 )
 
         # Calculate actual risk amount with final share count
@@ -240,7 +258,10 @@ class PositionSizer:
             risk_amount=actual_risk_amount,
             position_value=position_value,
             result_code=PositionSizeResult.SUCCESS,
-            reason=f"Success: {shares} shares @ ${entry_price:.2f} = ${position_value:.2f}, Risk: ${actual_risk_amount:.2f}"
+            reason=(
+                f"Success: {shares} shares @ ${entry_price:.2f} = ${position_value:.2f}, "
+                f"Risk: ${actual_risk_amount:.2f}"
+            ),
         )
 
     def _check_kill_switch(self, account: AccountState) -> bool:
@@ -315,7 +336,9 @@ class PositionSizer:
 
         # Check deployment limit (50% of account)
         available_deployment = (account.balance * self.max_deployment_pct) - account.deployed_value
-        shares_by_deployment = int(available_deployment / entry_price) if available_deployment > 0 else 0
+        shares_by_deployment = (
+            int(available_deployment / entry_price) if available_deployment > 0 else 0
+        )
 
         # Check cash limit
         shares_by_cash = int(account.cash / entry_price)
@@ -341,15 +364,21 @@ class PositionSizer:
         max_deployment = account.balance * self.max_deployment_pct
         deployment_available = max(0, max_deployment - account.deployed_value)
 
-        daily_pnl_pct = account.daily_pnl / account.session_start_balance if account.session_start_balance > 0 else 0
-        kill_switch_distance = daily_pnl_pct - (-self.kill_switch_pct)  # Distance to threshold (negative = safe)
+        daily_pnl_pct = (
+            account.daily_pnl / account.session_start_balance
+            if account.session_start_balance > 0
+            else 0
+        )
+        kill_switch_distance = daily_pnl_pct - (
+            -self.kill_switch_pct
+        )  # Distance to threshold (negative = safe)
 
         return {
-            'deployment_pct': deployment_pct,
-            'deployment_used': account.deployed_value,
-            'deployment_available': deployment_available,
-            'daily_pnl': account.daily_pnl,
-            'daily_pnl_pct': daily_pnl_pct,
-            'kill_switch_triggered': self.kill_switch_triggered,
-            'kill_switch_distance': kill_switch_distance,
+            "deployment_pct": deployment_pct,
+            "deployment_used": account.deployed_value,
+            "deployment_available": deployment_available,
+            "daily_pnl": account.daily_pnl,
+            "daily_pnl_pct": daily_pnl_pct,
+            "kill_switch_triggered": self.kill_switch_triggered,
+            "kill_switch_distance": kill_switch_distance,
         }

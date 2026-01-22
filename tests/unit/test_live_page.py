@@ -212,8 +212,9 @@ def test_live_page_handles_empty_positions():
     live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
-    assert "positions.length === 0" in content or "No open positions" in content, \
+    assert "positions.length === 0" in content or "No open positions" in content, (
         "Should handle empty positions"
+    )
 
 
 def test_live_page_handles_loading_state():
@@ -250,8 +251,9 @@ def test_live_page_calculates_total_exposure():
     live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
-    assert "totalExposure" in content or "total_exposure" in content, \
+    assert "totalExposure" in content or "total_exposure" in content, (
         "Should calculate total exposure"
+    )
     assert "reduce" in content, "Should use reduce for calculation"
 
 
@@ -260,8 +262,7 @@ def test_live_page_displays_last_update_time():
     live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
-    assert "Last updated" in content or "lastUpdate" in content, \
-        "Should display last update time"
+    assert "Last updated" in content or "lastUpdate" in content, "Should display last update time"
 
 
 def test_live_page_uses_responsive_design():
@@ -332,4 +333,5 @@ def test_live_page_file_size_reasonable():
 
 if __name__ == "__main__":
     import pytest
+
     pytest.main([__file__, "-v"])

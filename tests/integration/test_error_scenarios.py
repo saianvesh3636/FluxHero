@@ -68,6 +68,7 @@ class TestAPIFailures:
     @pytest.mark.asyncio
     async def test_network_timeout(self):
         """Test handling of network timeout errors."""
+
         async def mock_timeout(*args, **kwargs):
             raise httpx.TimeoutException("Request timed out")
 
@@ -88,11 +89,7 @@ class TestAPIFailures:
             call_count[0] += 1
             response = Mock()
             response.status_code = 500
-            raise httpx.HTTPStatusError(
-                "Server error",
-                request=Mock(),
-                response=response
-            )
+            raise httpx.HTTPStatusError("Server error", request=Mock(), response=response)
 
         async with AsyncAPIClient(
             base_url="https://api.example.com",
@@ -114,11 +111,7 @@ class TestAPIFailures:
             call_count[0] += 1
             response = Mock()
             response.status_code = 404
-            raise httpx.HTTPStatusError(
-                "Not found",
-                request=Mock(),
-                response=response
-            )
+            raise httpx.HTTPStatusError("Not found", request=Mock(), response=response)
 
         async with AsyncAPIClient(
             base_url="https://api.example.com",
@@ -174,7 +167,7 @@ class TestAPIFailures:
             # Verify HTTP client is initialized
             assert client._client is not None
             # Verify it's an httpx.AsyncClient
-            assert client._client.__class__.__name__ == 'AsyncClient'
+            assert client._client.__class__.__name__ == "AsyncClient"
 
     @pytest.mark.asyncio
     async def test_missing_api_credentials(self):
@@ -191,6 +184,7 @@ class TestAPIFailures:
     @pytest.mark.asyncio
     async def test_connection_refused(self):
         """Test handling of connection refused errors."""
+
         async def mock_connection_refused(*args, **kwargs):
             raise httpx.ConnectError("Connection refused")
 
@@ -224,9 +218,7 @@ class TestWebSocketDisconnects:
         # Mock WebSocket that disconnects after 2 messages
         mock_ws = AsyncMock()
         messages = ['{"price": 100}', '{"price": 101}']
-        mock_ws.recv = AsyncMock(
-            side_effect=messages + [ConnectionClosed(None, None)]
-        )
+        mock_ws.recv = AsyncMock(side_effect=messages + [ConnectionClosed(None, None)])
         feed._ws = mock_ws
         feed._connected = True
 
@@ -535,8 +527,8 @@ class TestInvalidDataScenarios:
         # Should return a dict with regime information
         assert isinstance(result, dict)
         # The result contains 'trend_regime' and 'volatility_regime' arrays
-        assert 'trend_regime' in result
-        assert 'volatility_regime' in result
+        assert "trend_regime" in result
+        assert "volatility_regime" in result
 
     def test_kama_with_zero_volatility(self):
         """Test KAMA calculation with zero volatility (constant price)."""
@@ -558,9 +550,7 @@ class TestInvalidDataScenarios:
 
         mock_ws = AsyncMock()
         # Send non-JSON message
-        mock_ws.recv = AsyncMock(
-            side_effect=["not valid json", TimeoutError()]
-        )
+        mock_ws.recv = AsyncMock(side_effect=["not valid json", TimeoutError()])
         feed._ws = mock_ws
         feed._connected = True
 
@@ -608,9 +598,7 @@ class TestDataPipelineErrors:
     async def test_pipeline_start_with_api_failure(self):
         """Test pipeline startup when initial API call fails."""
         mock_rest = AsyncMock()
-        mock_rest.fetch_candles = AsyncMock(
-            side_effect=httpx.HTTPError("Connection failed")
-        )
+        mock_rest.fetch_candles = AsyncMock(side_effect=httpx.HTTPError("Connection failed"))
         mock_ws = AsyncMock()
 
         pipeline = DataPipeline(mock_rest, mock_ws)
@@ -625,9 +613,7 @@ class TestDataPipelineErrors:
         mock_rest.fetch_candles = AsyncMock(return_value=[])
 
         mock_ws = AsyncMock()
-        mock_ws.connect = AsyncMock(
-            side_effect=ConnectionError("Failed to connect")
-        )
+        mock_ws.connect = AsyncMock(side_effect=ConnectionError("Failed to connect"))
 
         pipeline = DataPipeline(mock_rest, mock_ws)
 
@@ -726,15 +712,17 @@ class TestEdgeCaseAggregation:
     def test_indicator_calculation_with_all_edge_cases(self):
         """Test indicator calculation with multiple edge cases combined."""
         # Array with NaN, Inf, negative, zero, and normal values
-        prices = np.array([
-            100.0,      # Normal
-            np.nan,     # NaN
-            -10.0,      # Negative
-            0.0,        # Zero
-            np.inf,     # Inf
-            105.0,      # Normal
-            110.0,      # Normal
-        ])
+        prices = np.array(
+            [
+                100.0,  # Normal
+                np.nan,  # NaN
+                -10.0,  # Negative
+                0.0,  # Zero
+                np.inf,  # Inf
+                105.0,  # Normal
+                110.0,  # Normal
+            ]
+        )
 
         # EMA should handle all edge cases
         ema = calculate_ema(prices, period=3)

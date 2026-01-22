@@ -147,7 +147,9 @@ class TestConfigurationGuidance:
     def test_security_warnings_present(self, guide_content):
         """Verify security warnings are included."""
         # Check for NEVER (in bold or plain text) related to committing secrets
-        assert ("NEVER" in guide_content and "commit" in guide_content) or "never commit" in guide_content.lower()
+        assert (
+            "NEVER" in guide_content and "commit" in guide_content
+        ) or "never commit" in guide_content.lower()
         assert "paper trading" in guide_content.lower()
         assert "API key" in guide_content
 
@@ -180,7 +182,10 @@ class TestCommandsAreValid:
         """Verify uvicorn commands are correct."""
         assert "uvicorn" in guide_content
         # Should reference the correct module path
-        assert "backend.api.server:app" in guide_content or "fluxhero.backend.api.server:app" in guide_content
+        assert (
+            "backend.api.server:app" in guide_content
+            or "fluxhero.backend.api.server:app" in guide_content
+        )
 
     def test_curl_commands_use_localhost(self, guide_content):
         """Verify curl commands reference correct host."""
@@ -242,7 +247,9 @@ class TestBestPractices:
         maintenance_keywords = ["daily", "weekly", "monthly"]
         for keyword in maintenance_keywords:
             # Should appear in context of tasks
-            assert keyword in guide_content.lower(), f"Maintenance frequency {keyword} not documented"
+            assert keyword in guide_content.lower(), (
+                f"Maintenance frequency {keyword} not documented"
+            )
 
 
 class TestQuickReference:
@@ -291,7 +298,9 @@ class TestDocumentationQuality:
         """Verify no placeholder text remains."""
         placeholders = ["TODO", "TBD", "FIXME", "XXX", "[INSERT", "PLACEHOLDER"]
         for placeholder in placeholders:
-            assert placeholder not in guide_content.upper(), f"Placeholder text found: {placeholder}"
+            assert placeholder not in guide_content.upper(), (
+                f"Placeholder text found: {placeholder}"
+            )
 
     def test_consistent_formatting(self, guide_content):
         """Verify consistent markdown formatting."""

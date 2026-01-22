@@ -69,9 +69,7 @@ class RateLimiter:
                 self.requests[client_id] = []
 
             # Remove expired requests
-            self.requests[client_id] = [
-                t for t in self.requests[client_id] if t > cutoff
-            ]
+            self.requests[client_id] = [t for t in self.requests[client_id] if t > cutoff]
 
             # Check if we can make request
             if len(self.requests[client_id]) < self.max_requests:
@@ -100,9 +98,7 @@ class RateLimiter:
                 return 0
 
             # Remove expired requests
-            self.requests[client_id] = [
-                t for t in self.requests[client_id] if t > cutoff
-            ]
+            self.requests[client_id] = [t for t in self.requests[client_id] if t > cutoff]
 
             # If under limit, no wait needed
             if len(self.requests[client_id]) < self.max_requests:
@@ -169,10 +165,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             exclude_paths: List of paths to exclude from rate limiting
         """
         super().__init__(app)
-        self.rate_limiter = RateLimiter(
-            max_requests=max_requests,
-            window_seconds=window_seconds
-        )
+        self.rate_limiter = RateLimiter(max_requests=max_requests, window_seconds=window_seconds)
         self.exclude_paths = exclude_paths or []
 
         logger.info(
@@ -181,7 +174,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 "max_requests": max_requests,
                 "window_seconds": window_seconds,
                 "exclude_paths": self.exclude_paths,
-            }
+            },
         )
 
     async def dispatch(self, request: Request, call_next):
@@ -215,7 +208,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "client_ip": client_ip,
                     "path": request.url.path,
                     "retry_after": retry_after,
-                }
+                },
             )
 
             # Return 429 Too Many Requests

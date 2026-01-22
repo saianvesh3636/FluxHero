@@ -57,7 +57,7 @@ def sample_trade():
         status=TradeStatus.OPEN,
         strategy="TREND",
         regime="STRONG_TREND",
-        signal_reason="KAMA crossover + high ADX"
+        signal_reason="KAMA crossover + high ADX",
     )
 
 
@@ -72,7 +72,7 @@ def sample_position():
         current_price=185.00,
         unrealized_pnl=250.00,
         stop_loss=175.00,
-        entry_time=datetime.utcnow().isoformat()
+        entry_time=datetime.utcnow().isoformat(),
     )
 
 
@@ -144,7 +144,7 @@ async def test_update_trade(temp_db, sample_trade):
         exit_price=425.00,
         exit_time=datetime.utcnow().isoformat(),
         realized_pnl=450.00,
-        status=TradeStatus.CLOSED
+        status=TradeStatus.CLOSED,
     )
 
     # Verify update
@@ -370,7 +370,7 @@ async def test_multiple_concurrent_operations(temp_db, sample_trade, sample_posi
         temp_db.set_setting("test_key", "test_value"),
         temp_db.get_open_trades(),
         temp_db.get_open_positions(),
-        temp_db.get_all_settings()
+        temp_db.get_all_settings(),
     ]
 
     # All should complete without errors
@@ -563,7 +563,7 @@ async def test_trade_with_optional_fields(temp_db):
         shares=10,
         stop_loss=95.0,
         status=TradeStatus.OPEN,
-        strategy="TEST"
+        strategy="TEST",
     )
 
     trade_id = await temp_db.add_trade(minimal_trade)
@@ -586,7 +586,7 @@ async def test_position_with_short_side(temp_db):
         current_price=195.0,
         unrealized_pnl=500.0,  # Profit on short
         stop_loss=205.0,
-        entry_time=datetime.utcnow().isoformat()
+        entry_time=datetime.utcnow().isoformat(),
     )
 
     await temp_db.upsert_position(short_position)
@@ -659,6 +659,7 @@ async def test_success_criteria_query_performance(temp_db, sample_trade):
 
 # ==================== Signal Explanation Storage Tests ====================
 
+
 @pytest.mark.asyncio
 async def test_signal_explanation_storage(temp_db, sample_trade):
     """
@@ -672,27 +673,33 @@ async def test_signal_explanation_storage(temp_db, sample_trade):
 
     # Create a signal explanation JSON (simulating SignalExplanation.to_dict())
     signal_explanation = {
-        'symbol': 'SPY',
-        'signal_type': 1,  # LONG
-        'price': 420.50,
-        'timestamp': 1700000000.0,
-        'strategy_mode': 2,  # TREND_FOLLOWING
-        'regime': 2,  # STRONG_TREND
-        'volatility_state': 2,  # HIGH
-        'atr': 3.2,
-        'kama': 418.0,
-        'rsi': 65.0,
-        'adx': 32.0,
-        'r_squared': 0.81,
-        'risk_amount': 1000.0,
-        'risk_percent': 1.0,
-        'stop_loss': 415.0,
-        'position_size': 100,
-        'entry_trigger': 'KAMA crossover (Price > KAMA+0.5×ATR)',
-        'noise_filtered': True,
-        'volume_validated': True,
-        'formatted_reason': 'BUY SPY @ $420.50\nReason: Volatility (ATR=3.2, High) + KAMA crossover\nRegime: STRONG_TREND (ADX=32, R²=0.81)\nRisk: $1000 (1.00% account), Stop: $415.00',
-        'compact_reason': 'BUY @ $420.50 | KAMA crossover | STRONG_TREND (ATR=3.2, High) | Risk: $1000 (1.00%)'
+        "symbol": "SPY",
+        "signal_type": 1,  # LONG
+        "price": 420.50,
+        "timestamp": 1700000000.0,
+        "strategy_mode": 2,  # TREND_FOLLOWING
+        "regime": 2,  # STRONG_TREND
+        "volatility_state": 2,  # HIGH
+        "atr": 3.2,
+        "kama": 418.0,
+        "rsi": 65.0,
+        "adx": 32.0,
+        "r_squared": 0.81,
+        "risk_amount": 1000.0,
+        "risk_percent": 1.0,
+        "stop_loss": 415.0,
+        "position_size": 100,
+        "entry_trigger": "KAMA crossover (Price > KAMA+0.5×ATR)",
+        "noise_filtered": True,
+        "volume_validated": True,
+        "formatted_reason": (
+            "BUY SPY @ $420.50\nReason: Volatility (ATR=3.2, High) + KAMA crossover\n"
+            "Regime: STRONG_TREND (ADX=32, R²=0.81)\nRisk: $1000 (1.00% account), Stop: $415.00"
+        ),
+        "compact_reason": (
+            "BUY @ $420.50 | KAMA crossover | STRONG_TREND (ATR=3.2, High) | "
+            "Risk: $1000 (1.00%)"
+        ),
     }
 
     # Add trade with signal explanation
@@ -713,14 +720,14 @@ async def test_signal_explanation_storage(temp_db, sample_trade):
 
     # Parse JSON and verify contents
     parsed_explanation = json.loads(retrieved_trade.signal_explanation)
-    assert parsed_explanation['symbol'] == 'SPY'
-    assert parsed_explanation['signal_type'] == 1
-    assert parsed_explanation['price'] == 420.50
-    assert parsed_explanation['atr'] == 3.2
-    assert parsed_explanation['kama'] == 418.0
-    assert parsed_explanation['risk_amount'] == 1000.0
-    assert parsed_explanation['entry_trigger'] == 'KAMA crossover (Price > KAMA+0.5×ATR)'
-    assert 'BUY SPY @ $420.50' in parsed_explanation['formatted_reason']
+    assert parsed_explanation["symbol"] == "SPY"
+    assert parsed_explanation["signal_type"] == 1
+    assert parsed_explanation["price"] == 420.50
+    assert parsed_explanation["atr"] == 3.2
+    assert parsed_explanation["kama"] == 418.0
+    assert parsed_explanation["risk_amount"] == 1000.0
+    assert parsed_explanation["entry_trigger"] == "KAMA crossover (Price > KAMA+0.5×ATR)"
+    assert "BUY SPY @ $420.50" in parsed_explanation["formatted_reason"]
 
 
 @pytest.mark.asyncio
@@ -767,19 +774,19 @@ async def test_signal_explanation_update(temp_db, sample_trade):
 
     # Create signal explanation
     signal_explanation = {
-        'symbol': 'AAPL',
-        'signal_type': -1,  # SHORT
-        'price': 175.00,
-        'atr': 2.5,
-        'entry_trigger': 'RSI overbought + Upper Bollinger Band',
-        'formatted_reason': 'SELL SHORT AAPL @ $175.00\nReason: Volatility (ATR=2.5, Normal) + RSI overbought\nRegime: MEAN_REVERSION\nRisk: $750 (0.75% account), Stop: $178.00'
+        "symbol": "AAPL",
+        "signal_type": -1,  # SHORT
+        "price": 175.00,
+        "atr": 2.5,
+        "entry_trigger": "RSI overbought + Upper Bollinger Band",
+        "formatted_reason": (
+            "SELL SHORT AAPL @ $175.00\nReason: Volatility (ATR=2.5, Normal) + RSI overbought\n"
+            "Regime: MEAN_REVERSION\nRisk: $750 (0.75% account), Stop: $178.00"
+        ),
     }
 
     # Update trade with signal explanation
-    await temp_db.update_trade(
-        trade_id,
-        signal_explanation=json.dumps(signal_explanation)
-    )
+    await temp_db.update_trade(trade_id, signal_explanation=json.dumps(signal_explanation))
 
     # Wait for async write
     await asyncio.sleep(0.1)
@@ -792,9 +799,9 @@ async def test_signal_explanation_update(temp_db, sample_trade):
     assert retrieved_trade.signal_explanation is not None
 
     parsed_explanation = json.loads(retrieved_trade.signal_explanation)
-    assert parsed_explanation['symbol'] == 'AAPL'
-    assert parsed_explanation['signal_type'] == -1
-    assert parsed_explanation['price'] == 175.00
+    assert parsed_explanation["symbol"] == "AAPL"
+    assert parsed_explanation["signal_type"] == -1
+    assert parsed_explanation["price"] == 175.00
 
 
 @pytest.mark.asyncio
@@ -813,11 +820,11 @@ async def test_signal_explanation_query_recent_trades(temp_db, sample_trade):
         trade.symbol = f"TEST{i}"
 
         signal_explanation = {
-            'symbol': f'TEST{i}',
-            'signal_type': 1,
-            'price': 100.0 + i,
-            'atr': 2.0 + i * 0.1,
-            'entry_trigger': f'Test trigger {i}'
+            "symbol": f"TEST{i}",
+            "signal_type": 1,
+            "price": 100.0 + i,
+            "atr": 2.0 + i * 0.1,
+            "entry_trigger": f"Test trigger {i}",
         }
 
         trade.signal_explanation = json.dumps(signal_explanation)
@@ -834,9 +841,9 @@ async def test_signal_explanation_query_recent_trades(temp_db, sample_trade):
     for trade in recent_trades:
         assert trade.signal_explanation is not None
         parsed = json.loads(trade.signal_explanation)
-        assert 'symbol' in parsed
-        assert 'signal_type' in parsed
-        assert 'entry_trigger' in parsed
+        assert "symbol" in parsed
+        assert "signal_type" in parsed
+        assert "entry_trigger" in parsed
 
 
 @pytest.mark.asyncio
@@ -853,7 +860,7 @@ async def test_signal_explanation_migration(temp_db):
     cursor = conn.execute("PRAGMA table_info(trades)")
     columns = [row[1] for row in cursor.fetchall()]
 
-    assert 'signal_explanation' in columns, "signal_explanation column not found in trades table"
+    assert "signal_explanation" in columns, "signal_explanation column not found in trades table"
 
 
 @pytest.mark.asyncio
@@ -868,31 +875,34 @@ async def test_signal_explanation_full_workflow(temp_db, sample_trade):
 
     # Step 1: Create signal explanation (simulating SignalGenerator output)
     entry_explanation = {
-        'symbol': 'MSFT',
-        'signal_type': 1,  # LONG
-        'price': 350.00,
-        'timestamp': 1700000000.0,
-        'strategy_mode': 2,  # TREND_FOLLOWING
-        'regime': 2,  # STRONG_TREND
-        'volatility_state': 1,  # NORMAL
-        'atr': 3.5,
-        'kama': 348.0,
-        'rsi': 55.0,
-        'adx': 28.0,
-        'r_squared': 0.75,
-        'risk_amount': 1500.0,
-        'risk_percent': 1.0,
-        'stop_loss': 341.25,
-        'position_size': 150,
-        'entry_trigger': 'KAMA crossover (Price > KAMA+0.5×ATR)',
-        'noise_filtered': True,
-        'volume_validated': True,
-        'formatted_reason': 'BUY MSFT @ $350.00\nReason: Volatility (ATR=3.5, Normal) + KAMA crossover\nRegime: STRONG_TREND (ADX=28, R²=0.75)\nRisk: $1500 (1.00% account), Stop: $341.25'
+        "symbol": "MSFT",
+        "signal_type": 1,  # LONG
+        "price": 350.00,
+        "timestamp": 1700000000.0,
+        "strategy_mode": 2,  # TREND_FOLLOWING
+        "regime": 2,  # STRONG_TREND
+        "volatility_state": 1,  # NORMAL
+        "atr": 3.5,
+        "kama": 348.0,
+        "rsi": 55.0,
+        "adx": 28.0,
+        "r_squared": 0.75,
+        "risk_amount": 1500.0,
+        "risk_percent": 1.0,
+        "stop_loss": 341.25,
+        "position_size": 150,
+        "entry_trigger": "KAMA crossover (Price > KAMA+0.5×ATR)",
+        "noise_filtered": True,
+        "volume_validated": True,
+        "formatted_reason": (
+            "BUY MSFT @ $350.00\nReason: Volatility (ATR=3.5, Normal) + KAMA crossover\n"
+            "Regime: STRONG_TREND (ADX=28, R²=0.75)\nRisk: $1500 (1.00% account), Stop: $341.25"
+        ),
     }
 
     # Step 2: Create and save trade with entry explanation
     trade = Trade(**sample_trade.__dict__)
-    trade.symbol = 'MSFT'
+    trade.symbol = "MSFT"
     trade.entry_price = 350.00
     trade.stop_loss = 341.25
     trade.shares = 150
@@ -907,21 +917,21 @@ async def test_signal_explanation_full_workflow(temp_db, sample_trade):
     assert retrieved_trade.signal_explanation is not None
 
     entry_parsed = json.loads(retrieved_trade.signal_explanation)
-    assert entry_parsed['entry_trigger'] == 'KAMA crossover (Price > KAMA+0.5×ATR)'
-    assert entry_parsed['risk_amount'] == 1500.0
+    assert entry_parsed["entry_trigger"] == "KAMA crossover (Price > KAMA+0.5×ATR)"
+    assert entry_parsed["risk_amount"] == 1500.0
 
     # Step 4: Close trade and update with exit explanation
     exit_explanation = entry_explanation.copy()
-    exit_explanation['exit_reason'] = 'Trailing stop hit at $348.00'
-    exit_explanation['hold_period_bars'] = 25
-    exit_explanation['realized_pnl'] = -300.0
+    exit_explanation["exit_reason"] = "Trailing stop hit at $348.00"
+    exit_explanation["hold_period_bars"] = 25
+    exit_explanation["realized_pnl"] = -300.0
 
     await temp_db.update_trade(
         trade_id,
         exit_price=348.00,
         realized_pnl=-300.0,
         status=TradeStatus.CLOSED,
-        signal_explanation=json.dumps(exit_explanation)
+        signal_explanation=json.dumps(exit_explanation),
     )
     await asyncio.sleep(0.1)
 
@@ -932,9 +942,9 @@ async def test_signal_explanation_full_workflow(temp_db, sample_trade):
     assert final_trade.realized_pnl == -300.0
 
     exit_parsed = json.loads(final_trade.signal_explanation)
-    assert 'exit_reason' in exit_parsed
-    assert exit_parsed['exit_reason'] == 'Trailing stop hit at $348.00'
-    assert exit_parsed['realized_pnl'] == -300.0
+    assert "exit_reason" in exit_parsed
+    assert exit_parsed["exit_reason"] == "Trailing stop hit at $348.00"
+    assert exit_parsed["realized_pnl"] == -300.0
 
 
 # ==================== Exception Handling Tests ====================
@@ -981,7 +991,7 @@ async def test_write_worker_logs_sqlite_errors(temp_db, caplog):
     import sqlite3
 
     # Set logging level to capture error logs
-    caplog.set_level(logging.ERROR, logger='backend.storage.sqlite_store')
+    caplog.set_level(logging.ERROR, logger="backend.storage.sqlite_store")
 
     # Create a function that will raise sqlite3.Error
     def failing_operation():
@@ -998,7 +1008,7 @@ async def test_write_worker_logs_sqlite_errors(temp_db, caplog):
     # Note: This will pass even if logging isn't yet implemented
     # but will verify it when it is
     for record in caplog.records:
-        if record.levelname == 'ERROR' and 'SQLite error' in record.message:
+        if record.levelname == "ERROR" and "SQLite error" in record.message:
             assert True
             return
 
@@ -1016,7 +1026,7 @@ async def test_structured_logging_on_initialize(temp_db, caplog, tmp_path):
     """
     import logging
 
-    caplog.set_level(logging.INFO, logger='backend.storage.sqlite_store')
+    caplog.set_level(logging.INFO, logger="backend.storage.sqlite_store")
 
     # Create a new temporary database to capture initialization logs
     db_path = tmp_path / "test_logging.db"
@@ -1027,7 +1037,7 @@ async def test_structured_logging_on_initialize(temp_db, caplog, tmp_path):
     found_init_log = False
     for record in caplog.records:
         if "Initializing SQLite database" in record.message:
-            assert hasattr(record, 'db_path')
+            assert hasattr(record, "db_path")
             found_init_log = True
             break
 
@@ -1044,7 +1054,7 @@ async def test_structured_logging_on_trade_operations(temp_db, sample_trade, cap
     """
     import logging
 
-    caplog.set_level(logging.DEBUG, logger='backend.storage.sqlite_store')
+    caplog.set_level(logging.DEBUG, logger="backend.storage.sqlite_store")
 
     # Add trade
     trade_id = await temp_db.add_trade(sample_trade)
@@ -1054,8 +1064,8 @@ async def test_structured_logging_on_trade_operations(temp_db, sample_trade, cap
     found_insert_log = False
     for record in caplog.records:
         if "Trade inserted successfully" in record.message:
-            assert hasattr(record, 'trade_id')
-            assert hasattr(record, 'symbol')
+            assert hasattr(record, "trade_id")
+            assert hasattr(record, "symbol")
             found_insert_log = True
             break
 
@@ -1072,8 +1082,8 @@ async def test_structured_logging_on_trade_operations(temp_db, sample_trade, cap
     found_update_log = False
     for record in caplog.records:
         if "Trade updated successfully" in record.message:
-            assert hasattr(record, 'trade_id')
-            assert hasattr(record, 'fields_updated')
+            assert hasattr(record, "trade_id")
+            assert hasattr(record, "fields_updated")
             found_update_log = True
             break
 
@@ -1089,7 +1099,7 @@ async def test_structured_logging_on_position_operations(temp_db, sample_positio
     """
     import logging
 
-    caplog.set_level(logging.DEBUG, logger='backend.storage.sqlite_store')
+    caplog.set_level(logging.DEBUG, logger="backend.storage.sqlite_store")
 
     # Upsert position
     await temp_db.upsert_position(sample_position)
@@ -1099,8 +1109,8 @@ async def test_structured_logging_on_position_operations(temp_db, sample_positio
     found_upsert_log = False
     for record in caplog.records:
         if "Position upserted successfully" in record.message:
-            assert hasattr(record, 'symbol')
-            assert hasattr(record, 'shares')
+            assert hasattr(record, "symbol")
+            assert hasattr(record, "shares")
             found_upsert_log = True
             break
 
@@ -1117,7 +1127,7 @@ async def test_structured_logging_on_position_operations(temp_db, sample_positio
     found_delete_log = False
     for record in caplog.records:
         if "Position deleted successfully" in record.message:
-            assert hasattr(record, 'symbol')
+            assert hasattr(record, "symbol")
             found_delete_log = True
             break
 
@@ -1133,7 +1143,7 @@ async def test_structured_logging_on_settings_operations(temp_db, caplog):
     """
     import logging
 
-    caplog.set_level(logging.DEBUG, logger='backend.storage.sqlite_store')
+    caplog.set_level(logging.DEBUG, logger="backend.storage.sqlite_store")
 
     # Set setting
     await temp_db.set_setting("test_key", "test_value", "Test setting")
@@ -1143,7 +1153,7 @@ async def test_structured_logging_on_settings_operations(temp_db, caplog):
     found_set_log = False
     for record in caplog.records:
         if "Setting updated successfully" in record.message:
-            assert hasattr(record, 'key')
+            assert hasattr(record, "key")
             found_set_log = True
             break
 
@@ -1159,7 +1169,7 @@ async def test_structured_logging_on_archive(temp_db, sample_trade, caplog):
     """
     import logging
 
-    caplog.set_level(logging.INFO, logger='backend.storage.sqlite_store')
+    caplog.set_level(logging.INFO, logger="backend.storage.sqlite_store")
 
     # Add old trades to archive
     now = datetime.utcnow()
@@ -1182,13 +1192,13 @@ async def test_structured_logging_on_archive(temp_db, sample_trade, caplog):
 
     for record in caplog.records:
         if "Exported" in record.message and "trades to archive" in record.message:
-            assert hasattr(record, 'count')
-            assert hasattr(record, 'archive_path')
-            assert hasattr(record, 'cutoff_date')
+            assert hasattr(record, "count")
+            assert hasattr(record, "archive_path")
+            assert hasattr(record, "cutoff_date")
             found_export_log = True
         elif "Deleted" in record.message and "archived trades from SQLite" in record.message:
-            assert hasattr(record, 'count')
-            assert hasattr(record, 'cutoff_date')
+            assert hasattr(record, "count")
+            assert hasattr(record, "cutoff_date")
             found_delete_log = True
 
     assert found_export_log, "Archive export log not found"
@@ -1202,7 +1212,7 @@ async def test_structured_logging_on_close(temp_db, caplog):
     """
     import logging
 
-    caplog.set_level(logging.INFO, logger='backend.storage.sqlite_store')
+    caplog.set_level(logging.INFO, logger="backend.storage.sqlite_store")
 
     # Close database
     await temp_db.close()
@@ -1211,7 +1221,7 @@ async def test_structured_logging_on_close(temp_db, caplog):
     found_close_log = False
     for record in caplog.records:
         if "Closing SQLite database" in record.message:
-            assert hasattr(record, 'db_path')
+            assert hasattr(record, "db_path")
             found_close_log = True
             break
 

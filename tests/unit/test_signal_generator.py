@@ -230,60 +230,92 @@ class TestSignalExplanation:
 
         data = explanation.to_dict()
 
-        assert data['symbol'] == "SPY"
-        assert data['signal_type'] == 1  # LONG
-        assert data['price'] == 420.50
-        assert data['timestamp'] == 1234567890.0
-        assert data['strategy_mode'] == 2  # TREND_FOLLOWING
-        assert data['regime'] == 2  # STRONG_TREND
-        assert data['volatility_state'] == 2  # HIGH
-        assert data['atr'] == 3.2
-        assert data['kama'] == 418.0
-        assert data['rsi'] == 55.0
-        assert data['risk_amount'] == 1000.0
-        assert data['stop_loss'] == 415.0
-        assert data['position_size'] == 200
-        assert 'formatted_reason' in data
-        assert 'compact_reason' in data
+        assert data["symbol"] == "SPY"
+        assert data["signal_type"] == 1  # LONG
+        assert data["price"] == 420.50
+        assert data["timestamp"] == 1234567890.0
+        assert data["strategy_mode"] == 2  # TREND_FOLLOWING
+        assert data["regime"] == 2  # STRONG_TREND
+        assert data["volatility_state"] == 2  # HIGH
+        assert data["atr"] == 3.2
+        assert data["kama"] == 418.0
+        assert data["rsi"] == 55.0
+        assert data["risk_amount"] == 1000.0
+        assert data["stop_loss"] == 415.0
+        assert data["position_size"] == 200
+        assert "formatted_reason" in data
+        assert "compact_reason" in data
 
     def test_volatility_state_names(self):
         """Test volatility state name formatting."""
         # Use LONG signal so we get formatted output, not "NO SIGNAL"
         low_vol = SignalExplanation(
-            symbol="SPY", signal_type=SignalType.LONG, price=420.0,
-            timestamp=time.time(), strategy_mode=StrategyMode.NEUTRAL,
-            regime=RegimeType.NEUTRAL, volatility_state=VolatilityState.LOW,
-            atr=1.0, kama=420.0, entry_trigger="Test",
-            risk_amount=1000.0, risk_percent=0.01, stop_loss=415.0,
+            symbol="SPY",
+            signal_type=SignalType.LONG,
+            price=420.0,
+            timestamp=time.time(),
+            strategy_mode=StrategyMode.NEUTRAL,
+            regime=RegimeType.NEUTRAL,
+            volatility_state=VolatilityState.LOW,
+            atr=1.0,
+            kama=420.0,
+            entry_trigger="Test",
+            risk_amount=1000.0,
+            risk_percent=0.01,
+            stop_loss=415.0,
         )
         assert "Low" in low_vol.format_signal_reason()
 
         high_vol = SignalExplanation(
-            symbol="SPY", signal_type=SignalType.LONG, price=420.0,
-            timestamp=time.time(), strategy_mode=StrategyMode.NEUTRAL,
-            regime=RegimeType.NEUTRAL, volatility_state=VolatilityState.HIGH,
-            atr=5.0, kama=420.0, entry_trigger="Test",
-            risk_amount=1000.0, risk_percent=0.01, stop_loss=415.0,
+            symbol="SPY",
+            signal_type=SignalType.LONG,
+            price=420.0,
+            timestamp=time.time(),
+            strategy_mode=StrategyMode.NEUTRAL,
+            regime=RegimeType.NEUTRAL,
+            volatility_state=VolatilityState.HIGH,
+            atr=5.0,
+            kama=420.0,
+            entry_trigger="Test",
+            risk_amount=1000.0,
+            risk_percent=0.01,
+            stop_loss=415.0,
         )
         assert "High" in high_vol.format_signal_reason()
 
     def test_regime_names(self):
         """Test regime name formatting."""
         trend = SignalExplanation(
-            symbol="SPY", signal_type=SignalType.LONG, price=420.0,
-            timestamp=time.time(), strategy_mode=StrategyMode.TREND_FOLLOWING,
-            regime=RegimeType.STRONG_TREND, volatility_state=VolatilityState.NORMAL,
-            atr=2.5, kama=418.0, entry_trigger="Test", risk_amount=1000.0,
-            risk_percent=0.01, stop_loss=415.0,
+            symbol="SPY",
+            signal_type=SignalType.LONG,
+            price=420.0,
+            timestamp=time.time(),
+            strategy_mode=StrategyMode.TREND_FOLLOWING,
+            regime=RegimeType.STRONG_TREND,
+            volatility_state=VolatilityState.NORMAL,
+            atr=2.5,
+            kama=418.0,
+            entry_trigger="Test",
+            risk_amount=1000.0,
+            risk_percent=0.01,
+            stop_loss=415.0,
         )
         assert "STRONG_TREND" in trend.format_signal_reason()
 
         mr = SignalExplanation(
-            symbol="SPY", signal_type=SignalType.LONG, price=420.0,
-            timestamp=time.time(), strategy_mode=StrategyMode.MEAN_REVERSION,
-            regime=RegimeType.MEAN_REVERSION, volatility_state=VolatilityState.NORMAL,
-            atr=2.5, kama=420.0, entry_trigger="Test", risk_amount=1000.0,
-            risk_percent=0.01, stop_loss=415.0,
+            symbol="SPY",
+            signal_type=SignalType.LONG,
+            price=420.0,
+            timestamp=time.time(),
+            strategy_mode=StrategyMode.MEAN_REVERSION,
+            regime=RegimeType.MEAN_REVERSION,
+            volatility_state=VolatilityState.NORMAL,
+            atr=2.5,
+            kama=420.0,
+            entry_trigger="Test",
+            risk_amount=1000.0,
+            risk_percent=0.01,
+            stop_loss=415.0,
         )
         assert "MEAN_REVERSION" in mr.format_signal_reason()
 
@@ -627,7 +659,7 @@ class TestSuccessCriteria:
         # Line 3: "Regime: STRONG_TREND (ADX=32, R²=0.81)"
         # Line 4: "Risk: $1,000 (1% account), Stop: $415.00"
 
-        lines = reason.split('\n')
+        lines = reason.split("\n")
         assert len(lines) == 4
 
         assert lines[0] == "BUY SPY @ $420.50"

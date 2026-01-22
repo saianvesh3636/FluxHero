@@ -582,7 +582,10 @@ async def test_success_fetch_500_candles_performance():
     This is a mock test since we can't make real API calls.
     In production, this would test actual API performance.
     """
-    mock_response = {"bars": [{"t": "2024-01-01T10:00:00Z", "o": 100, "h": 101, "l": 99, "c": 100.5, "v": 1000}] * 500}
+    mock_response = {
+        "bars": [{"t": "2024-01-01T10:00:00Z", "o": 100, "h": 101, "l": 99, "c": 100.5, "v": 1000}]
+        * 500
+    }
 
     async with AsyncAPIClient(
         base_url="https://api.example.com",

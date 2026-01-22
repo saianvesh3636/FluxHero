@@ -42,6 +42,7 @@ from backend.strategy.noise_filter import (
 # Spread-to-Volatility Ratio Tests
 # ============================================================================
 
+
 class TestSpreadToVolatilityRatio:
     """Test spread-to-volatility ratio calculation (R4.1.1-4.1.3)."""
 
@@ -126,6 +127,7 @@ class TestSpreadToVolatilityRatio:
 # Volume Validation Tests
 # ============================================================================
 
+
 class TestVolumeValidation:
     """Test volume validation logic (R4.2.1-4.2.3)."""
 
@@ -207,6 +209,7 @@ class TestVolumeValidation:
 # ============================================================================
 # Time-of-Day Filter Tests
 # ============================================================================
+
 
 class TestTimeOfDayFilter:
     """Test time-of-day filtering logic (R4.3.1-4.3.3)."""
@@ -294,6 +297,7 @@ class TestTimeOfDayFilter:
 # Combined Noise Filter Tests
 # ============================================================================
 
+
 class TestCombinedNoiseFilter:
     """Test combined noise filter application."""
 
@@ -305,9 +309,7 @@ class TestCombinedNoiseFilter:
         is_breakout = np.array([False, False, False, False, False])
         is_illiquid = np.array([False, False, False, False, False])
 
-        valid = apply_noise_filter(
-            sv_ratio, volume, avg_volume, is_breakout, is_illiquid
-        )
+        valid = apply_noise_filter(sv_ratio, volume, avg_volume, is_breakout, is_illiquid)
 
         # All signals should pass (good SV ratio, good volume, normal hours)
         assert valid[0]  # 0.01 < 0.05, 1000 > 500
@@ -322,9 +324,7 @@ class TestCombinedNoiseFilter:
         is_breakout = np.array([False, False, False])
         is_illiquid = np.array([False, False, False])
 
-        valid = apply_noise_filter(
-            sv_ratio, volume, avg_volume, is_breakout, is_illiquid
-        )
+        valid = apply_noise_filter(sv_ratio, volume, avg_volume, is_breakout, is_illiquid)
 
         assert valid[0]  # Pass
         assert not valid[1]  # Reject: SV ratio 0.06 > 0.05
@@ -338,9 +338,7 @@ class TestCombinedNoiseFilter:
         is_breakout = np.array([False, False, False])
         is_illiquid = np.array([False, True, False])
 
-        valid = apply_noise_filter(
-            sv_ratio, volume, avg_volume, is_breakout, is_illiquid
-        )
+        valid = apply_noise_filter(sv_ratio, volume, avg_volume, is_breakout, is_illiquid)
 
         assert valid[0]  # Normal hours: 0.01 < 0.05
         assert not valid[1]  # Illiquid hours: 0.03 > 0.025 (stricter)
@@ -354,9 +352,7 @@ class TestCombinedNoiseFilter:
         is_breakout = np.array([False, False, False])
         is_illiquid = np.array([False, False, False])
 
-        valid = apply_noise_filter(
-            sv_ratio, volume, avg_volume, is_breakout, is_illiquid
-        )
+        valid = apply_noise_filter(sv_ratio, volume, avg_volume, is_breakout, is_illiquid)
 
         assert valid[0]  # 1000 > 500
         assert not valid[1]  # 400 < 500 (reject)
@@ -370,9 +366,7 @@ class TestCombinedNoiseFilter:
         is_breakout = np.array([True, True, True])
         is_illiquid = np.array([False, False, False])
 
-        valid = apply_noise_filter(
-            sv_ratio, volume, avg_volume, is_breakout, is_illiquid
-        )
+        valid = apply_noise_filter(sv_ratio, volume, avg_volume, is_breakout, is_illiquid)
 
         assert valid[0]  # 2000 > 1500
         assert not valid[1]  # 1400 < 1500 (reject)
@@ -386,9 +380,7 @@ class TestCombinedNoiseFilter:
         is_breakout = np.array([False, False, True, False])
         is_illiquid = np.array([False, False, False, False])
 
-        valid = apply_noise_filter(
-            sv_ratio, volume, avg_volume, is_breakout, is_illiquid
-        )
+        valid = apply_noise_filter(sv_ratio, volume, avg_volume, is_breakout, is_illiquid)
 
         assert not valid[0]  # Reject: high SV ratio
         assert not valid[1]  # Reject: low volume (normal)
@@ -403,9 +395,7 @@ class TestCombinedNoiseFilter:
         is_breakout = np.array([False, False, False])
         is_illiquid = np.array([False, False, False])
 
-        valid = apply_noise_filter(
-            sv_ratio, volume, avg_volume, is_breakout, is_illiquid
-        )
+        valid = apply_noise_filter(sv_ratio, volume, avg_volume, is_breakout, is_illiquid)
 
         assert not valid[0]  # NaN SV ratio
         assert not valid[1]  # NaN avg volume
@@ -415,6 +405,7 @@ class TestCombinedNoiseFilter:
 # ============================================================================
 # Rejection Reason Tests
 # ============================================================================
+
 
 class TestRejectionReason:
     """Test rejection reason calculation for debugging."""
@@ -427,9 +418,7 @@ class TestRejectionReason:
         is_breakout = np.array([False, False, False, True, False])
         is_illiquid = np.array([False, False, False, False, False])
 
-        reasons = calculate_rejection_reason(
-            sv_ratio, volume, avg_volume, is_breakout, is_illiquid
-        )
+        reasons = calculate_rejection_reason(sv_ratio, volume, avg_volume, is_breakout, is_illiquid)
 
         assert reasons[0] == 0  # Valid signal
         assert reasons[1] == 1  # High SV ratio (normal hours)
@@ -445,9 +434,7 @@ class TestRejectionReason:
         is_breakout = np.array([False, False])
         is_illiquid = np.array([True, False])
 
-        reasons = calculate_rejection_reason(
-            sv_ratio, volume, avg_volume, is_breakout, is_illiquid
-        )
+        reasons = calculate_rejection_reason(sv_ratio, volume, avg_volume, is_breakout, is_illiquid)
 
         assert reasons[0] == 2  # High SV ratio (illiquid hours, 0.03 > 0.025)
         assert reasons[1] == 0  # Valid (normal hours, 0.01 < 0.05)
@@ -456,6 +443,7 @@ class TestRejectionReason:
 # ============================================================================
 # Success Criteria Tests (from FLUXHERO_REQUIREMENTS.md)
 # ============================================================================
+
 
 class TestSuccessCriteria:
     """Test success criteria from requirements."""
@@ -512,6 +500,7 @@ class TestSuccessCriteria:
 # Edge Case Tests
 # ============================================================================
 
+
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""
 
@@ -529,7 +518,9 @@ class TestEdgeCases:
         """Test functions handle single-value arrays."""
         single = np.array([100.0])
 
-        sv_ratio = calculate_spread_to_volatility_ratio(single, single, single, volatility_period=10)
+        sv_ratio = calculate_spread_to_volatility_ratio(
+            single, single, single, volatility_period=10
+        )
         assert len(sv_ratio) == 1
         assert np.isnan(sv_ratio[0])
 
@@ -559,6 +550,7 @@ class TestEdgeCases:
 # Performance Benchmark Tests
 # ============================================================================
 
+
 class TestPerformance:
     """Test performance benchmarks for noise filter."""
 
@@ -575,15 +567,12 @@ class TestPerformance:
 
         # Warm up JIT compilation
         _ = apply_noise_filter(
-            sv_ratio[:100], volume[:100], avg_volume[:100],
-            is_breakout[:100], is_illiquid[:100]
+            sv_ratio[:100], volume[:100], avg_volume[:100], is_breakout[:100], is_illiquid[:100]
         )
 
         # Benchmark
         start = time.perf_counter()
-        _ = apply_noise_filter(
-            sv_ratio, volume, avg_volume, is_breakout, is_illiquid
-        )
+        _ = apply_noise_filter(sv_ratio, volume, avg_volume, is_breakout, is_illiquid)
         elapsed = (time.perf_counter() - start) * 1000  # Convert to ms
 
         print(f"\nNoise filter (10k candles): {elapsed:.2f}ms")
@@ -613,6 +602,7 @@ class TestPerformance:
 # ============================================================================
 # Price Gap Filter Tests
 # ============================================================================
+
 
 class TestPriceGapFilter:
     """Test price gap filter functions (Phase 16 - Retail optimization)."""
@@ -770,12 +760,12 @@ class TestPriceGapFilter:
         for i in range(1, n):
             # Normal price change (90% of time)
             if np.random.rand() > 0.1:
-                close_prices[i] = close_prices[i-1] * (1 + np.random.randn() * 0.01)
-                open_prices[i] = close_prices[i-1] * (1 + np.random.randn() * 0.005)
+                close_prices[i] = close_prices[i - 1] * (1 + np.random.randn() * 0.01)
+                open_prices[i] = close_prices[i - 1] * (1 + np.random.randn() * 0.005)
             else:
                 # Occasional large gap (10% of time)
-                close_prices[i] = close_prices[i-1] * (1 + np.random.randn() * 0.03)
-                open_prices[i] = close_prices[i-1] * (1 + np.random.randn() * 0.02)
+                close_prices[i] = close_prices[i - 1] * (1 + np.random.randn() * 0.03)
+                open_prices[i] = close_prices[i - 1] * (1 + np.random.randn() * 0.02)
 
         # Benchmark
         start = time.perf_counter()
@@ -794,6 +784,7 @@ class TestPriceGapFilter:
 # ============================================================================
 # Integration Tests
 # ============================================================================
+
 
 class TestIntegration:
     """Test integrated noise filter workflow."""
@@ -823,14 +814,10 @@ class TestIntegration:
         avg_volume = calculate_average_volume(volume, period=20)
 
         # Step 3: Apply noise filter
-        valid = apply_noise_filter(
-            sv_ratio, volume, avg_volume, is_breakout, is_illiquid
-        )
+        valid = apply_noise_filter(sv_ratio, volume, avg_volume, is_breakout, is_illiquid)
 
         # Step 4: Get rejection reasons for debugging
-        reasons = calculate_rejection_reason(
-            sv_ratio, volume, avg_volume, is_breakout, is_illiquid
-        )
+        reasons = calculate_rejection_reason(sv_ratio, volume, avg_volume, is_breakout, is_illiquid)
 
         # Verify some signals passed and some failed
         num_valid = np.sum(valid[20:])  # Skip first 20 bars (insufficient data)
@@ -841,7 +828,7 @@ class TestIntegration:
         assert np.any(reasons == 0), "No valid signals (reason 0)"
         assert np.any(reasons > 0), "No rejected signals"
 
-        print(f"\nIntegration test: {num_valid}/{n-20} signals passed filter")
+        print(f"\nIntegration test: {num_valid}/{n - 20} signals passed filter")
 
 
 if __name__ == "__main__":

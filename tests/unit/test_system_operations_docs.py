@@ -50,7 +50,9 @@ def test_daily_reboot_documentation():
 
     # Should document 9:00 AM EST daily reboot
     assert "9:00 AM EST" in content, "Missing 9:00 AM EST daily reboot time"
-    assert "daily_reboot.py" in content or "Daily Reboot" in content, "Missing daily reboot script reference"
+    assert "daily_reboot.py" in content or "Daily Reboot" in content, (
+        "Missing daily reboot script reference"
+    )
 
     # Should document what happens during reboot
     assert "WebSocket" in content, "Missing WebSocket reconnection info"
@@ -101,10 +103,14 @@ def test_emergency_procedures_documented():
     content = docs_path.read_text()
 
     # Should document kill switch
-    assert "kill switch" in content.lower() or "emergency" in content.lower(), "Missing emergency procedures"
+    assert "kill switch" in content.lower() or "emergency" in content.lower(), (
+        "Missing emergency procedures"
+    )
 
     # Should document position closure
-    assert "close" in content.lower() and "position" in content.lower(), "Missing position closure procedure"
+    assert "close" in content.lower() and "position" in content.lower(), (
+        "Missing position closure procedure"
+    )
 
 
 def test_backup_procedures_documented():

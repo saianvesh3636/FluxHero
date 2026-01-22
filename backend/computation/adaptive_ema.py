@@ -20,10 +20,7 @@ from numba import njit
 
 
 @njit(cache=True)
-def calculate_efficiency_ratio(
-    prices: np.ndarray,
-    period: int = 10
-) -> np.ndarray:
+def calculate_efficiency_ratio(prices: np.ndarray, period: int = 10) -> np.ndarray:
     """
     Calculate Efficiency Ratio (ER) - measures trend strength.
 
@@ -86,9 +83,7 @@ def calculate_efficiency_ratio(
 
 @njit(cache=True)
 def calculate_adaptive_smoothing_constant(
-    efficiency_ratio: np.ndarray,
-    fast_period: int = 2,
-    slow_period: int = 30
+    efficiency_ratio: np.ndarray, fast_period: int = 2, slow_period: int = 30
 ) -> np.ndarray:
     """
     Calculate Adaptive Smoothing Constant (ASC) based on Efficiency Ratio.
@@ -141,10 +136,7 @@ def calculate_adaptive_smoothing_constant(
 
 @njit(cache=True)
 def calculate_kama(
-    prices: np.ndarray,
-    er_period: int = 10,
-    fast_period: int = 2,
-    slow_period: int = 30
+    prices: np.ndarray, er_period: int = 10, fast_period: int = 2, slow_period: int = 30
 ) -> np.ndarray:
     """
     Calculate Kaufman's Adaptive Moving Average (KAMA).
@@ -213,7 +205,7 @@ def calculate_kama_with_regime_adjustment(
     fast_period: int = 2,
     slow_period: int = 30,
     trend_threshold: float = 0.6,
-    choppy_threshold: float = 0.3
+    choppy_threshold: float = 0.3,
 ) -> tuple:
     """
     Calculate KAMA with regime-aware adjustments.
@@ -283,7 +275,7 @@ def validate_kama_bounds(
     efficiency_ratio: np.ndarray,
     adaptive_smoothing_constant: np.ndarray,
     fast_period: int = 2,
-    slow_period: int = 30
+    slow_period: int = 30,
 ) -> tuple:
     """
     Validate that ER and ASC are within expected mathematical bounds.
@@ -336,8 +328,10 @@ def validate_kama_bounds(
     for i in range(len(adaptive_smoothing_constant)):
         if not np.isnan(adaptive_smoothing_constant[i]):
             # Allow small numerical tolerance
-            if (adaptive_smoothing_constant[i] < asc_min - 1e-10 or
-                adaptive_smoothing_constant[i] > asc_max + 1e-10):
+            if (
+                adaptive_smoothing_constant[i] < asc_min - 1e-10
+                or adaptive_smoothing_constant[i] > asc_max + 1e-10
+            ):
                 asc_valid = False
                 break
 

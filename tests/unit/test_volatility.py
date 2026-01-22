@@ -20,7 +20,7 @@ import time
 import numpy as np
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 from backend.computation.indicators import calculate_atr
 from backend.computation.volatility import (
@@ -40,6 +40,7 @@ from backend.computation.volatility import (
 # ========================
 # ATR Moving Average Tests
 # ========================
+
 
 def test_calculate_atr_ma_basic():
     """Test basic ATR moving average calculation."""
@@ -78,6 +79,7 @@ def test_calculate_atr_ma_insufficient_data():
 # ==================================
 # Volatility State Classification Tests
 # ==================================
+
 
 def test_classify_volatility_state_low():
     """Test classification of low volatility state."""
@@ -134,9 +136,9 @@ def test_classify_volatility_state_custom_thresholds():
     # 1.5/2.0 = 0.75, which is NOT < 0.7, so NORMAL
     # 2.0/2.0 = 1.0 (NORMAL)
     # 4.5/2.0 = 2.25 > 2.0 (HIGH)
-    assert states[0] == VOL_STATE_NORMAL   # 0.75 is NOT < 0.7
-    assert states[1] == VOL_STATE_NORMAL   # 2.0/2.0 = 1.0
-    assert states[2] == VOL_STATE_HIGH     # 4.5/2.0 = 2.25 > 2.0
+    assert states[0] == VOL_STATE_NORMAL  # 0.75 is NOT < 0.7
+    assert states[1] == VOL_STATE_NORMAL  # 2.0/2.0 = 1.0
+    assert states[2] == VOL_STATE_HIGH  # 4.5/2.0 = 2.25 > 2.0
 
 
 def test_classify_volatility_state_handles_nan():
@@ -153,6 +155,7 @@ def test_classify_volatility_state_handles_nan():
 # ============================
 # Period Adjustment Tests
 # ============================
+
 
 def test_adjust_period_for_high_volatility():
     """Test period adjustment for high volatility (shorten by 30%)."""
@@ -189,23 +192,20 @@ def test_adjust_period_minimum_enforcement():
 def test_adjust_period_custom_multipliers():
     """Test period adjustment with custom multipliers."""
     adjusted_high = adjust_period_for_volatility(
-        100, VOL_STATE_HIGH,
-        low_vol_multiplier=1.5,
-        high_vol_multiplier=0.5
+        100, VOL_STATE_HIGH, low_vol_multiplier=1.5, high_vol_multiplier=0.5
     )
     adjusted_low = adjust_period_for_volatility(
-        100, VOL_STATE_LOW,
-        low_vol_multiplier=1.5,
-        high_vol_multiplier=0.5
+        100, VOL_STATE_LOW, low_vol_multiplier=1.5, high_vol_multiplier=0.5
     )
 
-    assert adjusted_high == 50   # 100 × 0.5
-    assert adjusted_low == 150   # 100 × 1.5
+    assert adjusted_high == 50  # 100 × 0.5
+    assert adjusted_low == 150  # 100 × 1.5
 
 
 # ====================================
 # Volatility Spike Detection Tests
 # ====================================
+
 
 def test_detect_volatility_spike_basic():
     """Test basic volatility spike detection."""
@@ -215,7 +215,7 @@ def test_detect_volatility_spike_basic():
     spikes = detect_volatility_spike(atr_5min, atr_1hour, spike_threshold=2.0)
 
     assert not spikes[0]  # 2.0 / 2.0 = 1.0 (not spike)
-    assert spikes[1]   # 4.5 / 2.0 = 2.25 > 2.0 (spike)
+    assert spikes[1]  # 4.5 / 2.0 = 2.25 > 2.0 (spike)
     assert not spikes[2]  # 3.5 / 2.0 = 1.75 (not > 2.0)
     assert not spikes[3]  # 2.0 / 2.0 = 1.0 (not spike)
 
@@ -239,7 +239,7 @@ def test_detect_volatility_spike_custom_threshold():
     spikes = detect_volatility_spike(atr_5min, atr_1hour, spike_threshold=2.5)
 
     assert not spikes[0]  # 3.0 / 2.0 = 1.5 (not > 2.5)
-    assert spikes[1]   # 6.0 / 2.0 = 3.0 > 2.5
+    assert spikes[1]  # 6.0 / 2.0 = 3.0 > 2.5
 
 
 def test_detect_volatility_spike_handles_nan():
@@ -255,6 +255,7 @@ def test_detect_volatility_spike_handles_nan():
 # ==============================
 # Volatility-Alpha Linkage Tests
 # ==============================
+
 
 def test_calculate_volatility_alpha_low_vol():
     """Test alpha calculation for low volatility (should be minimum)."""
@@ -320,6 +321,7 @@ def test_calculate_volatility_alpha_handles_nan():
 # Adaptive EMA with Volatility Tests
 # ===============================
 
+
 def test_adaptive_ema_basic():
     """Test basic adaptive EMA calculation."""
     prices = np.array([100.0, 101.0, 102.0, 103.0, 104.0, 105.0], dtype=np.float64)
@@ -336,8 +338,8 @@ def test_adaptive_ema_high_volatility_follows_price():
     """Test that adaptive EMA follows price closely in high volatility."""
     # Strong uptrend with high volatility
     prices = np.linspace(100, 120, 30).astype(np.float64)
-    atr = np.full(30, 5.0, dtype=np.float64)      # High ATR
-    atr_ma = np.full(30, 2.0, dtype=np.float64)   # ATR > 1.5 × ATR_MA
+    atr = np.full(30, 5.0, dtype=np.float64)  # High ATR
+    atr_ma = np.full(30, 2.0, dtype=np.float64)  # ATR > 1.5 × ATR_MA
 
     ema = calculate_adaptive_ema_with_volatility(prices, atr, atr_ma, base_period=10)
 
@@ -356,8 +358,8 @@ def test_adaptive_ema_low_volatility_smooths():
     np.random.seed(42)
     prices = 100.0 + np.random.randn(30) * 0.5
     prices = prices.astype(np.float64)
-    atr = np.full(30, 0.5, dtype=np.float64)      # Low ATR
-    atr_ma = np.full(30, 2.0, dtype=np.float64)   # ATR < 0.5 × ATR_MA
+    atr = np.full(30, 0.5, dtype=np.float64)  # Low ATR
+    atr_ma = np.full(30, 2.0, dtype=np.float64)  # ATR < 0.5 × ATR_MA
 
     ema = calculate_adaptive_ema_with_volatility(prices, atr, atr_ma, base_period=10)
 
@@ -366,7 +368,7 @@ def test_adaptive_ema_low_volatility_smooths():
     # EMA should be smoother than prices (lower std dev)
     if len(valid_ema) > 5:
         ema_volatility = np.std(np.diff(valid_ema))
-        price_volatility = np.std(np.diff(prices[-len(valid_ema):]))
+        price_volatility = np.std(np.diff(prices[-len(valid_ema) :]))
         assert ema_volatility < price_volatility
 
 
@@ -385,6 +387,7 @@ def test_adaptive_ema_insufficient_data():
 # ===================================
 # Multiplier Utility Function Tests
 # ===================================
+
 
 def test_get_stop_loss_multiplier_spike():
     """Test stop loss multiplier during volatility spike."""
@@ -410,6 +413,7 @@ def test_get_position_size_multiplier_normal():
 # Integration Tests
 # ==========================
 
+
 def test_full_volatility_workflow():
     """Test complete volatility analysis workflow."""
     # Generate synthetic price data
@@ -434,10 +438,9 @@ def test_full_volatility_workflow():
 
     # Step 4: Adjust periods based on volatility
     base_period = 20
-    adjusted_periods = np.array([
-        adjust_period_for_volatility(base_period, state)
-        for state in vol_states
-    ])
+    adjusted_periods = np.array(
+        [adjust_period_for_volatility(base_period, state) for state in vol_states]
+    )
 
     # Step 5: Detect volatility spikes
     spikes = detect_volatility_spike(atr, atr_ma)
@@ -480,6 +483,7 @@ def test_volatility_state_persistence():
 # Performance Benchmarks
 # ==========================
 
+
 def test_performance_volatility_suite_10k_candles():
     """Test that full volatility suite completes in <200ms for 10k candles."""
     n = 10000
@@ -514,8 +518,8 @@ def test_performance_volatility_suite_10k_candles():
 
     elapsed = time.time() - start
 
-    print(f"\n10k candles volatility suite: {elapsed*1000:.2f}ms")
-    assert elapsed < 0.2, f"Volatility suite took {elapsed*1000:.2f}ms (target: <200ms)"
+    print(f"\n10k candles volatility suite: {elapsed * 1000:.2f}ms")
+    assert elapsed < 0.2, f"Volatility suite took {elapsed * 1000:.2f}ms (target: <200ms)"
 
 
 def test_performance_individual_functions():
@@ -548,10 +552,10 @@ def test_performance_individual_functions():
     elapsed_ema = time.time() - start
 
     print("\nIndividual function performance (10k candles):")
-    print(f"  ATR MA: {elapsed_atr_ma*1000:.2f}ms")
-    print(f"  Classify: {elapsed_classify*1000:.2f}ms")
-    print(f"  Alpha: {elapsed_alpha*1000:.2f}ms")
-    print(f"  Adaptive EMA: {elapsed_ema*1000:.2f}ms")
+    print(f"  ATR MA: {elapsed_atr_ma * 1000:.2f}ms")
+    print(f"  Classify: {elapsed_classify * 1000:.2f}ms")
+    print(f"  Alpha: {elapsed_alpha * 1000:.2f}ms")
+    print(f"  Adaptive EMA: {elapsed_ema * 1000:.2f}ms")
 
     # Each should be reasonably fast
     assert elapsed_atr_ma < 0.1
@@ -563,6 +567,7 @@ def test_performance_individual_functions():
 # ==========================
 # Edge Case Tests
 # ==========================
+
 
 def test_edge_case_empty_arrays():
     """Test functions with empty arrays."""

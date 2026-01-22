@@ -99,20 +99,23 @@ class TestEnvironmentVariables:
     def test_env_var_cors_origins(self):
         """Test loading CORS origins from environment."""
         # pydantic-settings handles list parsing from JSON string
-        with patch.dict(os.environ, {
-            "FLUXHERO_CORS_ORIGINS": '["http://example.com", "http://test.com"]'
-        }):
+        with patch.dict(
+            os.environ, {"FLUXHERO_CORS_ORIGINS": '["http://example.com", "http://test.com"]'}
+        ):
             settings = Settings()
             assert "http://example.com" in settings.cors_origins
             assert "http://test.com" in settings.cors_origins
 
     def test_env_var_alpaca_settings(self):
         """Test loading Alpaca settings from environment."""
-        with patch.dict(os.environ, {
-            "FLUXHERO_ALPACA_API_KEY": "test-key",
-            "FLUXHERO_ALPACA_API_SECRET": "test-secret",
-            "FLUXHERO_ALPACA_API_URL": "https://api.alpaca.markets",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "FLUXHERO_ALPACA_API_KEY": "test-key",
+                "FLUXHERO_ALPACA_API_SECRET": "test-secret",
+                "FLUXHERO_ALPACA_API_URL": "https://api.alpaca.markets",
+            },
+        ):
             settings = Settings()
             assert settings.alpaca_api_key == "test-key"
             assert settings.alpaca_api_secret == "test-secret"
@@ -120,11 +123,14 @@ class TestEnvironmentVariables:
 
     def test_env_var_risk_settings(self):
         """Test loading risk settings from environment."""
-        with patch.dict(os.environ, {
-            "FLUXHERO_MAX_RISK_PCT_TREND": "0.02",
-            "FLUXHERO_MAX_OPEN_POSITIONS": "10",
-            "FLUXHERO_CORRELATION_THRESHOLD": "0.8",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "FLUXHERO_MAX_RISK_PCT_TREND": "0.02",
+                "FLUXHERO_MAX_OPEN_POSITIONS": "10",
+                "FLUXHERO_CORRELATION_THRESHOLD": "0.8",
+            },
+        ):
             settings = Settings()
             assert settings.max_risk_pct_trend == 0.02
             assert settings.max_open_positions == 10
@@ -320,9 +326,7 @@ class TestConfigIntegration:
     def test_settings_can_be_modified(self):
         """Test settings values can be overridden at instantiation."""
         settings = Settings(
-            auth_secret="custom-secret",
-            max_open_positions=20,
-            cors_origins=["http://custom.com"]
+            auth_secret="custom-secret", max_open_positions=20, cors_origins=["http://custom.com"]
         )
 
         assert settings.auth_secret == "custom-secret"

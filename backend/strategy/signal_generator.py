@@ -22,6 +22,7 @@ import numpy as np
 
 class SignalType(IntEnum):
     """Signal type enumeration."""
+
     NONE = 0
     LONG = 1
     SHORT = -1
@@ -31,6 +32,7 @@ class SignalType(IntEnum):
 
 class RegimeType(IntEnum):
     """Market regime enumeration."""
+
     MEAN_REVERSION = 0
     NEUTRAL = 1
     STRONG_TREND = 2
@@ -38,6 +40,7 @@ class RegimeType(IntEnum):
 
 class VolatilityState(IntEnum):
     """Volatility state enumeration."""
+
     LOW = 0
     NORMAL = 1
     HIGH = 2
@@ -45,6 +48,7 @@ class VolatilityState(IntEnum):
 
 class StrategyMode(IntEnum):
     """Strategy mode enumeration."""
+
     MEAN_REVERSION = 1
     TREND_FOLLOWING = 2
     NEUTRAL = 3
@@ -102,6 +106,7 @@ class SignalExplanation:
     volume_validated : bool
         Whether volume validation passed
     """
+
     symbol: str
     signal_type: SignalType
     price: float
@@ -205,27 +210,27 @@ class SignalExplanation:
             Dictionary representation suitable for database storage
         """
         return {
-            'symbol': self.symbol,
-            'signal_type': int(self.signal_type),
-            'price': self.price,
-            'timestamp': self.timestamp,
-            'strategy_mode': int(self.strategy_mode),
-            'regime': int(self.regime),
-            'volatility_state': int(self.volatility_state),
-            'atr': self.atr,
-            'kama': self.kama,
-            'rsi': self.rsi,
-            'adx': self.adx,
-            'r_squared': self.r_squared,
-            'risk_amount': self.risk_amount,
-            'risk_percent': self.risk_percent,
-            'stop_loss': self.stop_loss,
-            'position_size': self.position_size,
-            'entry_trigger': self.entry_trigger,
-            'noise_filtered': self.noise_filtered,
-            'volume_validated': self.volume_validated,
-            'formatted_reason': self.format_signal_reason(),
-            'compact_reason': self.format_compact_reason(),
+            "symbol": self.symbol,
+            "signal_type": int(self.signal_type),
+            "price": self.price,
+            "timestamp": self.timestamp,
+            "strategy_mode": int(self.strategy_mode),
+            "regime": int(self.regime),
+            "volatility_state": int(self.volatility_state),
+            "atr": self.atr,
+            "kama": self.kama,
+            "rsi": self.rsi,
+            "adx": self.adx,
+            "r_squared": self.r_squared,
+            "risk_amount": self.risk_amount,
+            "risk_percent": self.risk_percent,
+            "stop_loss": self.stop_loss,
+            "position_size": self.position_size,
+            "entry_trigger": self.entry_trigger,
+            "noise_filtered": self.noise_filtered,
+            "volume_validated": self.volume_validated,
+            "formatted_reason": self.format_signal_reason(),
+            "compact_reason": self.format_compact_reason(),
         }
 
     def _get_action_name(self) -> str:

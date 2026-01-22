@@ -28,18 +28,21 @@ from numpy.typing import NDArray
 
 class OrderSide(IntEnum):
     """Order side: BUY or SELL."""
+
     BUY = 1
     SELL = -1
 
 
 class OrderType(IntEnum):
     """Order type: MARKET or LIMIT."""
+
     MARKET = 0
     LIMIT = 1
 
 
 class OrderStatus(IntEnum):
     """Order status."""
+
     PENDING = 0
     FILLED = 1
     CANCELLED = 2
@@ -47,6 +50,7 @@ class OrderStatus(IntEnum):
 
 class PositionSide(IntEnum):
     """Position side."""
+
     LONG = 1
     SHORT = -1
     FLAT = 0
@@ -64,6 +68,7 @@ class BacktestConfig:
         impact_penalty_pct: Extra slippage if order exceeds impact threshold (default: 0.05%)
         risk_free_rate: Annual risk-free rate for Sharpe ratio (default: 4%)
     """
+
     initial_capital: float = 100000.0
     commission_per_share: float = 0.005  # R9.2.1: $0.005 per share (Alpaca-like)
     slippage_pct: float = 0.0001  # R9.2.2: 0.01% slippage on market orders
@@ -89,6 +94,7 @@ class Order:
         commission: Commission paid (calculated on fill)
         slippage: Slippage cost (calculated on fill)
     """
+
     bar_index: int
     symbol: str
     side: OrderSide
@@ -115,6 +121,7 @@ class Position:
         stop_loss: Stop loss price (None if not set)
         take_profit: Take profit price (None if not set)
     """
+
     symbol: str
     side: PositionSide
     shares: int
@@ -144,6 +151,7 @@ class Trade:
         slippage: Total slippage cost
         holding_bars: Number of bars held
     """
+
     symbol: str
     side: PositionSide
     shares: int
@@ -174,6 +182,7 @@ class BacktestState:
         equity_curve: Array of equity values at each bar
         peak_equity: Highest equity value seen (for drawdown calculation)
     """
+
     current_bar: int = 0
     cash: float = 0.0
     equity: float = 0.0
@@ -226,9 +235,9 @@ class BacktestEngine:
         self,
         bars: NDArray,
         strategy_func: Callable[[NDArray, int, Position | None], list[Order]],
-        symbol: str = 'SPY',
+        symbol: str = "SPY",
         timestamps: NDArray | None = None,
-        volumes: NDArray | None = None
+        volumes: NDArray | None = None,
     ) -> BacktestState:
         """
         Run backtest on historical data.
@@ -257,7 +266,7 @@ class BacktestEngine:
             current_bar=0,
             cash=self.config.initial_capital,
             equity=self.config.initial_capital,
-            peak_equity=self.config.initial_capital
+            peak_equity=self.config.initial_capital,
         )
 
         n_bars = len(bars)
@@ -324,7 +333,7 @@ class BacktestEngine:
         volume: float,
         avg_volume: float,
         timestamps: NDArray | None,
-        bar_index: int
+        bar_index: int,
     ) -> None:
         """
         Fill pending orders at next bar's open price (R9.1.1).
@@ -350,9 +359,7 @@ class BacktestEngine:
 
         for order in state.pending_orders:
             # Calculate fill price with slippage
-            fill_price = self._calculate_fill_price(
-                order, open_price, volume, avg_volume
-            )
+            fill_price = self._calculate_fill_price(order, open_price, volume, avg_volume)
 
             # Calculate commission
             commission = order.shares * self.config.commission_per_share
@@ -378,12 +385,14 @@ class BacktestEngine:
                         side=PositionSide.LONG,
                         shares=order.shares,
                         entry_price=fill_price,
-                        entry_bar_index=bar_index
+                        entry_bar_index=bar_index,
                     )
                 else:
                     # Average up
                     total_shares = state.position.shares + order.shares
-                    total_cost_basis = (state.position.entry_price * state.position.shares) + (fill_price * order.shares)
+                    total_cost_basis = (state.position.entry_price * state.position.shares) + (
+                        fill_price * order.shares
+                    )
                     state.position.shares = total_shares
                     state.position.entry_price = total_cost_basis / total_shares
 
@@ -392,7 +401,9 @@ class BacktestEngine:
                 if state.position is not None and state.position.side == PositionSide.LONG:
                     # Close long position
                     shares_to_close = min(order.shares, state.position.shares)
-                    close_proceeds = (fill_price * shares_to_close) - (commission * shares_to_close / order.shares)
+                    close_proceeds = (fill_price * shares_to_close) - (
+                        commission * shares_to_close / order.shares
+                    )
                     entry_cost = state.position.entry_price * shares_to_close
 
                     # Calculate P&L
@@ -409,7 +420,9 @@ class BacktestEngine:
                         shares=shares_to_close,
                         entry_price=state.position.entry_price,
                         entry_bar_index=state.position.entry_bar_index,
-                        entry_time=timestamps[state.position.entry_bar_index] if timestamps is not None else None,
+                        entry_time=timestamps[state.position.entry_bar_index]
+                        if timestamps is not None
+                        else None,
                         exit_price=fill_price,
                         exit_bar_index=bar_index,
                         exit_time=timestamps[bar_index] if timestamps is not None else None,
@@ -417,7 +430,7 @@ class BacktestEngine:
                         pnl_pct=pnl_pct,
                         commission=commission,
                         slippage=slippage_cost,
-                        holding_bars=bar_index - state.position.entry_bar_index
+                        holding_bars=bar_index - state.position.entry_bar_index,
                     )
                     state.trades.append(trade)
 
@@ -449,11 +462,7 @@ class BacktestEngine:
             state.pending_orders.remove(order)
 
     def _calculate_fill_price(
-        self,
-        order: Order,
-        open_price: float,
-        volume: float,
-        avg_volume: float
+        self, order: Order, open_price: float, volume: float, avg_volume: float
     ) -> float:
         """
         Calculate fill price with slippage (R9.2.2, R9.2.3).
@@ -505,7 +514,7 @@ class BacktestEngine:
         low: float,
         close: float,
         bar_index: int,
-        timestamps: NDArray | None
+        timestamps: NDArray | None,
     ) -> None:
         """
         Check if stop loss or take profit is hit.
@@ -566,7 +575,9 @@ class BacktestEngine:
                 shares=state.position.shares,
                 entry_price=state.position.entry_price,
                 entry_bar_index=state.position.entry_bar_index,
-                entry_time=timestamps[state.position.entry_bar_index] if timestamps is not None else None,
+                entry_time=timestamps[state.position.entry_bar_index]
+                if timestamps is not None
+                else None,
                 exit_price=exit_price,
                 exit_bar_index=bar_index,
                 exit_time=timestamps[bar_index] if timestamps is not None else None,
@@ -574,7 +585,7 @@ class BacktestEngine:
                 pnl_pct=pnl_pct,
                 commission=commission,
                 slippage=slippage_cost,
-                holding_bars=bar_index - state.position.entry_bar_index
+                holding_bars=bar_index - state.position.entry_bar_index,
             )
             state.trades.append(trade)
 
@@ -625,11 +636,11 @@ class BacktestEngine:
         """
         if len(state.trades) == 0:
             return {
-                'total_trades': 0,
-                'win_rate': 0.0,
-                'total_return': 0.0,
-                'total_return_pct': 0.0,
-                'final_equity': state.equity
+                "total_trades": 0,
+                "win_rate": 0.0,
+                "total_return": 0.0,
+                "total_return_pct": 0.0,
+                "final_equity": state.equity,
             }
 
         # Calculate basic metrics
@@ -646,15 +657,15 @@ class BacktestEngine:
         avg_win_loss_ratio = avg_win / avg_loss if avg_loss > 0 else 0.0
 
         return {
-            'total_trades': len(state.trades),
-            'winning_trades': len(winning_trades),
-            'losing_trades': len(losing_trades),
-            'win_rate': win_rate,
-            'avg_win': avg_win,
-            'avg_loss': avg_loss,
-            'avg_win_loss_ratio': avg_win_loss_ratio,
-            'total_return': total_return,
-            'total_return_pct': total_return_pct,
-            'final_equity': state.equity,
-            'initial_capital': self.config.initial_capital
+            "total_trades": len(state.trades),
+            "winning_trades": len(winning_trades),
+            "losing_trades": len(losing_trades),
+            "win_rate": win_rate,
+            "avg_win": avg_win,
+            "avg_loss": avg_loss,
+            "avg_win_loss_ratio": avg_win_loss_ratio,
+            "total_return": total_return,
+            "total_return_pct": total_return_pct,
+            "final_equity": state.equity,
+            "initial_capital": self.config.initial_capital,
         }

@@ -58,7 +58,7 @@ def get_auth_secret() -> str:
     if secret == DEFAULT_SECRET:
         logger.warning(
             "Using default authentication secret - not secure for production",
-            extra={"env_var": "FLUXHERO_AUTH_SECRET"}
+            extra={"env_var": "FLUXHERO_AUTH_SECRET"},
         )
 
     return secret
@@ -113,21 +113,15 @@ def validate_token(token: str | None) -> bool:
     # Note: secrets.compare_digest requires ASCII-only strings or bytes
     # For Unicode support, convert to bytes using UTF-8 encoding
     try:
-        token_bytes = token.encode('utf-8')
-        secret_bytes = expected_secret.encode('utf-8')
+        token_bytes = token.encode("utf-8")
+        secret_bytes = expected_secret.encode("utf-8")
         is_valid = secrets.compare_digest(token_bytes, secret_bytes)
     except (UnicodeEncodeError, AttributeError) as e:
-        logger.warning(
-            "Token validation failed: encoding error",
-            extra={"error": str(e)}
-        )
+        logger.warning("Token validation failed: encoding error", extra={"error": str(e)})
         return False
 
     if not is_valid:
-        logger.warning(
-            "Token validation failed: invalid token",
-            extra={"token_length": len(token)}
-        )
+        logger.warning("Token validation failed: invalid token", extra={"token_length": len(token)})
     else:
         logger.debug("Token validation successful")
 

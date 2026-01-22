@@ -96,7 +96,7 @@ def test_basic_risk_calculation(position_sizer, basic_account):
         account=basic_account,
         entry_price=100.0,
         stop_loss_price=98.0,
-        strategy='trend',
+        strategy="trend",
     )
 
     assert result.shares == 20  # Limited by 20% position size
@@ -114,7 +114,7 @@ def test_tight_stop_loss_larger_position(position_sizer, basic_account):
         account=basic_account,
         entry_price=100.0,
         stop_loss_price=99.0,  # Tight 1% stop
-        strategy='trend',
+        strategy="trend",
     )
 
     # Still limited by 20% position size limit
@@ -130,7 +130,7 @@ def test_wide_stop_loss_smaller_position(position_sizer, basic_account):
         account=basic_account,
         entry_price=100.0,
         stop_loss_price=95.0,  # Wide 5% stop
-        strategy='trend',
+        strategy="trend",
     )
 
     assert result.shares == 20  # Smaller position due to wide stop
@@ -151,7 +151,7 @@ def test_max_position_size_limit(position_sizer, basic_account):
         account=basic_account,
         entry_price=100.0,
         stop_loss_price=99.90,  # 0.1% stop
-        strategy='trend',
+        strategy="trend",
     )
 
     # Max position: 10000 × 0.20 = $2000 / $100 = 20 shares
@@ -167,7 +167,7 @@ def test_position_limit_with_expensive_stock(position_sizer, basic_account):
         account=basic_account,
         entry_price=500.0,
         stop_loss_price=490.0,  # $10 risk
-        strategy='trend',
+        strategy="trend",
     )
 
     # Risk-based: (10000 × 0.01) / 10 = 10 shares
@@ -198,7 +198,7 @@ def test_max_deployment_limit(position_sizer):
         account=account,
         entry_price=100.0,
         stop_loss_price=98.0,
-        strategy='trend',
+        strategy="trend",
     )
 
     # Max deployment: 10000 × 0.50 = $5000
@@ -225,7 +225,7 @@ def test_deployment_limit_exceeded(position_sizer):
         account=account,
         entry_price=100.0,
         stop_loss_price=98.0,
-        strategy='trend',
+        strategy="trend",
     )
 
     assert result.shares == 0
@@ -244,7 +244,7 @@ def test_round_down_to_whole_shares(position_sizer, basic_account):
         account=basic_account,
         entry_price=99.99,  # Odd price
         stop_loss_price=98.0,
-        strategy='trend',
+        strategy="trend",
     )
 
     # Position limit: 10000 × 0.20 / 99.99 = 20.002... → rounds to 20
@@ -268,7 +268,7 @@ def test_minimum_one_share(position_sizer):
         account=account,
         entry_price=200.0,  # Stock too expensive
         stop_loss_price=198.0,
-        strategy='trend',
+        strategy="trend",
     )
 
     # Risk amount: 100 × 0.01 = $1
@@ -293,7 +293,7 @@ def test_kill_switch_triggers_at_3_percent_loss(position_sizer, basic_account):
         account=basic_account,
         entry_price=100.0,
         stop_loss_price=98.0,
-        strategy='trend',
+        strategy="trend",
     )
 
     assert result.shares == 0
@@ -311,7 +311,7 @@ def test_kill_switch_not_triggered_below_threshold(position_sizer, basic_account
         account=basic_account,
         entry_price=100.0,
         stop_loss_price=98.0,
-        strategy='trend',
+        strategy="trend",
     )
 
     assert result.shares > 0  # Should still allow trades
@@ -475,7 +475,7 @@ def test_short_position_sizing(position_sizer, basic_account):
         account=basic_account,
         entry_price=100.0,
         stop_loss_price=102.0,  # Stop above entry (short)
-        strategy='mean_reversion',
+        strategy="mean_reversion",
     )
 
     # Risk per share: |100 - 102| = 2
@@ -529,13 +529,13 @@ def test_get_risk_metrics(position_sizer, basic_account):
     """Test get_risk_metrics monitoring."""
     metrics = position_sizer.get_risk_metrics(basic_account)
 
-    assert metrics['deployment_pct'] == 0.20  # 2000 / 10000
-    assert metrics['deployment_used'] == 2000.0
-    assert metrics['deployment_available'] == 3000.0  # 5000 - 2000
-    assert metrics['daily_pnl'] == 0.0
-    assert metrics['daily_pnl_pct'] == 0.0
-    assert metrics['kill_switch_triggered'] is False
-    assert metrics['kill_switch_distance'] > 0  # Positive = safe
+    assert metrics["deployment_pct"] == 0.20  # 2000 / 10000
+    assert metrics["deployment_used"] == 2000.0
+    assert metrics["deployment_available"] == 3000.0  # 5000 - 2000
+    assert metrics["daily_pnl"] == 0.0
+    assert metrics["daily_pnl_pct"] == 0.0
+    assert metrics["kill_switch_triggered"] is False
+    assert metrics["kill_switch_distance"] > 0  # Positive = safe
 
 
 def test_get_risk_metrics_near_kill_switch(position_sizer, basic_account):
@@ -544,9 +544,11 @@ def test_get_risk_metrics_near_kill_switch(position_sizer, basic_account):
 
     metrics = position_sizer.get_risk_metrics(basic_account)
 
-    assert metrics['daily_pnl'] == -280.0
-    assert metrics['daily_pnl_pct'] == -0.028
-    assert abs(metrics['kill_switch_distance'] - 0.002) < 0.0001  # ~0.2% away from -3% (floating point tolerance)
+    assert metrics["daily_pnl"] == -280.0
+    assert metrics["daily_pnl_pct"] == -0.028
+    assert (
+        abs(metrics["kill_switch_distance"] - 0.002) < 0.0001
+    )  # ~0.2% away from -3% (floating point tolerance)
 
 
 # ============================================================================

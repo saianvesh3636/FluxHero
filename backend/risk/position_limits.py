@@ -31,6 +31,7 @@ from backend.core.config import Settings, get_settings
 
 class StrategyType(IntEnum):
     """Strategy type for risk parameter selection."""
+
     MEAN_REVERSION = 0
     NEUTRAL = 1
     TREND_FOLLOWING = 2
@@ -38,6 +39,7 @@ class StrategyType(IntEnum):
 
 class RiskCheckResult(IntEnum):
     """Risk validation result codes."""
+
     APPROVED = 0
     REJECTED_NO_STOP = 1
     REJECTED_EXCESSIVE_RISK = 2
@@ -50,6 +52,7 @@ class RiskCheckResult(IntEnum):
 @dataclass
 class Position:
     """Represents an open position for risk calculations."""
+
     symbol: str
     shares: float
     entry_price: float
@@ -76,6 +79,7 @@ class PositionLimitsConfig:
     for new code. All risk parameters are now managed through centralized
     configuration in backend.core.config.
     """
+
     # Position-level (R11.1)
     max_risk_pct_trend: float = 0.01  # 1% for trend-following
     max_risk_pct_mean_rev: float = 0.0075  # 0.75% for mean reversion
@@ -96,12 +100,13 @@ class PositionLimitsConfig:
 # Position-Level Risk Checks (R11.1)
 # ============================================================================
 
+
 def calculate_position_size_from_risk(
     account_balance: float,
     entry_price: float,
     stop_loss: float,
     strategy_type: StrategyType,
-    config: Settings | None = None
+    config: Settings | None = None,
 ) -> float:
     """
     Calculate position size based on risk percentage.
@@ -158,7 +163,7 @@ def validate_position_level_risk(
     stop_loss: float | None,
     shares: float,
     strategy_type: StrategyType,
-    config: Settings | None = None
+    config: Settings | None = None,
 ) -> tuple[RiskCheckResult, str]:
     """
     Validate position-level risk constraints.
@@ -188,8 +193,7 @@ def validate_position_level_risk(
 
     # R11.1.3: Stop loss mandatory
     if stop_loss is None:
-        return (RiskCheckResult.REJECTED_NO_STOP,
-                "Stop loss is mandatory for all positions")
+        return (RiskCheckResult.REJECTED_NO_STOP, "Stop loss is mandatory for all positions")
 
     # Calculate position value
     position_value = abs(shares * entry_price)
@@ -197,9 +201,11 @@ def validate_position_level_risk(
     # R11.1.2: Check max position size (20% of account)
     max_position_value = account_balance * config.max_position_size_pct
     if position_value > max_position_value:
-        return (RiskCheckResult.REJECTED_POSITION_TOO_LARGE,
-                f"Position size ${position_value:.2f} exceeds max ${max_position_value:.2f} "
-                f"({config.max_position_size_pct*100:.0f}% of account)")
+        return (
+            RiskCheckResult.REJECTED_POSITION_TOO_LARGE,
+            f"Position size ${position_value:.2f} exceeds max ${max_position_value:.2f} "
+            f"({config.max_position_size_pct * 100:.0f}% of account)",
+        )
 
     # R11.1.1: Check max risk per trade
     if strategy_type == StrategyType.TREND_FOLLOWING:
@@ -211,9 +217,11 @@ def validate_position_level_risk(
     max_risk_amount = account_balance * max_risk_pct
 
     if risk_amount > max_risk_amount:
-        return (RiskCheckResult.REJECTED_EXCESSIVE_RISK,
-                f"Risk ${risk_amount:.2f} exceeds max ${max_risk_amount:.2f} "
-                f"({max_risk_pct*100:.2f}% of account)")
+        return (
+            RiskCheckResult.REJECTED_EXCESSIVE_RISK,
+            f"Risk ${risk_amount:.2f} exceeds max ${max_risk_amount:.2f} "
+            f"({max_risk_pct * 100:.2f}% of account)",
+        )
 
     return (RiskCheckResult.APPROVED, "Position risk checks passed")
 
@@ -223,7 +231,7 @@ def calculate_atr_stop_loss(
     atr: float,
     side: int,  # 1 for long, -1 for short
     strategy_type: StrategyType,
-    config: Settings | None = None
+    config: Settings | None = None,
 ) -> float:
     """
     Calculate ATR-based stop loss price.
@@ -265,11 +273,12 @@ def calculate_atr_stop_loss(
 # Portfolio-Level Risk Checks (R11.2)
 # ============================================================================
 
+
 def validate_portfolio_level_risk(
     account_balance: float,
     open_positions: list[Position],
     new_position_value: float,
-    config: Settings | None = None
+    config: Settings | None = None,
 ) -> tuple[RiskCheckResult, str]:
     """
     Validate portfolio-level risk constraints.
@@ -297,8 +306,10 @@ def validate_portfolio_level_risk(
 
     # R11.2.2: Check max positions
     if len(open_positions) >= config.max_open_positions:
-        return (RiskCheckResult.REJECTED_MAX_POSITIONS,
-                f"Already at max {config.max_open_positions} open positions")
+        return (
+            RiskCheckResult.REJECTED_MAX_POSITIONS,
+            f"Already at max {config.max_open_positions} open positions",
+        )
 
     # R11.2.1: Check total exposure
     current_exposure = sum(pos.market_value for pos in open_positions)
@@ -306,9 +317,11 @@ def validate_portfolio_level_risk(
     max_exposure = account_balance * config.max_total_exposure_pct
 
     if total_exposure > max_exposure:
-        return (RiskCheckResult.REJECTED_TOTAL_EXPOSURE,
-                f"Total exposure ${total_exposure:.2f} would exceed max ${max_exposure:.2f} "
-                f"({config.max_total_exposure_pct*100:.0f}% of account)")
+        return (
+            RiskCheckResult.REJECTED_TOTAL_EXPOSURE,
+            f"Total exposure ${total_exposure:.2f} would exceed max ${max_exposure:.2f} "
+            f"({config.max_total_exposure_pct * 100:.0f}% of account)",
+        )
 
     return (RiskCheckResult.APPROVED, "Portfolio risk checks passed")
 
@@ -373,7 +386,7 @@ def check_correlation_with_existing_positions(
     new_symbol_prices: np.ndarray,
     open_positions: list[Position],
     position_prices_map: dict,  # {symbol: np.ndarray of recent prices}
-    config: Settings | None = None
+    config: Settings | None = None,
 ) -> tuple[bool, float, str | None]:
     """
     Check if new position is highly correlated with existing positions.
@@ -418,10 +431,7 @@ def check_correlation_with_existing_positions(
             continue
 
         # Calculate correlation
-        corr = calculate_correlation(
-            new_symbol_prices[-min_len:],
-            existing_prices[-min_len:]
-        )
+        corr = calculate_correlation(new_symbol_prices[-min_len:], existing_prices[-min_len:])
 
         abs_corr = abs(corr)
         if abs_corr > max_correlation:
@@ -438,6 +448,7 @@ def check_correlation_with_existing_positions(
 # Comprehensive Risk Validation
 # ============================================================================
 
+
 def validate_new_position(
     account_balance: float,
     entry_price: float,
@@ -447,7 +458,7 @@ def validate_new_position(
     open_positions: list[Position],
     new_symbol_prices: np.ndarray | None = None,
     position_prices_map: dict | None = None,
-    config: Settings | None = None
+    config: Settings | None = None,
 ) -> tuple[RiskCheckResult, str, float]:
     """
     Comprehensive risk validation for new position.
@@ -506,13 +517,14 @@ def validate_new_position(
 
         if should_reduce:
             adjusted_shares = np.floor(shares * (1.0 - config.correlation_size_reduction))
-            reason = (f"Position size reduced by {config.correlation_size_reduction*100:.0f}% "
-                     f"due to {max_corr:.2f} correlation with {corr_symbol}")
+            reason = (
+                f"Position size reduced by {config.correlation_size_reduction * 100:.0f}% "
+                f"due to {max_corr:.2f} correlation with {corr_symbol}"
+            )
 
             # Re-validate with adjusted size
             result, val_reason = validate_position_level_risk(
-                account_balance, entry_price, stop_loss, adjusted_shares,
-                strategy_type, config
+                account_balance, entry_price, stop_loss, adjusted_shares, strategy_type, config
             )
             if result != RiskCheckResult.APPROVED:
                 return (result, val_reason, 0.0)
@@ -526,9 +538,8 @@ def validate_new_position(
 # Risk Monitoring
 # ============================================================================
 
-def calculate_total_portfolio_risk(
-    open_positions: list[Position]
-) -> tuple[float, float]:
+
+def calculate_total_portfolio_risk(open_positions: list[Position]) -> tuple[float, float]:
     """
     Calculate total portfolio risk and exposure.
 
@@ -556,9 +567,7 @@ def calculate_total_portfolio_risk(
     return (total_risk, total_exposure)
 
 
-def get_largest_position(
-    open_positions: list[Position]
-) -> Position | None:
+def get_largest_position(open_positions: list[Position]) -> Position | None:
     """
     Get the largest position by market value.
 
@@ -577,9 +586,7 @@ def get_largest_position(
     return max(open_positions, key=lambda p: p.market_value)
 
 
-def calculate_worst_case_loss(
-    open_positions: list[Position]
-) -> float:
+def calculate_worst_case_loss(open_positions: list[Position]) -> float:
     """
     Calculate worst-case scenario if all stops are hit.
 

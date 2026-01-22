@@ -74,7 +74,9 @@ def test_requirements_valid_format():
 
         # Check that it doesn't start with special characters (except comments)
         if not line.startswith("#"):
-            assert line[0].isalnum(), f"Package name should start with alphanumeric character: {line}"
+            assert line[0].isalnum(), (
+                f"Package name should start with alphanumeric character: {line}"
+            )
 
 
 def test_requirements_contains_version_specs():
@@ -115,4 +117,6 @@ def test_sqlite3_note_present():
         content = f.read()
 
     # Should mention sqlite3 in comments
-    assert "sqlite3" in content.lower(), "requirements.txt should note that sqlite3 is in standard library"
+    assert "sqlite3" in content.lower(), (
+        "requirements.txt should note that sqlite3 is in standard library"
+    )

@@ -43,6 +43,7 @@ from backend.risk.kill_switch import (  # noqa: E402
 # EquityTracker Tests (R11.3.1)
 # ============================================================================
 
+
 def test_equity_tracker_initialization():
     """Test EquityTracker initialization."""
     tracker = EquityTracker(100000.0)
@@ -129,6 +130,7 @@ def test_equity_tracker_history():
 # ============================================================================
 # DrawdownCircuitBreaker Tests (R11.3.2, R11.3.3)
 # ============================================================================
+
 
 def test_circuit_breaker_initialization():
     """Test circuit breaker initialization."""
@@ -311,13 +313,11 @@ def test_circuit_breaker_alerts_tracking():
 # Risk Metrics Tests (R11.4.1)
 # ============================================================================
 
+
 def test_calculate_risk_metrics_no_positions():
     """Test risk metrics with no open positions."""
     metrics = calculate_risk_metrics(
-        account_balance=100000.0,
-        equity_peak=105000.0,
-        current_equity=100000.0,
-        open_positions=[]
+        account_balance=100000.0, equity_peak=105000.0, current_equity=100000.0, open_positions=[]
     )
 
     assert metrics.equity_peak == 105000.0
@@ -334,18 +334,18 @@ def test_calculate_risk_metrics_with_positions():
     """Test risk metrics with open positions."""
     positions = [
         Position("SPY", 100, 400.0, 410.0, 395.0),  # Risk: 100 × 5 = 500
-        Position("QQQ", 50, 300.0, 305.0, 291.0),   # Risk: 50 × 9 = 450
+        Position("QQQ", 50, 300.0, 305.0, 291.0),  # Risk: 50 × 9 = 450
     ]
 
     metrics = calculate_risk_metrics(
         account_balance=100000.0,
         equity_peak=100000.0,
         current_equity=100000.0,
-        open_positions=positions
+        open_positions=positions,
     )
 
     assert metrics.num_positions == 2
-    assert metrics.total_exposure == 100*410 + 50*305  # 56250
+    assert metrics.total_exposure == 100 * 410 + 50 * 305  # 56250
     assert metrics.exposure_pct == 0.5625  # 56.25%
     assert metrics.total_risk_deployed == 950.0  # 500 + 450
     assert metrics.worst_case_loss == 950.0
@@ -356,10 +356,7 @@ def test_calculate_risk_metrics_with_positions():
 def test_calculate_risk_metrics_warning_level():
     """Test risk metrics at warning drawdown level."""
     metrics = calculate_risk_metrics(
-        account_balance=85000.0,
-        equity_peak=100000.0,
-        current_equity=85000.0,
-        open_positions=[]
+        account_balance=85000.0, equity_peak=100000.0, current_equity=85000.0, open_positions=[]
     )
 
     assert metrics.current_drawdown_pct == 0.15
@@ -369,10 +366,7 @@ def test_calculate_risk_metrics_warning_level():
 def test_calculate_risk_metrics_critical_level():
     """Test risk metrics at critical drawdown level."""
     metrics = calculate_risk_metrics(
-        account_balance=80000.0,
-        equity_peak=100000.0,
-        current_equity=80000.0,
-        open_positions=[]
+        account_balance=80000.0, equity_peak=100000.0, current_equity=80000.0, open_positions=[]
     )
 
     assert metrics.current_drawdown_pct == 0.20
@@ -382,6 +376,7 @@ def test_calculate_risk_metrics_critical_level():
 # ============================================================================
 # Correlation Matrix Tests (R11.4.1)
 # ============================================================================
+
 
 def test_correlation_matrix_perfect_positive():
     """Test correlation matrix with perfectly correlated assets."""
@@ -441,6 +436,7 @@ def test_correlation_matrix_insufficient_data():
 # Daily Risk Report Tests (R11.4.2)
 # ============================================================================
 
+
 def test_generate_daily_risk_report():
     """Test daily risk report generation (R11.4.2)."""
     tracker = EquityTracker(100000.0)
@@ -455,7 +451,7 @@ def test_generate_daily_risk_report():
         account_balance=95000.0,
         equity_tracker=tracker,
         open_positions=positions,
-        circuit_breaker=breaker
+        circuit_breaker=breaker,
     )
 
     assert report.account_balance == 95000.0
@@ -473,10 +469,7 @@ def test_format_daily_risk_report():
     breaker = DrawdownCircuitBreaker()
 
     report = generate_daily_risk_report(
-        account_balance=100000.0,
-        equity_tracker=tracker,
-        open_positions=[],
-        circuit_breaker=breaker
+        account_balance=100000.0, equity_tracker=tracker, open_positions=[], circuit_breaker=breaker
     )
 
     formatted = format_daily_risk_report(report)
@@ -497,10 +490,7 @@ def test_daily_risk_report_with_alerts():
     breaker.update_trading_status(0.15)  # Trigger warning alert
 
     report = generate_daily_risk_report(
-        account_balance=85000.0,
-        equity_tracker=tracker,
-        open_positions=[],
-        circuit_breaker=breaker
+        account_balance=85000.0, equity_tracker=tracker, open_positions=[], circuit_breaker=breaker
     )
 
     assert len(report.alerts) > 0
@@ -510,6 +500,7 @@ def test_daily_risk_report_with_alerts():
 # ============================================================================
 # Position Data Class Tests
 # ============================================================================
+
 
 def test_position_market_value():
     """Test position market value calculation."""
@@ -544,6 +535,7 @@ def test_position_short():
 # ============================================================================
 # Integration Tests
 # ============================================================================
+
 
 def test_full_drawdown_workflow():
     """Test complete drawdown monitoring workflow."""
@@ -581,7 +573,7 @@ def test_risk_monitoring_with_multiple_positions():
         account_balance=100000.0,
         equity_peak=105000.0,
         current_equity=100000.0,
-        open_positions=positions
+        open_positions=positions,
     )
 
     # Verify all metrics calculated correctly
@@ -594,6 +586,7 @@ def test_risk_monitoring_with_multiple_positions():
 # ============================================================================
 # Edge Case Tests
 # ============================================================================
+
 
 def test_zero_equity_peak():
     """Test handling of zero equity peak."""
@@ -634,10 +627,7 @@ def test_custom_config():
 def test_empty_position_list():
     """Test risk calculations with empty position list."""
     metrics = calculate_risk_metrics(
-        account_balance=100000.0,
-        equity_peak=100000.0,
-        current_equity=100000.0,
-        open_positions=[]
+        account_balance=100000.0, equity_peak=100000.0, current_equity=100000.0, open_positions=[]
     )
 
     assert metrics.num_positions == 0
@@ -648,6 +638,7 @@ def test_empty_position_list():
 # ============================================================================
 # Success Criteria Tests (from FLUXHERO_REQUIREMENTS.md)
 # ============================================================================
+
 
 def test_success_criteria_five_losing_trades():
     """Test that 5 consecutive 1% losses don't trigger circuit breaker."""

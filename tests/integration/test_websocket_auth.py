@@ -36,8 +36,7 @@ class TestWebSocketAuthentication:
             with TestClient(app) as client:
                 # Connect with valid token in headers
                 with client.websocket_connect(
-                    "/ws/prices",
-                    headers={"Authorization": f"Bearer {custom_secret}"}
+                    "/ws/prices", headers={"Authorization": f"Bearer {custom_secret}"}
                 ) as websocket:
                     # Should receive connection confirmation message
                     data = websocket.receive_json()
@@ -55,8 +54,7 @@ class TestWebSocketAuthentication:
                 # Attempt connection with invalid token
                 with pytest.raises(Exception) as exc_info:
                     with client.websocket_connect(
-                        "/ws/prices",
-                        headers={"Authorization": f"Bearer {wrong_secret}"}
+                        "/ws/prices", headers={"Authorization": f"Bearer {wrong_secret}"}
                     ):
                         pass  # Should not reach here
 
@@ -80,10 +78,7 @@ class TestWebSocketAuthentication:
         with TestClient(app) as client:
             # Attempt connection with empty Authorization header
             with pytest.raises(Exception) as exc_info:
-                with client.websocket_connect(
-                    "/ws/prices",
-                    headers={"Authorization": ""}
-                ):
+                with client.websocket_connect("/ws/prices", headers={"Authorization": ""}):
                     pass  # Should not reach here
 
             # Connection should be rejected
@@ -94,10 +89,7 @@ class TestWebSocketAuthentication:
         with TestClient(app) as client:
             # Attempt connection with Bearer prefix but no actual token
             with pytest.raises(Exception) as exc_info:
-                with client.websocket_connect(
-                    "/ws/prices",
-                    headers={"Authorization": "Bearer "}
-                ):
+                with client.websocket_connect("/ws/prices", headers={"Authorization": "Bearer "}):
                     pass  # Should not reach here
 
             # Connection should be rejected
@@ -110,8 +102,7 @@ class TestWebSocketAuthentication:
             with TestClient(app) as client:
                 # Connect with default secret
                 with client.websocket_connect(
-                    "/ws/prices",
-                    headers={"Authorization": f"Bearer {DEFAULT_SECRET}"}
+                    "/ws/prices", headers={"Authorization": f"Bearer {DEFAULT_SECRET}"}
                 ) as websocket:
                     # Should receive connection confirmation
                     data = websocket.receive_json()
@@ -126,8 +117,7 @@ class TestWebSocketAuthentication:
             with TestClient(app) as client:
                 # Test with lowercase 'authorization'
                 with client.websocket_connect(
-                    "/ws/prices",
-                    headers={"authorization": f"Bearer {custom_secret}"}
+                    "/ws/prices", headers={"authorization": f"Bearer {custom_secret}"}
                 ) as websocket:
                     data = websocket.receive_json()
                     assert data["type"] == "connection"
@@ -141,8 +131,7 @@ class TestWebSocketAuthentication:
             with TestClient(app) as client:
                 # Connect with raw token (no Bearer prefix)
                 with client.websocket_connect(
-                    "/ws/prices",
-                    headers={"Authorization": custom_secret}
+                    "/ws/prices", headers={"Authorization": custom_secret}
                 ) as websocket:
                     data = websocket.receive_json()
                     assert data["type"] == "connection"
@@ -155,8 +144,7 @@ class TestWebSocketAuthentication:
         with patch.dict(os.environ, {"FLUXHERO_AUTH_SECRET": custom_secret}):
             with TestClient(app) as client:
                 with client.websocket_connect(
-                    "/ws/prices",
-                    headers={"Authorization": f"Bearer {custom_secret}"}
+                    "/ws/prices", headers={"Authorization": f"Bearer {custom_secret}"}
                 ) as websocket:
                     # Receive connection message
                     conn_msg = websocket.receive_json()

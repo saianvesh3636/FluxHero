@@ -50,7 +50,7 @@ def sample_trade():
         regime="STRONG_TREND",
         signal_reason="Bullish EMA crossover",
         created_at=datetime.utcnow().isoformat(),
-        updated_at=datetime.utcnow().isoformat()
+        updated_at=datetime.utcnow().isoformat(),
     )
 
 
@@ -82,7 +82,7 @@ async def test_archive_exports_to_parquet_and_deletes_from_sqlite(tmp_path, samp
             """SELECT * FROM trades
                WHERE entry_time < ? AND status != ?
                ORDER BY entry_time ASC""",
-            (cutoff_date, TradeStatus.OPEN)
+            (cutoff_date, TradeStatus.OPEN),
         )
         trades_to_archive = cursor.fetchall()
         count = len(trades_to_archive)
@@ -95,17 +95,12 @@ async def test_archive_exports_to_parquet_and_deletes_from_sqlite(tmp_path, samp
         archive_filename = f"trades_archive_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.parquet"
         archive_path = archive_dir / archive_filename
 
-        df.to_parquet(
-            archive_path,
-            engine='pyarrow',
-            compression='snappy',
-            index=False
-        )
+        df.to_parquet(archive_path, engine="pyarrow", compression="snappy", index=False)
 
         # Delete archived trades
         conn.execute(
             "DELETE FROM trades WHERE entry_time < ? AND status != ?",
-            (cutoff_date, TradeStatus.OPEN)
+            (cutoff_date, TradeStatus.OPEN),
         )
         conn.commit()
 
@@ -173,20 +168,24 @@ async def test_archive_exports_to_parquet_and_deletes_from_sqlite(tmp_path, samp
         assert len(df_archived) == 5, f"Expected 5 rows in Parquet, got {len(df_archived)}"
 
         # Assertion 4: Archived data should match old trades
-        archived_symbols = set(df_archived['symbol'].tolist())
+        archived_symbols = set(df_archived["symbol"].tolist())
         expected_symbols = set(old_trade_ids)
-        assert archived_symbols == expected_symbols, \
+        assert archived_symbols == expected_symbols, (
             f"Archived symbols {archived_symbols} don't match expected {expected_symbols}"
+        )
 
         # Assertion 5: SQLite should only have 4 trades remaining (3 recent + 1 open)
         remaining_trades = await store.get_recent_trades(limit=100)
-        assert len(remaining_trades) == 4, f"Expected 4 remaining trades, got {len(remaining_trades)}"
+        assert len(remaining_trades) == 4, (
+            f"Expected 4 remaining trades, got {len(remaining_trades)}"
+        )
 
         # Assertion 6: Remaining trades should be recent + open trade
         remaining_symbols = set(t.symbol for t in remaining_trades)
         expected_remaining = set(recent_trade_ids + ["OPEN_OLD"])
-        assert remaining_symbols == expected_remaining, \
+        assert remaining_symbols == expected_remaining, (
             f"Remaining symbols {remaining_symbols} don't match expected {expected_remaining}"
+        )
 
         # Assertion 7: Open trade should still exist
         open_trades_after = [t for t in remaining_trades if t.status == TradeStatus.OPEN]
@@ -250,7 +249,7 @@ async def test_archive_preserves_data_types(tmp_path, sample_trade):
             """SELECT * FROM trades
                WHERE entry_time < ? AND status != ?
                ORDER BY entry_time ASC""",
-            (cutoff_date, TradeStatus.OPEN)
+            (cutoff_date, TradeStatus.OPEN),
         )
         trades_to_archive = cursor.fetchall()
         count = len(trades_to_archive)
@@ -262,16 +261,11 @@ async def test_archive_preserves_data_types(tmp_path, sample_trade):
         archive_filename = f"trades_archive_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.parquet"
         archive_path = archive_dir / archive_filename
 
-        df.to_parquet(
-            archive_path,
-            engine='pyarrow',
-            compression='snappy',
-            index=False
-        )
+        df.to_parquet(archive_path, engine="pyarrow", compression="snappy", index=False)
 
         conn.execute(
             "DELETE FROM trades WHERE entry_time < ? AND status != ?",
-            (cutoff_date, TradeStatus.OPEN)
+            (cutoff_date, TradeStatus.OPEN),
         )
         conn.commit()
 
@@ -298,12 +292,12 @@ async def test_archive_preserves_data_types(tmp_path, sample_trade):
 
         # Verify data types and values
         row = df.iloc[0]
-        assert row['symbol'] == sample_trade.symbol
-        assert row['side'] == sample_trade.side
-        assert row['entry_price'] == sample_trade.entry_price
-        assert row['shares'] == sample_trade.shares
-        assert row['realized_pnl'] == sample_trade.realized_pnl
-        assert row['strategy'] == sample_trade.strategy
+        assert row["symbol"] == sample_trade.symbol
+        assert row["side"] == sample_trade.side
+        assert row["entry_price"] == sample_trade.entry_price
+        assert row["shares"] == sample_trade.shares
+        assert row["realized_pnl"] == sample_trade.realized_pnl
+        assert row["strategy"] == sample_trade.strategy
 
     finally:
         await store.close()

@@ -202,7 +202,7 @@ class TestResponsiveDesign:
         tablet_section = re.search(
             r"@media \(max-width: 1023px\).*?\.theme-toggle\s*\{[^}]*width:\s*40px",
             content,
-            re.DOTALL
+            re.DOTALL,
         )
         assert tablet_section is not None
 
@@ -334,11 +334,11 @@ class TestResponsiveDesign:
             # Check that we're using CSS classes
             # Look for Tailwind responsive classes or our custom classes
             has_responsive_classes = (
-                "md:" in content or
-                "lg:" in content or
-                "page-container" in content or
-                "stats-grid" in content or
-                "flex-col-tablet" in content
+                "md:" in content
+                or "lg:" in content
+                or "page-container" in content
+                or "stats-grid" in content
+                or "flex-col-tablet" in content
             )
 
             assert has_responsive_classes, f"{page_path} should use responsive CSS classes"
@@ -385,4 +385,5 @@ class TestResponsiveDesign:
 # Run all tests
 if __name__ == "__main__":
     import pytest
+
     pytest.main([__file__, "-v"])

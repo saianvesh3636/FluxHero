@@ -38,6 +38,7 @@ class ManagedOrder:
         original_qty: Original order quantity
         original_side: Original order side
     """
+
     order: Order
     placed_at: float = field(default_factory=time.time)
     last_checked_at: float = field(default_factory=time.time)
@@ -67,6 +68,7 @@ class ChaseConfig:
         chase_after_seconds: Time to wait before chasing (R10.2.2: 60s)
         poll_interval_seconds: Status polling interval (R10.2.1: 5s)
     """
+
     max_chase_attempts: int = 3
     chase_after_seconds: float = 60.0
     poll_interval_seconds: float = 5.0
@@ -92,7 +94,9 @@ class OrderManager:
         >>> broker = PaperBroker()
         >>> manager = OrderManager(broker)
         >>> await manager.start()
-        >>> order = await manager.place_order_with_monitoring("SPY", 100, OrderSide.BUY, OrderType.LIMIT, limit_price=450.0)
+        >>> order = await manager.place_order_with_monitoring(
+        ...     "SPY", 100, OrderSide.BUY, OrderType.LIMIT, limit_price=450.0
+        ... )
         >>> # Manager will monitor and chase if needed
         >>> await manager.stop()
     """
@@ -242,7 +246,11 @@ class OrderManager:
             managed_order.last_checked_at = current_time
 
             # Remove if filled, cancelled, or rejected
-            if updated_order.status in (OrderStatus.FILLED, OrderStatus.CANCELLED, OrderStatus.REJECTED):
+            if updated_order.status in (
+                OrderStatus.FILLED,
+                OrderStatus.CANCELLED,
+                OrderStatus.REJECTED,
+            ):
                 logger.info(f"Order {order_id} terminal status: {updated_order.status.name}")
                 orders_to_remove.append(order_id)
                 continue
@@ -273,7 +281,8 @@ class OrderManager:
         # Check chase limit (R10.2.3)
         if managed_order.chase_count >= self.config.max_chase_attempts:
             logger.warning(
-                f"Order {order.order_id} exceeded max chase attempts ({self.config.max_chase_attempts}). Abandoning."
+                f"Order {order.order_id} exceeded max chase attempts "
+                f"({self.config.max_chase_attempts}). Abandoning."
             )
             managed_order.is_abandoned = True
             # Cancel the order
@@ -296,7 +305,9 @@ class OrderManager:
                 new_mid_price = await self.get_mid_price_func(order.symbol)
                 if new_mid_price:
                     new_limit_price = new_mid_price
-                    logger.info(f"Updated limit price from {order.limit_price} to {new_limit_price}")
+                    logger.info(
+                        f"Updated limit price from {order.limit_price} to {new_limit_price}"
+                    )
             except Exception as e:
                 logger.error(f"Failed to get mid-price for {order.symbol}: {e}")
 

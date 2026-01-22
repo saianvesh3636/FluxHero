@@ -66,7 +66,9 @@ class RebootConfig:
 
         self.symbols = symbols
         self.timeframe = timeframe if timeframe is not None else settings.default_timeframe
-        self.initial_candles = initial_candles if initial_candles is not None else settings.initial_candles
+        self.initial_candles = (
+            initial_candles if initial_candles is not None else settings.initial_candles
+        )
         self.api_url = api_url if api_url is not None else settings.alpaca_api_url
         self.ws_url = ws_url if ws_url is not None else settings.alpaca_ws_url
         self.api_key = api_key if api_key is not None else settings.alpaca_api_key

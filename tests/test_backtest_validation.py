@@ -78,7 +78,7 @@ class DualModeStrategy:
             atr_ma=atr_ma,
             apply_persistence=True,
         )
-        self.trend_regime = regime_data['trend_regime']
+        self.trend_regime = regime_data["trend_regime"]
 
         # Generate signals for both strategies
         self.trend_signals = generate_trend_following_signals(
@@ -95,10 +95,7 @@ class DualModeStrategy:
         self.close_prices = close_prices
 
     def get_orders(
-        self,
-        bars: np.ndarray,
-        current_index: int,
-        position: Position | None
+        self, bars: np.ndarray, current_index: int, position: Position | None
     ) -> list[Order]:
         """Generate orders based on current bar and position."""
         orders = []
@@ -123,8 +120,10 @@ class DualModeStrategy:
             active_signal = self.mr_signals[current_index]
             risk_pct = 0.0075
         else:  # NEUTRAL
-            if (self.trend_signals[current_index] == self.mr_signals[current_index] and
-                self.trend_signals[current_index] != SIGNAL_NONE):
+            if (
+                self.trend_signals[current_index] == self.mr_signals[current_index]
+                and self.trend_signals[current_index] != SIGNAL_NONE
+            ):
                 active_signal = self.trend_signals[current_index]
             else:
                 active_signal = SIGNAL_NONE
@@ -238,7 +237,11 @@ class TestBacktestValidation:
         trend1 = np.linspace(100, 120, segment_length) + np.random.randn(segment_length) * 0.5
 
         # Q2: Ranging
-        range2 = 120 + 3 * np.sin(np.linspace(0, 15 * np.pi, segment_length)) + np.random.randn(segment_length) * 1.0
+        range2 = (
+            120
+            + 3 * np.sin(np.linspace(0, 15 * np.pi, segment_length))
+            + np.random.randn(segment_length) * 1.0
+        )
 
         # Q3: Pullback
         trend3 = np.linspace(120, 110, segment_length) + np.random.randn(segment_length) * 0.8
@@ -263,9 +266,9 @@ class TestBacktestValidation:
 
     def run_backtest_scenario(self, bars: np.ndarray, scenario_name: str) -> dict:
         """Run a backtest scenario and return performance metrics."""
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Running: {scenario_name}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         # Configure backtest
         config = BacktestConfig(
@@ -285,13 +288,15 @@ class TestBacktestValidation:
         state = engine.run(
             bars=bars,
             strategy_func=strategy.get_orders,
-            symbol='TEST',
+            symbol="TEST",
         )
 
         # Calculate metrics
         equity_curve = np.array(state.equity_curve)
         trades_pnl = np.array([t.pnl for t in state.trades]) if state.trades else np.array([])
-        trades_holding_periods = np.array([t.holding_bars for t in state.trades]) if state.trades else np.array([])
+        trades_holding_periods = (
+            np.array([t.holding_bars for t in state.trades]) if state.trades else np.array([])
+        )
 
         metrics = PerformanceMetrics.calculate_all_metrics(
             equity_curve=equity_curve,
@@ -310,18 +315,14 @@ class TestBacktestValidation:
         print(f"  Win Rate: {metrics['win_rate']:.2f}%")
         print(f"  Avg Win/Loss: {metrics['avg_win_loss_ratio']:.2f}")
 
-        return {
-            'scenario': scenario_name,
-            'metrics': metrics,
-            'num_trades': len(state.trades)
-        }
+        return {"scenario": scenario_name, "metrics": metrics, "num_trades": len(state.trades)}
 
     def test_trending_market(self):
         """Test backtest on trending market - should generate most trades."""
         bars = self.generate_trending_market(n_candles=252)
         result = self.run_backtest_scenario(bars, "Trending Market")
         self.trending_result = result
-        assert result['num_trades'] > 0, "Should generate trades in trending market"
+        assert result["num_trades"] > 0, "Should generate trades in trending market"
 
     def test_ranging_market(self):
         """Test backtest on ranging market."""
@@ -336,7 +337,7 @@ class TestBacktestValidation:
         bars = self.generate_mixed_market(n_candles=252)
         result = self.run_backtest_scenario(bars, "Mixed Market")
         self.mixed_result = result
-        assert result['num_trades'] > 0, "Should generate trades in mixed market"
+        assert result["num_trades"] > 0, "Should generate trades in mixed market"
 
     def test_validate_minimum_targets(self):
         """Validate that system meets minimum performance targets."""
@@ -347,39 +348,50 @@ class TestBacktestValidation:
 
         all_results = [self.trending_result, self.ranging_result, self.mixed_result]
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("VALIDATION SUMMARY")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         passing_scenarios = []
 
         for result in all_results:
-            scenario = result['scenario']
-            m = result['metrics']
+            scenario = result["scenario"]
+            m = result["metrics"]
 
-            sharpe_pass = m['sharpe_ratio'] > self.min_sharpe
-            dd_pass = m['max_drawdown_pct'] < self.max_drawdown_limit
-            wr_pass = m['win_rate'] > self.min_win_rate
+            sharpe_pass = m["sharpe_ratio"] > self.min_sharpe
+            dd_pass = m["max_drawdown_pct"] < self.max_drawdown_limit
+            wr_pass = m["win_rate"] > self.min_win_rate
             all_pass = sharpe_pass and dd_pass and wr_pass
 
             print(f"{scenario}:")
-            print(f"  Sharpe: {m['sharpe_ratio']:.2f} {'✓' if sharpe_pass else '✗'} (>{self.min_sharpe})")
-            print(f"  Max DD: {m['max_drawdown_pct']:.2f}% {'✓' if dd_pass else '✗'} (<{self.max_drawdown_limit}%)")
-            print(f"  Win Rate: {m['win_rate']:.2f}% {'✓' if wr_pass else '✗'} (>{self.min_win_rate}%)")
+            print(
+                f"  Sharpe: {m['sharpe_ratio']:.2f} "
+                f"{'✓' if sharpe_pass else '✗'} (>{self.min_sharpe})"
+            )
+            print(
+                f"  Max DD: {m['max_drawdown_pct']:.2f}% "
+                f"{'✓' if dd_pass else '✗'} (<{self.max_drawdown_limit}%)"
+            )
+            print(
+                f"  Win Rate: {m['win_rate']:.2f}% "
+                f"{'✓' if wr_pass else '✗'} (>{self.min_win_rate}%)"
+            )
             print(f"  Status: {'✓ PASS' if all_pass else '✗ NEEDS OPTIMIZATION'}\n")
 
             if all_pass:
                 passing_scenarios.append(scenario)
 
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Passing: {len(passing_scenarios)}/{len(all_results)} scenarios")
         if passing_scenarios:
             print(f"Scenarios: {', '.join(passing_scenarios)}")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         # Check system functionality
-        any_trades = any(r['num_trades'] > 0 for r in all_results)
-        reasonable_drawdown = all(r['metrics']['max_drawdown_pct'] < self.max_drawdown_limit for r in all_results)
+        any_trades = any(r["num_trades"] > 0 for r in all_results)
+        reasonable_drawdown = all(
+            r["metrics"]["max_drawdown_pct"] < self.max_drawdown_limit for r in all_results
+        )
 
         assert any_trades, "System should generate trades"
         assert reasonable_drawdown, "All scenarios should maintain drawdown below limit"
@@ -390,9 +402,9 @@ class TestBacktestValidation:
 
     def test_performance_benchmark(self):
         """Test that indicator calculations meet performance targets."""
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("Performance Benchmark: Indicator Suite")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         bars = self.generate_trending_market(n_candles=10_000)
         close = np.ascontiguousarray(bars[:, 3])
@@ -430,7 +442,7 @@ class TestBacktestValidation:
         print(f"RSI (14):     {rsi_time:.2f}ms")
         print(f"ATR (14):     {atr_time:.2f}ms")
         print(f"KAMA (10/2/30): {kama_time:.2f}ms")
-        print(f"{'─'*40}")
+        print(f"{'─' * 40}")
         print(f"Total:        {total_time:.2f}ms")
         print("Target:       <500ms")
         print(f"Status:       {'✓ PASS' if total_time < 500 else '✗ FAIL'}\n")
@@ -439,5 +451,5 @@ class TestBacktestValidation:
         print("✓ Performance benchmark passed!\n")
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v', '-s'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "-s"])

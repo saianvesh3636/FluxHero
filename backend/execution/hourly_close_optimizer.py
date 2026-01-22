@@ -42,12 +42,14 @@ from typing import Any
 
 class OrderSide(IntEnum):
     """Order side enumeration."""
+
     BUY = 1
     SELL = -1
 
 
 class OrderType(IntEnum):
     """Order type enumeration."""
+
     MARKET = 0
     LIMIT = 1
     STOP = 2
@@ -71,6 +73,7 @@ class ScheduledOrder:
         signal_reason: Explanation for the trade signal
         metadata: Additional order metadata
     """
+
     symbol: str
     side: OrderSide
     quantity: float
@@ -114,7 +117,7 @@ class HourlyCloseOptimizer:
         self,
         signal_check_minute: int = 59,
         order_submit_minute: int = 0,
-        max_history_size: int = 100
+        max_history_size: int = 100,
     ):
         """
         Initialize the hourly close optimizer.
@@ -187,11 +190,7 @@ class HourlyCloseOptimizer:
         """
         return current_time.minute == self.order_submit_minute
 
-    def schedule_order(
-        self,
-        order: ScheduledOrder,
-        current_time: datetime
-    ) -> ScheduledOrder:
+    def schedule_order(self, order: ScheduledOrder, current_time: datetime) -> ScheduledOrder:
         """
         Schedule an order for submission at the next hour boundary.
 
@@ -221,9 +220,9 @@ class HourlyCloseOptimizer:
         # Calculate next hour boundary (minute 0)
         if current_time.minute == 59:
             # If at minute 59, submit at next hour
-            submit_time = current_time.replace(
-                minute=0, second=0, microsecond=0
-            ) + timedelta(hours=1)
+            submit_time = current_time.replace(minute=0, second=0, microsecond=0) + timedelta(
+                hours=1
+            )
         else:
             # If not at minute 59, calculate next appropriate submit time
             if current_time.minute < self.order_submit_minute:
@@ -247,9 +246,7 @@ class HourlyCloseOptimizer:
         return order
 
     def get_pending_orders(
-        self,
-        current_time: datetime,
-        window_seconds: int = 60
+        self, current_time: datetime, window_seconds: int = 60
     ) -> list[ScheduledOrder]:
         """
         Get orders scheduled for submission at the current time.
@@ -314,7 +311,7 @@ class HourlyCloseOptimizer:
 
         # Trim history if needed
         if len(self.submitted_orders_history) > self.max_history_size:
-            self.submitted_orders_history = self.submitted_orders_history[-self.max_history_size:]
+            self.submitted_orders_history = self.submitted_orders_history[-self.max_history_size :]
 
     def cancel_order(self, order: ScheduledOrder) -> bool:
         """

@@ -56,10 +56,9 @@ def generate_synthetic_market_data(num_candles: int = 500, regime: str = "trendi
 
     # Start timestamp
     start_time = datetime.now() - timedelta(days=num_candles // 390)
-    timestamps = np.array([
-        int((start_time + timedelta(minutes=i)).timestamp())
-        for i in range(num_candles)
-    ])
+    timestamps = np.array(
+        [int((start_time + timedelta(minutes=i)).timestamp()) for i in range(num_candles)]
+    )
 
     # Generate prices based on regime
     if regime == "trending":
@@ -72,7 +71,7 @@ def generate_synthetic_market_data(num_candles: int = 500, regime: str = "trendi
         closes = 100 + np.random.normal(0, 2, num_candles)
         # Add some autocorrelation
         for i in range(1, num_candles):
-            closes[i] = 0.7 * closes[i-1] + 0.3 * closes[i]
+            closes[i] = 0.7 * closes[i - 1] + 0.3 * closes[i]
 
     # Generate OHLC from closes
     opens = np.roll(closes, 1)
@@ -147,9 +146,7 @@ def test_full_integration_workflow(tmp_path):
 
     # 3. INDICATOR CALCULATIONS
     print("\n3. Calculating indicators...")
-    open_array, high_array, low_array, close_array, volume_array = (
-        candle_buffer.get_ohlcv_arrays()
-    )
+    open_array, high_array, low_array, close_array, volume_array = candle_buffer.get_ohlcv_arrays()
 
     start_time = time.perf_counter()
 
@@ -159,9 +156,7 @@ def test_full_integration_workflow(tmp_path):
     kama, efficiency_ratio, regime_kama = calculate_kama_with_regime_adjustment(
         close_array, er_period=10, fast_period=2, slow_period=30
     )
-    upper_bb, middle_bb, lower_bb = calculate_bollinger_bands(
-        close_array, period=20, num_std=2.0
-    )
+    upper_bb, middle_bb, lower_bb = calculate_bollinger_bands(close_array, period=20, num_std=2.0)
 
     elapsed_ms = (time.perf_counter() - start_time) * 1000
 
@@ -176,8 +171,7 @@ def test_full_integration_workflow(tmp_path):
     print("\n4. Detecting market regime...")
     atr_ma = calculate_atr_ma(atr, period=50)
     regime_result = detect_regime(
-        high_array, low_array, close_array, atr, atr_ma,
-        adx_period=14, regression_period=50
+        high_array, low_array, close_array, atr, atr_ma, adx_period=14, regression_period=50
     )
     regime_trend = regime_result["trend_regime_confirmed"]
     regime_volatility = regime_result["volatility_regime"]
@@ -197,14 +191,12 @@ def test_full_integration_workflow(tmp_path):
 
     # Trend-following signals
     tf_signals = generate_trend_following_signals(
-        close_array, kama, atr,
-        entry_multiplier=0.5, exit_multiplier=0.3
+        close_array, kama, atr, entry_multiplier=0.5, exit_multiplier=0.3
     )
 
     # Mean-reversion signals
     mr_signals = generate_mean_reversion_signals(
-        close_array, rsi, lower_bb, middle_bb,
-        rsi_oversold=30, rsi_overbought=70
+        close_array, rsi, lower_bb, middle_bb, rsi_oversold=30, rsi_overbought=70
     )
 
     # Verify signals were generated
@@ -213,7 +205,10 @@ def test_full_integration_workflow(tmp_path):
 
     tf_signal_count = np.sum(tf_signals != 0)
     mr_signal_count = np.sum(mr_signals != 0)
-    print(f"   ✓ Generated {tf_signal_count} trend-following and {mr_signal_count} mean-reversion signals")
+    print(
+        f"   ✓ Generated {tf_signal_count} trend-following and "
+        f"{mr_signal_count} mean-reversion signals"
+    )
 
     # 6. DUAL-MODE STRATEGY
     print("\n6. Testing dual-mode strategy...")
@@ -270,16 +265,12 @@ def test_integration_performance_benchmarks():
     kama, er, regime = calculate_kama_with_regime_adjustment(
         closes, er_period=10, fast_period=2, slow_period=30
     )
-    upper_bb, middle_bb, lower_bb = calculate_bollinger_bands(
-        closes, period=20, num_std=2.0
-    )
+    upper_bb, middle_bb, lower_bb = calculate_bollinger_bands(closes, period=20, num_std=2.0)
 
     elapsed_ms = (time.perf_counter() - start_time) * 1000
 
     # Target: <500ms for 10k candles
-    assert elapsed_ms < 500, (
-        f"Indicator suite took {elapsed_ms:.1f}ms, expected <500ms"
-    )
+    assert elapsed_ms < 500, f"Indicator suite took {elapsed_ms:.1f}ms, expected <500ms"
 
     print(f"✓ Full indicator suite on 10k candles: {elapsed_ms:.1f}ms (target: <500ms)\n")
 

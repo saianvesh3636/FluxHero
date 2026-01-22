@@ -216,9 +216,7 @@ async def test_fetch_candles_cache_hit(tmp_path):
     mock_candle_data = CandleData(
         symbol="SPY",
         timeframe="1h",
-        timestamp=np.array(
-            [datetime.now(UTC) for _ in range(500)], dtype="datetime64[ns]"
-        ),
+        timestamp=np.array([datetime.now(UTC) for _ in range(500)], dtype="datetime64[ns]"),
         open=np.random.uniform(400, 410, 500),
         high=np.random.uniform(410, 420, 500),
         low=np.random.uniform(390, 400, 500),
@@ -274,9 +272,7 @@ async def test_fetch_candles_cache_miss(tmp_path):
     await orchestrator._fetch_and_cache_candles("SPY")
 
     # Verify API was called
-    mock_rest_client.fetch_candles.assert_called_once_with(
-        symbol="SPY", timeframe="1h", limit=500
-    )
+    mock_rest_client.fetch_candles.assert_called_once_with(symbol="SPY", timeframe="1h", limit=500)
 
     # Verify buffer populated
     assert "SPY" in orchestrator.candle_buffers
@@ -320,9 +316,7 @@ async def test_initialize_websocket_success(tmp_path):
     mock_rest_client = AsyncMock()
     orchestrator.rest_client = mock_rest_client
 
-    with patch(
-        "backend.maintenance.daily_reboot.WebSocketFeed", return_value=mock_ws
-    ):
+    with patch("backend.maintenance.daily_reboot.WebSocketFeed", return_value=mock_ws):
         await orchestrator._initialize_websocket("SPY")
 
     # Verify WebSocket connected and subscribed
@@ -532,9 +526,7 @@ async def test_run_reboot_failure(tmp_path):
 
     # Mock REST client that raises error
     mock_rest_client = AsyncMock()
-    mock_rest_client.fetch_candles = AsyncMock(
-        side_effect=Exception("API connection failed")
-    )
+    mock_rest_client.fetch_candles = AsyncMock(side_effect=Exception("API connection failed"))
     mock_rest_client.close = AsyncMock()
 
     with patch(

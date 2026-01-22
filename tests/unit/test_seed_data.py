@@ -35,9 +35,16 @@ class TestPositionDataGeneration:
 
         # Check all required fields are present
         required_fields = [
-            "symbol", "entry_price", "current_price", "shares",
-            "side", "stop_loss", "entry_time", "strategy",
-            "regime", "signal_reason"
+            "symbol",
+            "entry_price",
+            "current_price",
+            "shares",
+            "side",
+            "stop_loss",
+            "entry_time",
+            "strategy",
+            "regime",
+            "signal_reason",
         ]
         for field in required_fields:
             assert field in data, f"Missing required field: {field}"

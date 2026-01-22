@@ -84,12 +84,12 @@ def test_analytics_page_has_atr_bands():
 
     # Check for ATR band series
     assert "atr" in content.lower(), "Should reference ATR"
-    assert (
-        "atrUpper" in content or "atr_upper" in content.lower() or "ATR Upper" in content
-    ), "Should have ATR upper band"
-    assert (
-        "atrLower" in content or "atr_lower" in content.lower() or "ATR Lower" in content
-    ), "Should have ATR lower band"
+    assert "atrUpper" in content or "atr_upper" in content.lower() or "ATR Upper" in content, (
+        "Should have ATR upper band"
+    )
+    assert "atrLower" in content or "atr_lower" in content.lower() or "ATR Lower" in content, (
+        "Should have ATR lower band"
+    )
 
 
 def test_analytics_page_has_signal_markers():
@@ -102,12 +102,12 @@ def test_analytics_page_has_signal_markers():
     assert "marker" in content.lower(), "Should use markers"
 
     # Check for marker types
-    assert (
-        "arrowUp" in content or "arrow_up" in content.lower() or "Buy" in content
-    ), "Should have buy signals"
-    assert (
-        "arrowDown" in content or "arrow_down" in content.lower() or "Sell" in content
-    ), "Should have sell signals"
+    assert "arrowUp" in content or "arrow_up" in content.lower() or "Buy" in content, (
+        "Should have buy signals"
+    )
+    assert "arrowDown" in content or "arrow_down" in content.lower() or "Sell" in content, (
+        "Should have sell signals"
+    )
 
 
 def test_analytics_page_has_indicator_panel():
@@ -131,12 +131,10 @@ def test_analytics_page_has_performance_metrics():
     assert (
         "totalReturn" in content or "total_return" in content.lower() or "Total Return" in content
     ), "Should display total return"
-    assert (
-        "sharpe" in content.lower() or "Sharpe" in content
-    ), "Should display Sharpe ratio"
-    assert (
-        "winRate" in content or "win_rate" in content.lower() or "Win Rate" in content
-    ), "Should display win rate"
+    assert "sharpe" in content.lower() or "Sharpe" in content, "Should display Sharpe ratio"
+    assert "winRate" in content or "win_rate" in content.lower() or "Win Rate" in content, (
+        "Should display win rate"
+    )
     assert (
         "maxDrawdown" in content
         or "max_drawdown" in content.lower()
@@ -161,7 +159,9 @@ def test_analytics_page_has_timeframe_selector():
     content = analytics_page.read_text()
 
     # Check for timeframe selector
-    assert "timeframe" in content.lower() or "interval" in content.lower(), "Should have timeframe selection"
+    assert "timeframe" in content.lower() or "interval" in content.lower(), (
+        "Should have timeframe selection"
+    )
 
 
 def test_analytics_page_has_responsive_design():
@@ -170,9 +170,9 @@ def test_analytics_page_has_responsive_design():
     content = analytics_page.read_text()
 
     # Check for responsive design patterns
-    assert (
-        "md:" in content or "lg:" in content or "responsive" in content.lower()
-    ), "Should have responsive design classes"
+    assert "md:" in content or "lg:" in content or "responsive" in content.lower(), (
+        "Should have responsive design classes"
+    )
 
 
 def test_analytics_page_has_loading_state():
@@ -191,12 +191,12 @@ def test_analytics_page_has_color_coding():
     content = analytics_page.read_text()
 
     # Check for color coding
-    assert (
-        "green" in content.lower() or "#26a69a" in content.lower() or "text-green" in content
-    ), "Should use green for positive values"
-    assert (
-        "red" in content.lower() or "#ef5350" in content.lower() or "text-red" in content
-    ), "Should use red for negative values"
+    assert "green" in content.lower() or "#26a69a" in content.lower() or "text-green" in content, (
+        "Should use green for positive values"
+    )
+    assert "red" in content.lower() or "#ef5350" in content.lower() or "text-red" in content, (
+        "Should use red for negative values"
+    )
 
 
 def test_analytics_page_has_chart_resize_handler():
@@ -227,9 +227,7 @@ def test_lightweight_charts_dependency():
     content = json.loads(package_json.read_text())
     dependencies = content.get("dependencies", {})
 
-    assert (
-        "lightweight-charts" in dependencies
-    ), "lightweight-charts should be in dependencies"
+    assert "lightweight-charts" in dependencies, "lightweight-charts should be in dependencies"
 
 
 def test_analytics_page_typescript_types():
@@ -263,9 +261,7 @@ def test_analytics_page_has_dark_theme():
 
     # Check for dark theme colors
     assert (
-        "bg-gray" in content
-        or "background: { color: '#" in content
-        or "dark" in content.lower()
+        "bg-gray" in content or "background: { color: '#" in content or "dark" in content.lower()
     ), "Should have dark theme styling"
 
 
@@ -275,9 +271,7 @@ def test_analytics_page_has_grid_layout():
     content = analytics_page.read_text()
 
     # Check for grid layout
-    assert (
-        "grid" in content.lower() or "flex" in content.lower()
-    ), "Should use grid or flex layout"
+    assert "grid" in content.lower() or "flex" in content.lower(), "Should use grid or flex layout"
 
 
 def test_analytics_page_client_component():
@@ -286,7 +280,9 @@ def test_analytics_page_client_component():
     content = analytics_page.read_text()
 
     # Check for 'use client' directive
-    assert "'use client'" in content or '"use client"' in content, "Should be marked as client component"
+    assert "'use client'" in content or '"use client"' in content, (
+        "Should be marked as client component"
+    )
 
 
 def test_analytics_page_auto_refresh():
@@ -296,7 +292,9 @@ def test_analytics_page_auto_refresh():
 
     # Check for auto-refresh with interval
     assert "setInterval" in content or "interval" in content.lower(), "Should have auto-refresh"
-    assert "clearInterval" in content or "clear" in content.lower(), "Should clear interval on cleanup"
+    assert "clearInterval" in content or "clear" in content.lower(), (
+        "Should clear interval on cleanup"
+    )
 
 
 def test_analytics_page_has_header():

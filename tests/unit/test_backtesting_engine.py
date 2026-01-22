@@ -35,6 +35,7 @@ from backend.backtesting.metrics import (
 # Tests for fills.py - Next-Bar Fill Logic
 # ============================================================================
 
+
 class TestNextBarFillLogic:
     """Test next-bar fill logic (R9.1)."""
 
@@ -112,35 +113,32 @@ class TestNextBarFillLogic:
         """Test that stop is checked before target (conservative)."""
         # Both stop and target theoretically hit in same bar
         exited, price, reason = check_stop_and_target(
-            high=111.0, low=94.0, close=96.0,
-            stop_price=95.0, target_price=110.0, is_long=True
+            high=111.0, low=94.0, close=96.0, stop_price=95.0, target_price=110.0, is_long=True
         )
 
         assert exited is True
         assert price == 95.0  # Stop price
-        assert reason == 'stop'
+        assert reason == "stop"
 
     def test_check_stop_and_target_target_only(self):
         """Test target hit when stop not touched."""
         exited, price, reason = check_stop_and_target(
-            high=111.0, low=106.0, close=108.0,
-            stop_price=95.0, target_price=110.0, is_long=True
+            high=111.0, low=106.0, close=108.0, stop_price=95.0, target_price=110.0, is_long=True
         )
 
         assert exited is True
         assert price == 110.0
-        assert reason == 'target'
+        assert reason == "target"
 
     def test_check_stop_and_target_neither(self):
         """Test neither stop nor target hit."""
         exited, price, reason = check_stop_and_target(
-            high=108.0, low=96.0, close=102.0,
-            stop_price=95.0, target_price=110.0, is_long=True
+            high=108.0, low=96.0, close=102.0, stop_price=95.0, target_price=110.0, is_long=True
         )
 
         assert exited is False
         assert price == 102.0
-        assert reason == 'none'
+        assert reason == "none"
 
     def test_validate_no_lookahead_valid(self):
         """Test lookahead validation with valid fills (R9.1.4)."""
@@ -162,6 +160,7 @@ class TestNextBarFillLogic:
 # ============================================================================
 # Tests for metrics.py - Performance Calculations
 # ============================================================================
+
 
 class TestPerformanceMetrics:
     """Test performance metrics calculations (R9.3)."""
@@ -277,94 +276,95 @@ class TestPerformanceMetrics:
             trades_holding_periods=holding_periods,
             initial_capital=100000.0,
             risk_free_rate=0.04,
-            periods_per_year=252
+            periods_per_year=252,
         )
 
         # Check all required metrics present
-        assert 'total_return' in metrics
-        assert 'total_return_pct' in metrics
-        assert 'sharpe_ratio' in metrics
-        assert 'max_drawdown_pct' in metrics
-        assert 'win_rate' in metrics
-        assert 'avg_win_loss_ratio' in metrics
-        assert 'total_trades' in metrics
+        assert "total_return" in metrics
+        assert "total_return_pct" in metrics
+        assert "sharpe_ratio" in metrics
+        assert "max_drawdown_pct" in metrics
+        assert "win_rate" in metrics
+        assert "avg_win_loss_ratio" in metrics
+        assert "total_trades" in metrics
 
         # Validate some values
-        assert metrics['total_return'] == 15000.0
-        assert metrics['total_return_pct'] == 15.0
-        assert metrics['total_trades'] == 4
-        assert metrics['win_rate'] == 0.75  # 3 wins out of 4
+        assert metrics["total_return"] == 15000.0
+        assert metrics["total_return_pct"] == 15.0
+        assert metrics["total_trades"] == 4
+        assert metrics["win_rate"] == 0.75  # 3 wins out of 4
 
     def test_performance_metrics_format_report(self):
         """Test metrics report formatting."""
         metrics = {
-            'initial_capital': 100000.0,
-            'final_equity': 125000.0,
-            'total_return': 25000.0,
-            'total_return_pct': 25.0,
-            'annualized_return_pct': 55.6,
-            'sharpe_ratio': 1.2,
-            'max_drawdown_pct': -12.5,
-            'risk_free_rate': 0.04,
-            'total_trades': 50,
-            'winning_trades': 28,
-            'losing_trades': 22,
-            'win_rate': 0.56,
-            'avg_win': 1200.0,
-            'avg_loss': 800.0,
-            'avg_win_loss_ratio': 1.5,
-            'avg_holding_period': 5.2
+            "initial_capital": 100000.0,
+            "final_equity": 125000.0,
+            "total_return": 25000.0,
+            "total_return_pct": 25.0,
+            "annualized_return_pct": 55.6,
+            "sharpe_ratio": 1.2,
+            "max_drawdown_pct": -12.5,
+            "risk_free_rate": 0.04,
+            "total_trades": 50,
+            "winning_trades": 28,
+            "losing_trades": 22,
+            "win_rate": 0.56,
+            "avg_win": 1200.0,
+            "avg_loss": 800.0,
+            "avg_win_loss_ratio": 1.5,
+            "avg_holding_period": 5.2,
         }
 
         report = PerformanceMetrics.format_metrics_report(metrics)
 
         # Check report contains key information
-        assert 'BACKTEST PERFORMANCE REPORT' in report
-        assert '$125,000.00' in report
-        assert '25.00%' in report
-        assert '1.20' in report  # Sharpe
-        assert '56.00%' in report  # Win rate
+        assert "BACKTEST PERFORMANCE REPORT" in report
+        assert "$125,000.00" in report
+        assert "25.00%" in report
+        assert "1.20" in report  # Sharpe
+        assert "56.00%" in report  # Win rate
 
     def test_performance_metrics_check_success_criteria(self):
         """Test success criteria checking (FLUXHERO_REQUIREMENTS.md)."""
         # Metrics that meet all criteria
         good_metrics = {
-            'sharpe_ratio': 1.0,  # >0.8 ✓
-            'max_drawdown_pct': -20.0,  # <25% ✓
-            'win_rate': 0.50,  # >45% ✓
-            'avg_win_loss_ratio': 2.0  # >1.5 ✓
+            "sharpe_ratio": 1.0,  # >0.8 ✓
+            "max_drawdown_pct": -20.0,  # <25% ✓
+            "win_rate": 0.50,  # >45% ✓
+            "avg_win_loss_ratio": 2.0,  # >1.5 ✓
         }
 
         criteria = PerformanceMetrics.check_success_criteria(good_metrics)
 
-        assert criteria['sharpe_ratio_ok'] is True
-        assert criteria['max_drawdown_ok'] is True
-        assert criteria['win_rate_ok'] is True
-        assert criteria['win_loss_ratio_ok'] is True
-        assert criteria['all_criteria_met'] is True
+        assert criteria["sharpe_ratio_ok"] is True
+        assert criteria["max_drawdown_ok"] is True
+        assert criteria["win_rate_ok"] is True
+        assert criteria["win_loss_ratio_ok"] is True
+        assert criteria["all_criteria_met"] is True
 
     def test_performance_metrics_fail_criteria(self):
         """Test failure detection for success criteria."""
         # Metrics that fail some criteria
         bad_metrics = {
-            'sharpe_ratio': 0.5,  # <0.8 ✗
-            'max_drawdown_pct': -30.0,  # >25% ✗
-            'win_rate': 0.40,  # <45% ✗
-            'avg_win_loss_ratio': 1.2  # <1.5 ✗
+            "sharpe_ratio": 0.5,  # <0.8 ✗
+            "max_drawdown_pct": -30.0,  # >25% ✗
+            "win_rate": 0.40,  # <45% ✗
+            "avg_win_loss_ratio": 1.2,  # <1.5 ✗
         }
 
         criteria = PerformanceMetrics.check_success_criteria(bad_metrics)
 
-        assert criteria['sharpe_ratio_ok'] is False
-        assert criteria['max_drawdown_ok'] is False
-        assert criteria['win_rate_ok'] is False
-        assert criteria['win_loss_ratio_ok'] is False
-        assert criteria['all_criteria_met'] is False
+        assert criteria["sharpe_ratio_ok"] is False
+        assert criteria["max_drawdown_ok"] is False
+        assert criteria["win_rate_ok"] is False
+        assert criteria["win_loss_ratio_ok"] is False
+        assert criteria["all_criteria_met"] is False
 
 
 # ============================================================================
 # Tests for engine.py - Backtest Orchestrator
 # ============================================================================
+
 
 class TestBacktestEngine:
     """Test backtest engine orchestrator."""
@@ -389,32 +389,36 @@ class TestBacktestEngine:
     def test_backtest_simple_buy_and_hold(self):
         """Test simple buy-and-hold backtest (validation test)."""
         # Create simple uptrend data
-        bars = np.array([
-            [100.0, 102.0, 99.0, 101.0, 1000000],  # Bar 0
-            [101.0, 103.0, 100.0, 102.0, 1000000],  # Bar 1
-            [102.0, 105.0, 101.0, 104.0, 1000000],  # Bar 2
-            [104.0, 106.0, 103.0, 105.0, 1000000],  # Bar 3
-            [105.0, 108.0, 104.0, 107.0, 1000000],  # Bar 4
-        ])
+        bars = np.array(
+            [
+                [100.0, 102.0, 99.0, 101.0, 1000000],  # Bar 0
+                [101.0, 103.0, 100.0, 102.0, 1000000],  # Bar 1
+                [102.0, 105.0, 101.0, 104.0, 1000000],  # Bar 2
+                [104.0, 106.0, 103.0, 105.0, 1000000],  # Bar 3
+                [105.0, 108.0, 104.0, 107.0, 1000000],  # Bar 4
+            ]
+        )
 
         # Simple strategy: buy at bar 0, hold
         def buy_and_hold_strategy(bars_data, current_idx, position):
             orders = []
             if current_idx == 0 and position is None:
                 # Buy 500 shares at bar 0 (fits in $100k capital)
-                orders.append(Order(
-                    bar_index=0,
-                    symbol='TEST',
-                    side=OrderSide.BUY,
-                    shares=500,
-                    order_type=OrderType.MARKET
-                ))
+                orders.append(
+                    Order(
+                        bar_index=0,
+                        symbol="TEST",
+                        side=OrderSide.BUY,
+                        shares=500,
+                        order_type=OrderType.MARKET,
+                    )
+                )
             return orders
 
         config = BacktestConfig(initial_capital=100000.0)
         engine = BacktestEngine(config)
 
-        state = engine.run(bars, buy_and_hold_strategy, symbol='TEST')
+        state = engine.run(bars, buy_and_hold_strategy, symbol="TEST")
 
         # Check position opened
         assert len(state.trades) == 0  # No closed trades (still holding)
@@ -426,32 +430,30 @@ class TestBacktestEngine:
 
     def test_backtest_simple_trade_with_exit(self):
         """Test backtest with entry and exit."""
-        bars = np.array([
-            [100.0, 102.0, 99.0, 101.0, 1000000],  # Bar 0
-            [101.0, 103.0, 100.0, 102.0, 1000000],  # Bar 1
-            [102.0, 105.0, 101.0, 104.0, 1000000],  # Bar 2
-            [104.0, 106.0, 103.0, 105.0, 1000000],  # Bar 3
-            [105.0, 104.0, 102.0, 103.0, 1000000],  # Bar 4
-        ])
+        bars = np.array(
+            [
+                [100.0, 102.0, 99.0, 101.0, 1000000],  # Bar 0
+                [101.0, 103.0, 100.0, 102.0, 1000000],  # Bar 1
+                [102.0, 105.0, 101.0, 104.0, 1000000],  # Bar 2
+                [104.0, 106.0, 103.0, 105.0, 1000000],  # Bar 3
+                [105.0, 104.0, 102.0, 103.0, 1000000],  # Bar 4
+            ]
+        )
 
         # Strategy: buy at bar 0, sell at bar 2
         # Note: Using 989 shares to account for slippage + commission with $100k capital
         def simple_strategy(bars_data, current_idx, position):
             orders = []
             if current_idx == 0 and position is None:
-                orders.append(Order(
-                    bar_index=0, symbol='TEST', side=OrderSide.BUY, shares=989
-                ))
+                orders.append(Order(bar_index=0, symbol="TEST", side=OrderSide.BUY, shares=989))
             elif current_idx == 2 and position is not None:
-                orders.append(Order(
-                    bar_index=2, symbol='TEST', side=OrderSide.SELL, shares=989
-                ))
+                orders.append(Order(bar_index=2, symbol="TEST", side=OrderSide.SELL, shares=989))
             return orders
 
         config = BacktestConfig(initial_capital=100000.0)
         engine = BacktestEngine(config)
 
-        state = engine.run(bars, simple_strategy, symbol='TEST')
+        state = engine.run(bars, simple_strategy, symbol="TEST")
 
         # Check trade completed
         assert len(state.trades) == 1
@@ -463,20 +465,22 @@ class TestBacktestEngine:
 
     def test_backtest_slippage_applied(self):
         """Test that slippage is applied to fills (R9.2.2)."""
-        bars = np.array([
-            [100.0, 102.0, 99.0, 101.0, 1000000],
-            [101.0, 103.0, 100.0, 102.0, 1000000],
-        ])
+        bars = np.array(
+            [
+                [100.0, 102.0, 99.0, 101.0, 1000000],
+                [101.0, 103.0, 100.0, 102.0, 1000000],
+            ]
+        )
 
         def buy_strategy(bars_data, current_idx, position):
             if current_idx == 0 and position is None:
-                return [Order(bar_index=0, symbol='TEST', side=OrderSide.BUY, shares=100)]
+                return [Order(bar_index=0, symbol="TEST", side=OrderSide.BUY, shares=100)]
             return []
 
         config = BacktestConfig(initial_capital=100000.0, slippage_pct=0.001)  # 0.1% slippage
         engine = BacktestEngine(config)
 
-        state = engine.run(bars, buy_strategy, symbol='TEST')
+        state = engine.run(bars, buy_strategy, symbol="TEST")
 
         # Fill should occur at bar 1 open (101.0) + 0.1% slippage
         assert state.position is not None
@@ -485,27 +489,29 @@ class TestBacktestEngine:
 
     def test_backtest_commission_applied(self):
         """Test that commission is deducted (R9.2.1)."""
-        bars = np.array([
-            [100.0, 102.0, 99.0, 101.0, 1000000],
-            [101.0, 103.0, 100.0, 102.0, 1000000],
-            [102.0, 105.0, 101.0, 104.0, 1000000],
-        ])
+        bars = np.array(
+            [
+                [100.0, 102.0, 99.0, 101.0, 1000000],
+                [101.0, 103.0, 100.0, 102.0, 1000000],
+                [102.0, 105.0, 101.0, 104.0, 1000000],
+            ]
+        )
 
         def buy_sell_strategy(bars_data, current_idx, position):
             if current_idx == 0 and position is None:
-                return [Order(bar_index=0, symbol='TEST', side=OrderSide.BUY, shares=100)]
+                return [Order(bar_index=0, symbol="TEST", side=OrderSide.BUY, shares=100)]
             elif current_idx == 1 and position is not None:
-                return [Order(bar_index=1, symbol='TEST', side=OrderSide.SELL, shares=100)]
+                return [Order(bar_index=1, symbol="TEST", side=OrderSide.SELL, shares=100)]
             return []
 
         config = BacktestConfig(
             initial_capital=100000.0,
             commission_per_share=0.01,  # $0.01 per share
-            slippage_pct=0.0  # No slippage for clarity
+            slippage_pct=0.0,  # No slippage for clarity
         )
         engine = BacktestEngine(config)
 
-        state = engine.run(bars, buy_sell_strategy, symbol='TEST')
+        state = engine.run(bars, buy_sell_strategy, symbol="TEST")
 
         # Check commission was charged
         assert len(state.trades) == 1
@@ -516,21 +522,23 @@ class TestBacktestEngine:
 
     def test_backtest_insufficient_capital(self):
         """Test order cancellation when insufficient capital."""
-        bars = np.array([
-            [100.0, 102.0, 99.0, 101.0, 1000000],
-            [101.0, 103.0, 100.0, 102.0, 1000000],
-        ])
+        bars = np.array(
+            [
+                [100.0, 102.0, 99.0, 101.0, 1000000],
+                [101.0, 103.0, 100.0, 102.0, 1000000],
+            ]
+        )
 
         def overleveraged_strategy(bars_data, current_idx, position):
             if current_idx == 0 and position is None:
                 # Try to buy too many shares
-                return [Order(bar_index=0, symbol='TEST', side=OrderSide.BUY, shares=100000)]
+                return [Order(bar_index=0, symbol="TEST", side=OrderSide.BUY, shares=100000)]
             return []
 
         config = BacktestConfig(initial_capital=10000.0)  # Only $10k
         engine = BacktestEngine(config)
 
-        state = engine.run(bars, overleveraged_strategy, symbol='TEST')
+        state = engine.run(bars, overleveraged_strategy, symbol="TEST")
 
         # Order should be cancelled (not enough capital)
         assert state.position is None
@@ -538,11 +546,13 @@ class TestBacktestEngine:
 
     def test_backtest_performance_summary(self):
         """Test performance summary generation."""
-        bars = np.array([
-            [100.0, 102.0, 99.0, 101.0, 1000000],
-            [101.0, 103.0, 100.0, 102.0, 1000000],
-            [102.0, 105.0, 101.0, 104.0, 1000000],
-        ])
+        bars = np.array(
+            [
+                [100.0, 102.0, 99.0, 101.0, 1000000],
+                [101.0, 103.0, 100.0, 102.0, 1000000],
+                [102.0, 105.0, 101.0, 104.0, 1000000],
+            ]
+        )
 
         def dummy_strategy(bars_data, current_idx, position):
             return []
@@ -550,22 +560,24 @@ class TestBacktestEngine:
         config = BacktestConfig(initial_capital=100000.0)
         engine = BacktestEngine(config)
 
-        state = engine.run(bars, dummy_strategy, symbol='TEST')
+        state = engine.run(bars, dummy_strategy, symbol="TEST")
 
         summary = engine.get_performance_summary(state)
 
-        assert 'total_trades' in summary
-        assert 'win_rate' in summary
-        assert 'total_return' in summary
-        assert 'final_equity' in summary
+        assert "total_trades" in summary
+        assert "win_rate" in summary
+        assert "total_return" in summary
+        assert "final_equity" in summary
 
     def test_backtest_equity_curve_tracking(self):
         """Test equity curve is tracked at each bar."""
-        bars = np.array([
-            [100.0, 102.0, 99.0, 101.0, 1000000],
-            [101.0, 103.0, 100.0, 102.0, 1000000],
-            [102.0, 105.0, 101.0, 104.0, 1000000],
-        ])
+        bars = np.array(
+            [
+                [100.0, 102.0, 99.0, 101.0, 1000000],
+                [101.0, 103.0, 100.0, 102.0, 1000000],
+                [102.0, 105.0, 101.0, 104.0, 1000000],
+            ]
+        )
 
         def dummy_strategy(bars_data, current_idx, position):
             return []
@@ -573,11 +585,11 @@ class TestBacktestEngine:
         config = BacktestConfig(initial_capital=100000.0)
         engine = BacktestEngine(config)
 
-        state = engine.run(bars, dummy_strategy, symbol='TEST')
+        state = engine.run(bars, dummy_strategy, symbol="TEST")
 
         # Equity curve should have entry for each bar
         assert len(state.equity_curve) == len(bars)
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

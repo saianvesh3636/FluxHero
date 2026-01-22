@@ -62,9 +62,9 @@ def test_error_boundary_has_getderivedstatefromerror():
     with open(path) as f:
         content = f.read()
 
-    assert (
-        "getDerivedStateFromError" in content
-    ), "ErrorBoundary must implement getDerivedStateFromError"
+    assert "getDerivedStateFromError" in content, (
+        "ErrorBoundary must implement getDerivedStateFromError"
+    )
 
 
 def test_error_boundary_has_state_interface():
@@ -103,9 +103,7 @@ def test_error_fallback_has_default_export():
     with open(path) as f:
         content = f.read()
 
-    assert (
-        "export default function ErrorFallback" in content
-    ), "ErrorFallback must export default"
+    assert "export default function ErrorFallback" in content, "ErrorFallback must export default"
 
 
 def test_error_fallback_has_props_interface():
@@ -127,15 +125,9 @@ def test_error_fallback_has_specialized_components():
         content = f.read()
 
     # Check for specialized error fallback components
-    assert (
-        "APIErrorFallback" in content
-    ), "ErrorFallback must export APIErrorFallback"
-    assert (
-        "DataLoadErrorFallback" in content
-    ), "ErrorFallback must export DataLoadErrorFallback"
-    assert (
-        "ComponentErrorFallback" in content
-    ), "ErrorFallback must export ComponentErrorFallback"
+    assert "APIErrorFallback" in content, "ErrorFallback must export APIErrorFallback"
+    assert "DataLoadErrorFallback" in content, "ErrorFallback must export DataLoadErrorFallback"
+    assert "ComponentErrorFallback" in content, "ErrorFallback must export ComponentErrorFallback"
 
 
 def test_error_fallback_has_styling():
@@ -155,9 +147,9 @@ def test_page_error_boundary_exports_default():
     with open(path) as f:
         content = f.read()
 
-    assert (
-        "export default function PageErrorBoundary" in content
-    ), "PageErrorBoundary must export default"
+    assert "export default function PageErrorBoundary" in content, (
+        "PageErrorBoundary must export default"
+    )
 
 
 def test_page_error_boundary_wraps_error_boundary():
@@ -167,9 +159,7 @@ def test_page_error_boundary_wraps_error_boundary():
         content = f.read()
 
     # Check that it imports and uses ErrorBoundary
-    assert (
-        "import ErrorBoundary" in content
-    ), "PageErrorBoundary must import ErrorBoundary"
+    assert "import ErrorBoundary" in content, "PageErrorBoundary must import ErrorBoundary"
     assert "<ErrorBoundary" in content, "PageErrorBoundary must use ErrorBoundary"
 
 
@@ -188,9 +178,9 @@ def test_async_error_boundary_exports_default():
     with open(path) as f:
         content = f.read()
 
-    assert (
-        "export default function AsyncErrorBoundary" in content
-    ), "AsyncErrorBoundary must export default"
+    assert "export default function AsyncErrorBoundary" in content, (
+        "AsyncErrorBoundary must export default"
+    )
 
 
 def test_async_error_boundary_handles_loading_state():
@@ -226,9 +216,9 @@ def test_async_error_boundary_exports_hook():
     with open(path) as f:
         content = f.read()
 
-    assert (
-        "export function useAsyncError" in content
-    ), "AsyncErrorBoundary must export useAsyncError hook"
+    assert "export function useAsyncError" in content, (
+        "AsyncErrorBoundary must export useAsyncError hook"
+    )
 
 
 def test_layout_integrates_error_boundary():
@@ -238,9 +228,7 @@ def test_layout_integrates_error_boundary():
         content = f.read()
 
     # Check that ErrorBoundary is imported and used
-    assert (
-        "import ErrorBoundary" in content
-    ), "Root layout must import ErrorBoundary"
+    assert "import ErrorBoundary" in content, "Root layout must import ErrorBoundary"
     assert "<ErrorBoundary>" in content, "Root layout must use ErrorBoundary"
 
 
@@ -258,9 +246,9 @@ def test_all_components_have_client_directive():
             content = f.read()
 
         # Check for 'use client' at the top of the file
-        assert (
-            "'use client'" in content or '"use client"' in content
-        ), f"{component_path} must have 'use client' directive for Next.js App Router"
+        assert "'use client'" in content or '"use client"' in content, (
+            f"{component_path} must have 'use client' directive for Next.js App Router"
+        )
 
 
 def test_error_boundary_has_reset_keys_support():
@@ -327,9 +315,9 @@ def test_typescript_interfaces_defined():
         with open(component_path) as f:
             content = f.read()
 
-        assert (
-            f"interface {interface_name}" in content
-        ), f"{component_path} must define {interface_name} interface"
+        assert f"interface {interface_name}" in content, (
+            f"{component_path} must define {interface_name} interface"
+        )
 
 
 def test_components_have_documentation():
@@ -346,9 +334,9 @@ def test_components_have_documentation():
             content = f.read()
 
         # Check for JSDoc comments
-        assert (
-            "/**" in content and "*/" in content
-        ), f"{component_path} must have JSDoc documentation"
+        assert "/**" in content and "*/" in content, (
+            f"{component_path} must have JSDoc documentation"
+        )
 
 
 def test_error_boundary_integration_complete():
@@ -369,9 +357,7 @@ def test_error_boundary_integration_complete():
     with open(layout_path) as f:
         layout_content = f.read()
 
-    assert (
-        "ErrorBoundary" in layout_content
-    ), "ErrorBoundary must be integrated in root layout"
+    assert "ErrorBoundary" in layout_content, "ErrorBoundary must be integrated in root layout"
 
     print("✓ Error boundary integration complete")
     print("✓ All required files exist")

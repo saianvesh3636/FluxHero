@@ -39,8 +39,10 @@ class TestEfficiencyRatio:
     def test_perfect_trend_high_er(self):
         """Perfect uptrend should have ER close to 1.0."""
         # Create perfect uptrend: +1 per bar
-        prices = np.array([100.0, 101.0, 102.0, 103.0, 104.0, 105.0,
-                          106.0, 107.0, 108.0, 109.0, 110.0], dtype=np.float64)
+        prices = np.array(
+            [100.0, 101.0, 102.0, 103.0, 104.0, 105.0, 106.0, 107.0, 108.0, 109.0, 110.0],
+            dtype=np.float64,
+        )
         er = calculate_efficiency_ratio(prices, period=10)
 
         # Last ER should be close to 1.0 (perfect trend)
@@ -50,8 +52,10 @@ class TestEfficiencyRatio:
     def test_pure_noise_low_er(self):
         """Random oscillations should have ER close to 0.0."""
         # Create choppy market: alternating +1/-1
-        prices = np.array([100.0, 101.0, 100.0, 101.0, 100.0, 101.0,
-                          100.0, 101.0, 100.0, 101.0, 100.0], dtype=np.float64)
+        prices = np.array(
+            [100.0, 101.0, 100.0, 101.0, 100.0, 101.0, 100.0, 101.0, 100.0, 101.0, 100.0],
+            dtype=np.float64,
+        )
         er = calculate_efficiency_ratio(prices, period=10)
 
         # Last ER should be close to 0.0 (pure noise, no net movement)
@@ -102,13 +106,15 @@ class TestAdaptiveSmoothingConstant:
         # Calculate expected values
         sc_fast = 2.0 / (2 + 1)  # 0.6667
         sc_slow = 2.0 / (30 + 1)  # 0.0645
-        expected_asc_min = sc_slow ** 2
-        expected_asc_max = sc_fast ** 2
+        expected_asc_min = sc_slow**2
+        expected_asc_max = sc_fast**2
 
-        assert np.isclose(asc[0], expected_asc_min, rtol=1e-6), \
+        assert np.isclose(asc[0], expected_asc_min, rtol=1e-6), (
             f"ASC at ER=0 should be {expected_asc_min}, got {asc[0]}"
-        assert np.isclose(asc[1], expected_asc_max, rtol=1e-6), \
+        )
+        assert np.isclose(asc[1], expected_asc_max, rtol=1e-6), (
             f"ASC at ER=1 should be {expected_asc_max}, got {asc[1]}"
+        )
 
     def test_asc_monotonic_increase(self):
         """ASC should increase as ER increases."""
@@ -117,8 +123,9 @@ class TestAdaptiveSmoothingConstant:
 
         # ASC should be monotonically increasing
         for i in range(len(asc) - 1):
-            assert asc[i] <= asc[i + 1], \
-                f"ASC should increase with ER, but asc[{i}]={asc[i]} > asc[{i+1}]={asc[i+1]}"
+            assert asc[i] <= asc[i + 1], (
+                f"ASC should increase with ER, but asc[{i}]={asc[i]} > asc[{i + 1}]={asc[i + 1]}"
+            )
 
     def test_asc_bounds(self):
         """ASC must be between SC_slow² and SC_fast²."""
@@ -129,8 +136,8 @@ class TestAdaptiveSmoothingConstant:
 
         sc_fast = 2.0 / (2 + 1)
         sc_slow = 2.0 / (30 + 1)
-        asc_min = sc_slow ** 2
-        asc_max = sc_fast ** 2
+        asc_min = sc_slow**2
+        asc_max = sc_fast**2
 
         assert np.all(asc >= asc_min - 1e-10), "ASC below minimum bound"
         assert np.all(asc <= asc_max + 1e-10), "ASC above maximum bound"
@@ -152,8 +159,10 @@ class TestKAMA:
     def test_kama_trending_market(self):
         """KAMA should follow price closely in trending market."""
         # Strong uptrend
-        prices = np.array([100.0, 102.0, 104.0, 106.0, 108.0, 110.0,
-                          112.0, 114.0, 116.0, 118.0, 120.0], dtype=np.float64)
+        prices = np.array(
+            [100.0, 102.0, 104.0, 106.0, 108.0, 110.0, 112.0, 114.0, 116.0, 118.0, 120.0],
+            dtype=np.float64,
+        )
         kama = calculate_kama(prices, er_period=5)
 
         # KAMA should be within 2% of final price (requirement R2 success criteria)
@@ -162,14 +171,15 @@ class TestKAMA:
         final_kama = valid_kama[-1]
         final_price = prices[-1]
         pct_diff = abs(final_kama - final_price) / final_price * 100
-        assert pct_diff < 2.0, \
-            f"KAMA should be within 2% of price in trend, got {pct_diff:.2f}%"
+        assert pct_diff < 2.0, f"KAMA should be within 2% of price in trend, got {pct_diff:.2f}%"
 
     def test_kama_choppy_market(self):
         """KAMA should stay relatively flat in choppy market."""
         # Oscillating market around 100
-        prices = np.array([100.0, 101.0, 99.0, 100.5, 99.5, 100.0,
-                          101.0, 99.0, 100.0, 101.0, 100.0], dtype=np.float64)
+        prices = np.array(
+            [100.0, 101.0, 99.0, 100.5, 99.5, 100.0, 101.0, 99.0, 100.0, 101.0, 100.0],
+            dtype=np.float64,
+        )
         kama = calculate_kama(prices, er_period=5)
 
         valid_kama = kama[~np.isnan(kama)]
@@ -183,8 +193,9 @@ class TestKAMA:
         kama = calculate_kama(prices, er_period=10)
 
         # KAMA[10] should equal prices[10]
-        assert kama[10] == prices[10], \
+        assert kama[10] == prices[10], (
             f"First KAMA should equal first valid price, got {kama[10]} vs {prices[10]}"
+        )
 
     def test_kama_smooth_transitions(self):
         """KAMA should transition smoothly between regimes (no sudden jumps)."""
@@ -199,8 +210,7 @@ class TestKAMA:
         # Check no jumps > 5% of ATR
         kama_changes = np.abs(np.diff(valid_kama))
         max_change = np.max(kama_changes)
-        assert max_change < 2.0, \
-            f"KAMA should transition smoothly, max change was {max_change}"
+        assert max_change < 2.0, f"KAMA should transition smoothly, max change was {max_change}"
 
     def test_kama_insufficient_data(self):
         """KAMA should return all NaN for insufficient data."""
@@ -216,8 +226,10 @@ class TestRegimeAwareKAMA:
     def test_trending_regime_detection(self):
         """Strong trend should be classified as TRENDING (regime=2)."""
         # Perfect uptrend
-        prices = np.array([100.0, 102.0, 104.0, 106.0, 108.0, 110.0,
-                          112.0, 114.0, 116.0, 118.0, 120.0], dtype=np.float64)
+        prices = np.array(
+            [100.0, 102.0, 104.0, 106.0, 108.0, 110.0, 112.0, 114.0, 116.0, 118.0, 120.0],
+            dtype=np.float64,
+        )
         kama, er, regime = calculate_kama_with_regime_adjustment(
             prices, er_period=5, trend_threshold=0.6, choppy_threshold=0.3
         )
@@ -225,14 +237,15 @@ class TestRegimeAwareKAMA:
         # Last regime should be TRENDING (2)
         valid_regime = regime[~np.isnan(regime)]
         assert len(valid_regime) > 0
-        assert valid_regime[-1] == 2.0, \
-            f"Strong trend should be regime=2, got {valid_regime[-1]}"
+        assert valid_regime[-1] == 2.0, f"Strong trend should be regime=2, got {valid_regime[-1]}"
 
     def test_choppy_regime_detection(self):
         """Choppy market should be classified as CHOPPY (regime=0)."""
         # Oscillating market
-        prices = np.array([100.0, 101.0, 99.0, 100.5, 99.5, 100.0,
-                          101.0, 99.0, 100.0, 101.0, 100.0], dtype=np.float64)
+        prices = np.array(
+            [100.0, 101.0, 99.0, 100.5, 99.5, 100.0, 101.0, 99.0, 100.0, 101.0, 100.0],
+            dtype=np.float64,
+        )
         kama, er, regime = calculate_kama_with_regime_adjustment(
             prices, er_period=5, trend_threshold=0.6, choppy_threshold=0.3
         )
@@ -240,8 +253,7 @@ class TestRegimeAwareKAMA:
         # Last regime should be CHOPPY (0)
         valid_regime = regime[~np.isnan(regime)]
         assert len(valid_regime) > 0
-        assert valid_regime[-1] == 0.0, \
-            f"Choppy market should be regime=0, got {valid_regime[-1]}"
+        assert valid_regime[-1] == 0.0, f"Choppy market should be regime=0, got {valid_regime[-1]}"
 
     def test_neutral_regime_detection(self):
         """Moderate trend should be classified as NEUTRAL (regime=1)."""
@@ -260,8 +272,10 @@ class TestRegimeAwareKAMA:
 
     def test_regime_consistency_with_er(self):
         """Regime classification should match ER thresholds."""
-        prices = np.array([100.0, 102.0, 104.0, 106.0, 108.0, 110.0,
-                          112.0, 114.0, 116.0, 118.0, 120.0], dtype=np.float64)
+        prices = np.array(
+            [100.0, 102.0, 104.0, 106.0, 108.0, 110.0, 112.0, 114.0, 116.0, 118.0, 120.0],
+            dtype=np.float64,
+        )
         kama, er, regime = calculate_kama_with_regime_adjustment(
             prices, er_period=5, trend_threshold=0.6, choppy_threshold=0.3
         )
@@ -342,8 +356,9 @@ class TestKAMAEdgeCases:
 
     def test_negative_prices(self):
         """KAMA should handle negative prices (for some instruments)."""
-        prices = np.array([-10.0, -9.0, -8.0, -7.0, -6.0, -5.0,
-                          -4.0, -3.0, -2.0, -1.0, 0.0], dtype=np.float64)
+        prices = np.array(
+            [-10.0, -9.0, -8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0], dtype=np.float64
+        )
         kama = calculate_kama(prices, er_period=5)
 
         valid_kama = kama[~np.isnan(kama)]
@@ -351,8 +366,10 @@ class TestKAMAEdgeCases:
 
     def test_very_large_prices(self):
         """KAMA should handle large prices without overflow."""
-        prices = np.array([1e6, 1.01e6, 1.02e6, 1.03e6, 1.04e6, 1.05e6,
-                          1.06e6, 1.07e6, 1.08e6, 1.09e6, 1.1e6], dtype=np.float64)
+        prices = np.array(
+            [1e6, 1.01e6, 1.02e6, 1.03e6, 1.04e6, 1.05e6, 1.06e6, 1.07e6, 1.08e6, 1.09e6, 1.1e6],
+            dtype=np.float64,
+        )
         kama = calculate_kama(prices, er_period=5)
 
         valid_kama = kama[~np.isnan(kama)]
@@ -361,8 +378,22 @@ class TestKAMAEdgeCases:
 
     def test_prices_with_gaps(self):
         """KAMA should handle price gaps."""
-        prices = np.array([100.0, 101.0, 102.0, 103.0, 104.0, 110.0,  # Gap up
-                          111.0, 112.0, 113.0, 114.0, 115.0], dtype=np.float64)
+        prices = np.array(
+            [
+                100.0,
+                101.0,
+                102.0,
+                103.0,
+                104.0,
+                110.0,  # Gap up
+                111.0,
+                112.0,
+                113.0,
+                114.0,
+                115.0,
+            ],
+            dtype=np.float64,
+        )
         kama = calculate_kama(prices, er_period=5)
 
         valid_kama = kama[~np.isnan(kama)]
@@ -390,8 +421,7 @@ class TestKAMAPerformance:
         _ = calculate_kama(prices, er_period=10)
         elapsed_ms = (time.time() - start_time) * 1000
 
-        assert elapsed_ms < 100, \
-            f"KAMA on 10k candles took {elapsed_ms:.2f}ms, expected <100ms"
+        assert elapsed_ms < 100, f"KAMA on 10k candles took {elapsed_ms:.2f}ms, expected <100ms"
 
     def test_full_kama_suite_performance(self):
         """Full KAMA calculation (ER + ASC + KAMA + regime) on 10k candles <200ms."""
@@ -409,8 +439,7 @@ class TestKAMAPerformance:
         kama, er, regime = calculate_kama_with_regime_adjustment(prices, er_period=10)
         elapsed_ms = (time.time() - start_time) * 1000
 
-        assert elapsed_ms < 200, \
-            f"Full KAMA suite took {elapsed_ms:.2f}ms, expected <200ms"
+        assert elapsed_ms < 200, f"Full KAMA suite took {elapsed_ms:.2f}ms, expected <200ms"
 
 
 if __name__ == "__main__":
