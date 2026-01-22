@@ -7803,3 +7803,68 @@ Changes:
 - Added logging import to fluxhero/backend/storage/parquet_store.py
 - Replaced bare 'except Exception' at line 344 with 'except pa.ArrowException as e'
 - Added error logging for failed Parquet metadata reads
+- Added test_corrupted_parquet_file_handling() to tests/unit/test_parquet_store.py
+- Test verifies graceful handling of corrupted Parquet files with proper logging
+Status: Complete
+Tests: All related tests pass (test_corrupted_parquet_file_handling, test_get_cache_metadata)
+Linting: Passed
+2026-01-21 23:53:55 - Phase 1 Critical Storage Fixes: Replaced bare exception handler in sqlite_store.py:243 with specific sqlite3.Error handling and logging. Added comprehensive unit tests for exception handling. All 40 sqlite_store tests pass.
+
+=== Session: 2026-01-21 ===
+Task: Implement archive_old_trades() (AUDIT_TASKS.md Phase 1)
+
+Changes:
+1. Implemented archive_old_trades() in fluxhero/backend/storage/sqlite_store.py:
+   - Exports old trades (>30 days, CLOSED status) to Parquet with Snappy compression
+   - Deletes exported trades from SQLite to manage database size
+   - Preserves open trades regardless of age
+   - Creates archive directory: data/archive/
+   - Generates timestamped Parquet files: trades_archive_YYYYMMDD_HHMMSS.parquet
+   - Added pandas import for DataFrame conversion
+   - Proper error handling: raises exception if export fails (prevents data loss)
+
+2. Created integration tests in tests/integration/test_trade_archival.py:
+   - test_archive_exports_to_parquet_and_deletes_from_sqlite: Full workflow verification
+   - test_archive_handles_no_old_trades: Handles empty archive gracefully
+   - test_archive_preserves_data_types: Validates data integrity in Parquet
+   - 7 comprehensive assertions validating export, deletion, and data integrity
+
+3. Updated unit test in tests/unit/test_sqlite_store.py:
+   - test_archive_old_trades: Added verification that trades are deleted after archival
+   - Validates only recent trades remain after archival
+
+Test Results:
+- All 5 archival tests PASSED
+- Unit tests: test_archive_old_trades, test_archive_does_not_count_open_trades
+- Integration tests: 3 new comprehensive tests
+- Linting: All checks passed (ruff)
+
+Files Modified:
+- fluxhero/backend/storage/sqlite_store.py (+32 lines)
+- tests/integration/test_trade_archival.py (new file, 305 lines)
+- tests/unit/test_sqlite_store.py (+4 lines)
+- AUDIT_TASKS.md (marked Phase 1 tasks as complete)
+
+Implementation Details:
+- Archive cutoff: datetime.utcnow() - timedelta(days=30)
+- SQL query: WHERE entry_time < cutoff AND status != OPEN
+- Export format: Parquet with Snappy compression (fast read/write)
+- Archive location: data/archive/trades_archive_*.parquet
+- Error handling: Transaction rollback if export fails
+
+Status: Phase 1 of AUDIT_TASKS.md is now COMPLETE
+
+## 2026-01-22 - Phase 2 Task 1: Logging Configuration Module
+
+**Task:** Add Python logging configuration module at backend/core/logging_config.py
+**Status:** ✅ COMPLETE
+
+### What was implemented:
+
+1. Created `fluxhero/backend/core/logging_config.py` with:
+   - StructuredFormatter: JSON-formatted logs for machine parsing
+   - HumanReadableFormatter: Console-friendly output with optional colors
+   - setup_logging(): Centralized logging configuration with file rotation
+   - get_logger(): Convenience wrapper for getting logger instances
+   - log_with_context(): Helper for structured context logging
+

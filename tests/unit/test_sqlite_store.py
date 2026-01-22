@@ -1014,5 +1014,218 @@ async def test_write_worker_logs_sqlite_errors(temp_db, caplog):
     # This test documents the expected behavior
 
 
+@pytest.mark.asyncio
+async def test_structured_logging_on_initialize(temp_db, caplog):
+    """
+    Test that database initialization logs with structured data.
+
+    Phase 2, Task 3 (Audit): Verify structured logging is added to all
+    database operations with proper context.
+    """
+    import logging
+
+    caplog.set_level(logging.INFO, logger='backend.storage.sqlite_store')
+
+    # Create a new temporary database to capture initialization logs
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = os.path.join(tmpdir, "test_logging.db")
+        store = SQLiteStore(db_path)
+        await store.initialize()
+
+        # Verify initialization was logged with db_path in extra
+        found_init_log = False
+        for record in caplog.records:
+            if "Initializing SQLite database" in record.message:
+                assert hasattr(record, 'db_path')
+                found_init_log = True
+                break
+
+        assert found_init_log, "Initialization log not found"
+        await store.close()
+
+
+@pytest.mark.asyncio
+async def test_structured_logging_on_trade_operations(temp_db, sample_trade, caplog):
+    """
+    Test that trade operations log with structured data.
+
+    Verifies logging includes relevant context like symbol, trade_id, shares.
+    """
+    import logging
+
+    caplog.set_level(logging.DEBUG, logger='backend.storage.sqlite_store')
+
+    # Add trade
+    trade_id = await temp_db.add_trade(sample_trade)
+    await asyncio.sleep(0.1)  # Wait for async write
+
+    # Verify insert logs contain structured data
+    found_insert_log = False
+    for record in caplog.records:
+        if "Trade inserted successfully" in record.message:
+            assert hasattr(record, 'trade_id')
+            assert hasattr(record, 'symbol')
+            found_insert_log = True
+            break
+
+    assert found_insert_log, "Trade insert log not found"
+
+    # Clear logs
+    caplog.clear()
+
+    # Update trade
+    await temp_db.update_trade(trade_id, exit_price=425.00, status=TradeStatus.CLOSED)
+    await asyncio.sleep(0.1)
+
+    # Verify update logs contain structured data
+    found_update_log = False
+    for record in caplog.records:
+        if "Trade updated successfully" in record.message:
+            assert hasattr(record, 'trade_id')
+            assert hasattr(record, 'fields_updated')
+            found_update_log = True
+            break
+
+    assert found_update_log, "Trade update log not found"
+
+
+@pytest.mark.asyncio
+async def test_structured_logging_on_position_operations(temp_db, sample_position, caplog):
+    """
+    Test that position operations log with structured data.
+
+    Verifies upsert and delete operations include symbol context.
+    """
+    import logging
+
+    caplog.set_level(logging.DEBUG, logger='backend.storage.sqlite_store')
+
+    # Upsert position
+    await temp_db.upsert_position(sample_position)
+    await asyncio.sleep(0.1)
+
+    # Verify upsert logs
+    found_upsert_log = False
+    for record in caplog.records:
+        if "Position upserted successfully" in record.message:
+            assert hasattr(record, 'symbol')
+            assert hasattr(record, 'shares')
+            found_upsert_log = True
+            break
+
+    assert found_upsert_log, "Position upsert log not found"
+
+    # Clear logs
+    caplog.clear()
+
+    # Delete position
+    await temp_db.delete_position(sample_position.symbol)
+    await asyncio.sleep(0.1)
+
+    # Verify delete logs
+    found_delete_log = False
+    for record in caplog.records:
+        if "Position deleted successfully" in record.message:
+            assert hasattr(record, 'symbol')
+            found_delete_log = True
+            break
+
+    assert found_delete_log, "Position delete log not found"
+
+
+@pytest.mark.asyncio
+async def test_structured_logging_on_settings_operations(temp_db, caplog):
+    """
+    Test that settings operations log with structured data.
+
+    Verifies set and get operations include key context.
+    """
+    import logging
+
+    caplog.set_level(logging.DEBUG, logger='backend.storage.sqlite_store')
+
+    # Set setting
+    await temp_db.set_setting("test_key", "test_value", "Test setting")
+    await asyncio.sleep(0.1)
+
+    # Verify set logs
+    found_set_log = False
+    for record in caplog.records:
+        if "Setting updated successfully" in record.message:
+            assert hasattr(record, 'key')
+            found_set_log = True
+            break
+
+    assert found_set_log, "Setting update log not found"
+
+
+@pytest.mark.asyncio
+async def test_structured_logging_on_archive(temp_db, sample_trade, caplog):
+    """
+    Test that archive operations log with structured data.
+
+    Verifies archive includes count, cutoff_date, and archive_path.
+    """
+    import logging
+
+    caplog.set_level(logging.INFO, logger='backend.storage.sqlite_store')
+
+    # Add old trades to archive
+    now = datetime.utcnow()
+    for i in range(3):
+        trade = Trade(**sample_trade.__dict__)
+        trade.entry_time = (now - timedelta(days=35 + i)).isoformat()
+        trade.status = TradeStatus.CLOSED
+        await temp_db.add_trade(trade)
+
+    await asyncio.sleep(0.1)
+    caplog.clear()
+
+    # Archive trades
+    archived_count = await temp_db.archive_old_trades(days=30)
+    assert archived_count == 3
+
+    # Verify archive logs contain structured data
+    found_export_log = False
+    found_delete_log = False
+
+    for record in caplog.records:
+        if "Exported" in record.message and "trades to archive" in record.message:
+            assert hasattr(record, 'count')
+            assert hasattr(record, 'archive_path')
+            assert hasattr(record, 'cutoff_date')
+            found_export_log = True
+        elif "Deleted" in record.message and "archived trades from SQLite" in record.message:
+            assert hasattr(record, 'count')
+            assert hasattr(record, 'cutoff_date')
+            found_delete_log = True
+
+    assert found_export_log, "Archive export log not found"
+    assert found_delete_log, "Archive delete log not found"
+
+
+@pytest.mark.asyncio
+async def test_structured_logging_on_close(temp_db, caplog):
+    """
+    Test that close operation logs with structured data.
+    """
+    import logging
+
+    caplog.set_level(logging.INFO, logger='backend.storage.sqlite_store')
+
+    # Close database
+    await temp_db.close()
+
+    # Verify close logs
+    found_close_log = False
+    for record in caplog.records:
+        if "Closing SQLite database" in record.message:
+            assert hasattr(record, 'db_path')
+            found_close_log = True
+            break
+
+    assert found_close_log, "Database close log not found"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

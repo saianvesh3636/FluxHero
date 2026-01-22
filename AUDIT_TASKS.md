@@ -33,7 +33,7 @@ Fix critical issues, improve observability, and address architecture gaps identi
 
 - [x] Add Python logging configuration module at `backend/core/logging_config.py` using standard library logging
 - [x] Add structured logging to `backend/storage/parquet_store.py` (read/write operations, errors)
-- [ ] Add structured logging to `backend/storage/sqlite_store.py` (all database operations)
+- [x] Add structured logging to `backend/storage/sqlite_store.py` (all database operations)
 - [ ] Replace all `print()` statements in `backend/api/server.py` with proper logging calls
 - [ ] Verify logging consistency with `backend/execution/order_manager.py` as reference pattern
 

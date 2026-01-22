@@ -144,6 +144,7 @@ class SQLiteStore:
         - positions: Current open positions
         - settings: System configuration
         """
+        logger.info("Initializing SQLite database", extra={"db_path": str(self.db_path)})
         conn = self._get_connection()
 
         # Create trades table
@@ -225,6 +226,7 @@ class SQLiteStore:
         # Start async write worker
         if self._write_task is None or self._write_task.done():
             self._write_task = asyncio.create_task(self._write_worker())
+            logger.info("Started async write worker")
 
     async def _write_worker(self) -> None:
         """
@@ -247,7 +249,11 @@ class SQLiteStore:
                 break
             except sqlite3.Error as e:
                 # Log database errors but continue processing other operations
-                logger.error(f"SQLite error in write worker: {e}", exc_info=True)
+                logger.error(
+                    f"SQLite error in write worker: {e}",
+                    extra={"error_type": type(e).__name__},
+                    exc_info=True
+                )
                 self._write_queue.task_done()
 
     async def _async_write(self, operation, *args) -> Any:
@@ -273,6 +279,17 @@ class SQLiteStore:
         conn = self._get_connection()
         now = datetime.utcnow().isoformat()
 
+        logger.debug(
+            "Inserting trade",
+            extra={
+                "symbol": trade.symbol,
+                "side": trade.side,
+                "entry_price": trade.entry_price,
+                "shares": trade.shares,
+                "strategy": trade.strategy
+            }
+        )
+
         cursor = conn.execute("""
             INSERT INTO trades (
                 symbol, side, entry_price, entry_time, exit_price, exit_time,
@@ -285,7 +302,19 @@ class SQLiteStore:
             trade.take_profit, trade.realized_pnl, trade.status,
             trade.strategy, trade.regime, trade.signal_reason, trade.signal_explanation, now, now
         ))
-        return cursor.lastrowid
+        trade_id = cursor.lastrowid
+
+        logger.info(
+            "Trade inserted successfully",
+            extra={
+                "trade_id": trade_id,
+                "symbol": trade.symbol,
+                "side": trade.side,
+                "shares": trade.shares
+            }
+        )
+
+        return trade_id
 
     async def add_trade(self, trade: Trade) -> int:
         """
@@ -308,6 +337,14 @@ class SQLiteStore:
         conn = self._get_connection()
         now = datetime.utcnow().isoformat()
 
+        logger.debug(
+            "Updating trade",
+            extra={
+                "trade_id": trade_id,
+                "fields": list(updates.keys())
+            }
+        )
+
         # Build update query dynamically
         fields = []
         values = []
@@ -321,6 +358,14 @@ class SQLiteStore:
 
         query = f"UPDATE trades SET {', '.join(fields)} WHERE id = ?"
         conn.execute(query, values)
+
+        logger.info(
+            "Trade updated successfully",
+            extra={
+                "trade_id": trade_id,
+                "fields_updated": list(updates.keys())
+            }
+        )
 
     async def update_trade(self, trade_id: int, **kwargs) -> None:
         """
@@ -345,10 +390,18 @@ class SQLiteStore:
         Returns:
             Trade object or None if not found
         """
+        logger.debug("Fetching trade by ID", extra={"trade_id": trade_id})
         conn = self._get_connection()
         cursor = conn.execute("SELECT * FROM trades WHERE id = ?", (trade_id,))
         row = cursor.fetchone()
-        return Trade(**dict(row)) if row else None
+        result = Trade(**dict(row)) if row else None
+
+        if result:
+            logger.debug("Trade found", extra={"trade_id": trade_id, "symbol": result.symbol})
+        else:
+            logger.debug("Trade not found", extra={"trade_id": trade_id})
+
+        return result
 
     async def get_open_trades(self) -> List[Trade]:
         """
@@ -357,12 +410,15 @@ class SQLiteStore:
         Returns:
             List of Trade objects with status = OPEN
         """
+        logger.debug("Fetching all open trades")
         conn = self._get_connection()
         cursor = conn.execute(
             "SELECT * FROM trades WHERE status = ? ORDER BY entry_time DESC",
             (TradeStatus.OPEN,)
         )
-        return [Trade(**dict(row)) for row in cursor.fetchall()]
+        trades = [Trade(**dict(row)) for row in cursor.fetchall()]
+        logger.debug("Open trades fetched", extra={"count": len(trades)})
+        return trades
 
     async def get_recent_trades(self, limit: int = 50) -> List[Trade]:
         """
@@ -374,12 +430,15 @@ class SQLiteStore:
         Returns:
             List of Trade objects, ordered by entry_time descending
         """
+        logger.debug("Fetching recent trades", extra={"limit": limit})
         conn = self._get_connection()
         cursor = conn.execute(
             "SELECT * FROM trades ORDER BY entry_time DESC LIMIT ?",
             (limit,)
         )
-        return [Trade(**dict(row)) for row in cursor.fetchall()]
+        trades = [Trade(**dict(row)) for row in cursor.fetchall()]
+        logger.debug("Recent trades fetched", extra={"count": len(trades), "limit": limit})
+        return trades
 
     async def get_trades_by_date_range(self, start_date: str, end_date: str) -> List[Trade]:
         """
@@ -392,12 +451,21 @@ class SQLiteStore:
         Returns:
             List of Trade objects
         """
+        logger.debug(
+            "Fetching trades by date range",
+            extra={"start_date": start_date, "end_date": end_date}
+        )
         conn = self._get_connection()
         cursor = conn.execute(
             "SELECT * FROM trades WHERE entry_time >= ? AND entry_time <= ? ORDER BY entry_time",
             (start_date, end_date)
         )
-        return [Trade(**dict(row)) for row in cursor.fetchall()]
+        trades = [Trade(**dict(row)) for row in cursor.fetchall()]
+        logger.debug(
+            "Trades fetched by date range",
+            extra={"count": len(trades), "start_date": start_date, "end_date": end_date}
+        )
+        return trades
 
     # ==================== Position Operations ====================
 
@@ -405,6 +473,16 @@ class SQLiteStore:
         """Synchronous position upsert (called by async wrapper)."""
         conn = self._get_connection()
         now = datetime.utcnow().isoformat()
+
+        logger.debug(
+            "Upserting position",
+            extra={
+                "symbol": position.symbol,
+                "side": position.side,
+                "shares": position.shares,
+                "unrealized_pnl": position.unrealized_pnl
+            }
+        )
 
         conn.execute("""
             INSERT INTO positions (
@@ -426,6 +504,15 @@ class SQLiteStore:
             position.take_profit, position.entry_time, now
         ))
 
+        logger.info(
+            "Position upserted successfully",
+            extra={
+                "symbol": position.symbol,
+                "side": position.side,
+                "shares": position.shares
+            }
+        )
+
     async def upsert_position(self, position: Position) -> None:
         """
         Insert or update position (async, non-blocking).
@@ -444,8 +531,10 @@ class SQLiteStore:
 
     def _delete_position_sync(self, symbol: str) -> None:
         """Synchronous position delete (called by async wrapper)."""
+        logger.debug("Deleting position", extra={"symbol": symbol})
         conn = self._get_connection()
         conn.execute("DELETE FROM positions WHERE symbol = ?", (symbol,))
+        logger.info("Position deleted successfully", extra={"symbol": symbol})
 
     async def delete_position(self, symbol: str) -> None:
         """
@@ -469,10 +558,18 @@ class SQLiteStore:
         Returns:
             Position object or None if not found
         """
+        logger.debug("Fetching position by symbol", extra={"symbol": symbol})
         conn = self._get_connection()
         cursor = conn.execute("SELECT * FROM positions WHERE symbol = ?", (symbol,))
         row = cursor.fetchone()
-        return Position(**dict(row)) if row else None
+        result = Position(**dict(row)) if row else None
+
+        if result:
+            logger.debug("Position found", extra={"symbol": symbol, "shares": result.shares})
+        else:
+            logger.debug("Position not found", extra={"symbol": symbol})
+
+        return result
 
     async def get_open_positions(self) -> List[Position]:
         """
@@ -481,14 +578,18 @@ class SQLiteStore:
         Returns:
             List of Position objects
         """
+        logger.debug("Fetching all open positions")
         conn = self._get_connection()
         cursor = conn.execute("SELECT * FROM positions ORDER BY entry_time DESC")
-        return [Position(**dict(row)) for row in cursor.fetchall()]
+        positions = [Position(**dict(row)) for row in cursor.fetchall()]
+        logger.debug("Open positions fetched", extra={"count": len(positions)})
+        return positions
 
     # ==================== Settings Operations ====================
 
     def _set_setting_sync(self, key: str, value: str, description: str = "") -> None:
         """Synchronous setting upsert (called by async wrapper)."""
+        logger.debug("Setting configuration value", extra={"key": key})
         conn = self._get_connection()
         now = datetime.utcnow().isoformat()
 
@@ -500,6 +601,8 @@ class SQLiteStore:
                 description = excluded.description,
                 updated_at = excluded.updated_at
         """, (key, value, description, now))
+
+        logger.info("Setting updated successfully", extra={"key": key})
 
     async def set_setting(self, key: str, value: str, description: str = "") -> None:
         """
@@ -526,10 +629,18 @@ class SQLiteStore:
         Returns:
             Setting value or default
         """
+        logger.debug("Fetching setting", extra={"key": key})
         conn = self._get_connection()
         cursor = conn.execute("SELECT value FROM settings WHERE key = ?", (key,))
         row = cursor.fetchone()
-        return row["value"] if row else default
+        result = row["value"] if row else default
+
+        if row:
+            logger.debug("Setting found", extra={"key": key})
+        else:
+            logger.debug("Setting not found, using default", extra={"key": key, "default": default})
+
+        return result
 
     async def get_all_settings(self) -> Dict[str, str]:
         """
@@ -538,9 +649,12 @@ class SQLiteStore:
         Returns:
             Dictionary of key-value pairs
         """
+        logger.debug("Fetching all settings")
         conn = self._get_connection()
         cursor = conn.execute("SELECT key, value FROM settings")
-        return {row["key"]: row["value"] for row in cursor.fetchall()}
+        settings = {row["key"]: row["value"] for row in cursor.fetchall()}
+        logger.debug("All settings fetched", extra={"count": len(settings)})
+        return settings
 
     # ==================== Maintenance Operations ====================
 
@@ -577,7 +691,7 @@ class SQLiteStore:
         count = len(trades_to_archive)
 
         if count == 0:
-            logger.info("No trades to archive")
+            logger.info("No trades to archive", extra={"cutoff_date": cutoff_date})
             return 0
 
         # Export to Parquet if there are trades to archive
@@ -601,7 +715,14 @@ class SQLiteStore:
                 index=False
             )
 
-            logger.info(f"Exported {count} trades to {archive_path}")
+            logger.info(
+                f"Exported {count} trades to archive",
+                extra={
+                    "count": count,
+                    "archive_path": str(archive_path),
+                    "cutoff_date": cutoff_date
+                }
+            )
 
             # Delete archived trades from SQLite
             conn.execute(
@@ -610,10 +731,20 @@ class SQLiteStore:
             )
             conn.commit()
 
-            logger.info(f"Deleted {count} archived trades from SQLite")
+            logger.info(
+                f"Deleted {count} archived trades from SQLite",
+                extra={
+                    "count": count,
+                    "cutoff_date": cutoff_date
+                }
+            )
 
         except Exception as e:
-            logger.error(f"Failed to archive trades: {e}")
+            logger.error(
+                f"Failed to archive trades: {e}",
+                extra={"cutoff_date": cutoff_date, "trades_count": count},
+                exc_info=True
+            )
             # Don't delete if export failed
             raise
 
@@ -626,14 +757,19 @@ class SQLiteStore:
         Returns:
             Size in bytes
         """
-        return self.db_path.stat().st_size if self.db_path.exists() else 0
+        size = self.db_path.stat().st_size if self.db_path.exists() else 0
+        logger.debug("Database size retrieved", extra={"size_bytes": size, "db_path": str(self.db_path)})
+        return size
 
     async def close(self) -> None:
         """
         Close database connection and stop async worker.
         """
+        logger.info("Closing SQLite database", extra={"db_path": str(self.db_path)})
+
         # Cancel write worker
         if self._write_task and not self._write_task.done():
+            logger.debug("Cancelling async write worker")
             self._write_task.cancel()
             try:
                 await self._write_task
@@ -644,3 +780,4 @@ class SQLiteStore:
         if self._connection:
             self._connection.close()
             self._connection = None
+            logger.info("Database connection closed successfully")
