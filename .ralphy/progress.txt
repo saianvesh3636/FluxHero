@@ -1,61 +1,3 @@
-$ ./venv/bin/ruff check tests/integration/test_error_scenarios.py
-All checks passed!
-```
-
-### Requirements Coverage
-
-✅ **R8.1.2**: Retry logic handles all failure types correctly (timeout, 5xx, connection errors)  
-✅ **R8.2.2**: WebSocket auto-reconnect handles failures (max 5 retries, exponential backoff)  
-✅ **R8.2.4**: Heartbeat monitor detects stale connections (>60s timeout)  
-✅ **All Components**: Handle invalid data gracefully (NaN, Inf, empty, malformed)  
-✅ **System Resilience**: Recovers from complete failures (API + WS)  
-✅ **Edge Cases**: Propagate correctly through calculations  
-
-### Key Error Handling Patterns Validated
-
-1. **API Client**:
-   - Retries on 5xx and network errors (3 attempts, exponential backoff)
-   - No retry on 4xx client errors (fail fast)
-   - Rate limiting enforced (blocks when limit exceeded)
-   - Graceful handling of malformed responses
-
-2. **WebSocket Feed**:
-   - Auto-reconnect on disconnect (max 5 attempts)
-   - Heartbeat monitoring (timeout after 60s of no data)
-   - Stale connection detection via `is_stale()`
-   - Graceful handling of auth failures
-
-3. **Indicators**:
-   - Handle edge cases: NaN, Inf, negative, zero, single point, empty
-   - Warmup period produces NaN (expected behavior)
-   - Valid values after warmup period
-   - No crashes on extreme inputs
-
-4. **Data Pipeline**:
-   - Fails fast on initial setup errors
-   - Continues after WebSocket reconnection
-   - Signal callbacks work correctly
-
-### Validation Status
-
-✅ **35/35 tests passing**  
-✅ **Linting clean**  
-✅ **All error scenarios covered**  
-✅ **System resilience validated**  
-
-### Next Steps
-
-Continue to Phase 17 - Task 7: Performance benchmark (ensure 10k candle indicator calculation completes in <500ms)
-
----
-
-[2026-01-21 20:41:27] Phase 17 - Task 7: Performance Benchmark Complete
-- Updated tests/performance/test_benchmark.py with correct function signatures
-- Fixed imports to use fluxhero.backend.* paths
-- Added JIT warmup in fixture to ensure fair performance measurements
-- All indicators complete in well under 500ms target:
-  * EMA: 0.06ms (8333x faster than target)
-  * RSI: 0.10ms
   * ATR: 0.08ms
   * KAMA: 0.14ms
   * ADX: 0.20ms
@@ -106,3 +48,28 @@ Files Created:
 Status: Task complete. User guide provides comprehensive documentation for setup, configuration, running, monitoring, and troubleshooting the FluxHero system.
 
 Next Task: Document risk management rules and circuit breaker behavior (Phase 18, Task 3)
+
+[2026-01-21 20:48] Phase 18, Task 3: Document risk management rules and circuit breaker behavior
+- Created comprehensive RISK_MANAGEMENT.md documentation (872 lines)
+- Documented all position-level risk controls (R11.1.1-11.1.4):
+  * Maximum risk per trade (1% trend, 0.75% mean-rev)
+  * Maximum position size (20% of account)
+  * Mandatory stop loss requirement
+  * ATR-based stop loss calculation formulas
+- Documented all portfolio-level risk controls (R11.2.1-11.2.3):
+  * Maximum total exposure (50% of account)
+  * Maximum open positions (5 simultaneous)
+  * Correlation monitoring and position size reduction
+- Documented drawdown circuit breakers (R11.3.1-11.3.3):
+  * Drawdown tracking from equity peak
+  * 15% drawdown warning level (50% size reduction, tightened stops)
+  * 20% drawdown critical level (kill switch activation)
+- Documented risk monitoring and reporting (R11.4.1-11.4.2):
+  * Real-time risk metrics display
+  * Daily risk report generation and formatting
+- Included configuration details for PositionLimitsConfig and DrawdownCircuitBreakerConfig
+- Provided comprehensive examples for all risk scenarios
+- Added best practices and testing validation guidance
+- All tests passing (82/82 tests in test_position_limits.py and test_kill_switch.py)
+- Linting passed with ruff
+- Task marked complete in FLUXHERO_TASKS.md
