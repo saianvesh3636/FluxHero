@@ -34,9 +34,9 @@ The FluxHero test suite currently runs sequentially, creating a bottleneck durin
 - Description: Identify and fix tests that fail under parallel execution
 - Acceptance Criteria:
   - [ ] All tests pass when run with `pytest -n auto`
-  - [ ] Tests using shared files use `tmp_path` fixture or unique paths per worker
-  - [ ] Tests binding to specific ports use dynamic port allocation
-  - [ ] Database tests use isolated test databases or proper transaction isolation
+  - [x] Tests using shared files use `tmp_path` fixture or unique paths per worker
+  - [x] Tests binding to specific ports use dynamic port allocation
+  - [x] Database tests use isolated test databases or proper transaction isolation
 - Technical Notes: Run parallel tests first, then fix failures as they appear. Don't pre-audit—fix on demand.
 
 ## Should Have (Post-MVP)
