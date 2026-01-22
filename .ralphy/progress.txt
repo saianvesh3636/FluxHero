@@ -64,3 +64,45 @@ Continue to Phase 17 - Task 7: Performance benchmark (ensure 10k candle indicato
   * Composite (all indicators): 6.17ms
 - All 11 performance tests passing
 - Linting passed with ruff
+
+=== 2026-01-21 ===
+Task: Create user guide for running the system (setup, configuration, monitoring)
+Phase: 18 - Documentation & Deployment
+
+Completed:
+1. Created comprehensive USER_GUIDE.md in docs/ directory
+   - 10 major sections covering all aspects of system usage
+   - Detailed installation instructions for backend and frontend
+   - Complete configuration guide with .env template
+   - Step-by-step instructions for running the system
+   - Dashboard usage guide for all 4 tabs (Live Trading, Analytics, Trade History, Backtesting)
+   - Comprehensive monitoring section with log analysis
+   - Common operations (daily startup, running backtests, exporting data, archiving)
+   - Extensive troubleshooting guide with 6 common issues and solutions
+   - Best practices for risk management, strategy optimization, system maintenance
+   - Quick reference section with common commands and environment variables
+
+2. Created test suite for documentation validation
+   - 28 comprehensive tests in tests/documentation/test_user_guide.py
+   - Tests cover existence, structure, completeness, and quality
+   - Validates that referenced files exist
+   - Checks for security warnings and configuration guidance
+   - Ensures troubleshooting and best practices sections are comprehensive
+   - All tests passing (28/28)
+
+3. Fixed linting issues
+   - Removed unused import (os module)
+   - Code passes ruff linting
+
+4. Updated FLUXHERO_TASKS.md
+   - Marked "Write API documentation" as complete (was already done)
+   - Marked "Create user guide" as complete
+
+Files Created:
+- docs/USER_GUIDE.md (35,000+ characters, comprehensive guide)
+- tests/documentation/test_user_guide.py (300+ lines, 28 tests)
+- tests/documentation/__init__.py
+
+Status: Task complete. User guide provides comprehensive documentation for setup, configuration, running, monitoring, and troubleshooting the FluxHero system.
+
+Next Task: Document risk management rules and circuit breaker behavior (Phase 18, Task 3)
