@@ -108,6 +108,10 @@ class RateLimiter:
             if len(self.requests[client_id]) < self.max_requests:
                 return 0
 
+            # If no requests left after filtering (edge case), no wait needed
+            if not self.requests[client_id]:
+                return 0
+
             # Calculate wait time until oldest request expires
             oldest = self.requests[client_id][0]
             wait_time = int(self.window_seconds - (now - oldest) + 1)

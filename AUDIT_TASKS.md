@@ -64,7 +64,7 @@ Fix critical issues, improve observability, and address architecture gaps identi
 - [x] Add request/response logging middleware to `backend/api/server.py`
 - [x] Create `/metrics` endpoint with Prometheus-compatible format (order counts, latency percentiles, drawdown %)
 - [x] Update `/health` endpoint to include basic system metrics
-- [ ] Add tests for rate limiting and metrics endpoint
+- [x] Add tests for rate limiting and metrics endpoint
 
 ---
 
