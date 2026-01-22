@@ -246,9 +246,12 @@ class ParquetStore:
             df = pd.read_parquet(cache_path, engine='pyarrow')
             num_candles = len(df)
 
-            # Convert timestamp to numpy array (unix timestamp)
+            # Convert timestamp to numpy array (unix timestamp in seconds)
             if pd.api.types.is_datetime64_any_dtype(df['timestamp']):
-                timestamps = df['timestamp'].astype('int64') / 10**9  # Convert to seconds
+                # Use pandas conversion to handle various datetime resolutions correctly
+                # (parquet may store as ns, us, or ms depending on writer)
+                epoch = pd.Timestamp('1970-01-01', tz=None)
+                timestamps = (df['timestamp'] - epoch).dt.total_seconds().values
             else:
                 timestamps = df['timestamp'].values
 
