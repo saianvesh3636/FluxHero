@@ -93,3 +93,42 @@ Files Modified:
 - AUDIT_TASKS.md (marked task as complete)
 
 Next Task: Phase 4 - Task 1: Create backend/core/config.py using pydantic-settings with .env file support
+
+---
+Date: 2026-01-22
+Task: Phase 4 - Task 1: Create backend/core/config.py using pydantic-settings
+Status: Complete
+
+Summary:
+- Created centralized configuration module at fluxhero/backend/core/config.py
+- Implemented Settings class using pydantic-settings with BaseSettings
+- Added environment variable support with FLUXHERO_ prefix and .env file loading
+- Configured all major application settings:
+  * Authentication settings (auth_secret)
+  * API settings (title, description, version)
+  * CORS settings (origins, credentials, methods, headers)
+  * Alpaca API settings (api_url, ws_url, api_key, api_secret)
+  * Risk management settings (position limits, portfolio limits, stop losses)
+  * Data storage settings (cache_dir, log_file)
+  * Market data settings (timeframe, initial_candles)
+- Added field validation with pydantic constraints (ge, le for numeric ranges)
+- Implemented get_settings() function with lru_cache for singleton pattern
+- Created comprehensive test suite with 37 tests covering:
+  * Default configuration values
+  * Environment variable loading
+  * Settings validation and constraints
+  * Caching behavior
+  * Integration scenarios
+  * Edge cases and boundary conditions
+- All 37 tests passing
+- Linting passes with ruff
+- Installed pydantic-settings dependency in venv
+
+Files Created:
+- fluxhero/backend/core/config.py (242 lines)
+- tests/unit/test_config.py (382 lines, 37 tests)
+
+Files Modified:
+- AUDIT_TASKS.md (marked Phase 4 - Task 1 as complete)
+
+Next Task: Phase 4 - Task 2: Move CORS origins from backend/api/server.py to config
