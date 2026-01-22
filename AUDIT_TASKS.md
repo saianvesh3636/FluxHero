@@ -22,7 +22,7 @@ Fix critical issues, improve observability, and address architecture gaps identi
 ## Phase 1: Critical Storage Fixes
 
 - [x] Replace bare `except Exception` in `backend/storage/parquet_store.py:344` with `except pyarrow.ArrowException`, add logging for failures
-- [ ] Replace bare `except Exception: pass` in `backend/storage/sqlite_store.py:243` `_write_worker` with `except sqlite3.Error`, log and handle explicitly
+- [x] Replace bare `except Exception: pass` in `backend/storage/sqlite_store.py:243` `_write_worker` with `except sqlite3.Error`, log and handle explicitly
 - [ ] Implement `archive_old_trades()` in `backend/storage/sqlite_store.py:570` - export old records to Parquet, then delete from SQLite (per R7.1.3)
 - [x] Add unit tests for exception handling in `parquet_store.py` and `sqlite_store.py`
 - [ ] Add integration test for `archive_old_trades()` verifying export and deletion

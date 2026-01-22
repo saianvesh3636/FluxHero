@@ -19,11 +19,14 @@ Performance targets:
 
 import sqlite3
 import asyncio
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from enum import IntEnum
+
+logger = logging.getLogger(__name__)
 
 
 class PositionSide(IntEnum):
@@ -240,9 +243,10 @@ class SQLiteStore:
                     self._write_queue.task_done()
             except asyncio.CancelledError:
                 break
-            except Exception:
-                # Continue processing even if one operation fails
-                pass
+            except sqlite3.Error as e:
+                # Log database errors but continue processing other operations
+                logger.error(f"SQLite error in write worker: {e}", exc_info=True)
+                self._write_queue.task_done()
 
     async def _async_write(self, operation, *args) -> Any:
         """
