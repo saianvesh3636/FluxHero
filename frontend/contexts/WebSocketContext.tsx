@@ -80,6 +80,7 @@ export function WebSocketProvider({
 
   const {
     state: connectionState,
+    data,
     error,
     reconnectAttempts,
     reconnect,
@@ -101,11 +102,6 @@ export function WebSocketProvider({
   });
 
   // Update data when WebSocket receives messages
-  const { data } = useWebSocket(enabled ? url : '', {
-    autoReconnect: true,
-    maxReconnectAttempts: 5,
-  });
-
   React.useEffect(() => {
     if (data) {
       handleMessage(data);

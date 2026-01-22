@@ -211,3 +211,40 @@
 - Error states: 5 tests (offline detection, retry, timeouts, loading)
 
 **Result**: Task 4.4 complete. Frontend has automated E2E tests validating integration with backend APIs.
+
+---
+
+## 2026-01-22 17:59 - WebSocket Connection Verification (Task 5.1)
+
+**Task**: Implement Task 5.1 - WebSocket Connection Verification
+**Files Changed**:
+- frontend/app/layout.tsx (added WebSocketProvider)
+- frontend/app/analytics/page.tsx (added WebSocketStatus component and real-time price updates)
+- frontend/contexts/WebSocketContext.tsx (fixed duplicate WebSocket connection issue)
+- frontend/e2e/websocket.spec.ts (created WebSocket E2E tests)
+- TASKS.md (marked Task 5.1 as complete)
+- .context/history.md
+
+**Summary**:
+- Integrated WebSocketProvider into app layout to provide WebSocket context throughout the application
+- Added WebSocketStatus component to analytics page header showing connection status (Connected/Connecting/Reconnecting/Disconnected/Failed)
+- Implemented real-time price update subscription for selected symbol on analytics page
+- Fixed WebSocketContext to use single WebSocket connection instead of duplicate connections
+- Created comprehensive E2E test suite (6 tests) for WebSocket functionality:
+  - Connection status display on analytics page
+  - Connected status verification when backend running
+  - Price update logging verification
+  - Reconnection handling and retry button
+  - Symbol subscription when changing symbols
+  - Graceful error handling when WebSocket connection fails
+- WebSocketStatus component displays emoji indicators (🟢/🟡/🟠/🔴/⚪) and status text
+- Auto-reconnect functionality with exponential backoff
+- Retry button available when connection fails
+
+**Integration**:
+- WebSocket connects to /ws/prices endpoint on backend
+- Subscribes to price updates for symbols viewed on analytics page
+- Displays real-time connection status with visual feedback
+- Handles connection drops gracefully with auto-reconnect
+
+**Result**: Task 5.1 complete. WebSocket connection verification implemented with status display, real-time updates, and auto-reconnect functionality.

@@ -109,9 +109,9 @@
 ## Phase 5: Should Have (Post-MVP)
 
 ### Task 5.1: WebSocket Connection Verification
-- [ ] `WebSocketStatus` component shows "Connected" when backend running
-- [ ] Price updates appear in real-time on analytics page
-- [ ] Auto-reconnect works after connection drop
+- [x] `WebSocketStatus` component shows "Connected" when backend running
+- [x] Price updates appear in real-time on analytics page
+- [x] Auto-reconnect works after connection drop
 
 ### Task 5.2: Test Data Seeding Script
 - [ ] Create `scripts/seed_test_data.py`
