@@ -26,6 +26,8 @@ from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from enum import IntEnum
 
+import pandas as pd
+
 logger = logging.getLogger(__name__)
 
 
@@ -546,7 +548,7 @@ class SQLiteStore:
         """
         Archive trades older than specified days (R7.1.3).
 
-        This is a placeholder for archival logic. In production:
+        Implementation:
         1. Export old trades to Parquet files
         2. Delete from SQLite to save space
         3. Keep only last 30 days in SQLite
@@ -564,15 +566,57 @@ class SQLiteStore:
         conn = self._get_connection()
         cutoff_date = (datetime.utcnow() - timedelta(days=days)).isoformat()
 
-        # Count trades to archive
+        # Query trades to archive (closed trades older than cutoff)
         cursor = conn.execute(
-            "SELECT COUNT(*) as count FROM trades WHERE entry_time < ? AND status != ?",
+            """SELECT * FROM trades
+               WHERE entry_time < ? AND status != ?
+               ORDER BY entry_time ASC""",
             (cutoff_date, TradeStatus.OPEN)
         )
-        count = cursor.fetchone()["count"]
+        trades_to_archive = cursor.fetchall()
+        count = len(trades_to_archive)
 
-        # TODO: In production, export to Parquet before deleting
-        # For now, just return count without deleting
+        if count == 0:
+            logger.info("No trades to archive")
+            return 0
+
+        # Export to Parquet if there are trades to archive
+        try:
+            # Create archive directory
+            archive_dir = Path("data/archive")
+            archive_dir.mkdir(parents=True, exist_ok=True)
+
+            # Convert to DataFrame
+            df = pd.DataFrame([dict(row) for row in trades_to_archive])
+
+            # Generate archive filename with timestamp
+            archive_filename = f"trades_archive_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.parquet"
+            archive_path = archive_dir / archive_filename
+
+            # Write to Parquet with Snappy compression
+            df.to_parquet(
+                archive_path,
+                engine='pyarrow',
+                compression='snappy',
+                index=False
+            )
+
+            logger.info(f"Exported {count} trades to {archive_path}")
+
+            # Delete archived trades from SQLite
+            conn.execute(
+                "DELETE FROM trades WHERE entry_time < ? AND status != ?",
+                (cutoff_date, TradeStatus.OPEN)
+            )
+            conn.commit()
+
+            logger.info(f"Deleted {count} archived trades from SQLite")
+
+        except Exception as e:
+            logger.error(f"Failed to archive trades: {e}")
+            # Don't delete if export failed
+            raise
+
         return count
 
     async def get_database_size(self) -> int:

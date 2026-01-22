@@ -459,9 +459,17 @@ async def test_archive_old_trades(temp_db, sample_trade):
         trade.status = TradeStatus.CLOSED
         await temp_db.add_trade(trade)
 
-    # Check archive count
+    # Verify 8 trades exist initially
+    all_trades_before = await temp_db.get_recent_trades(limit=100)
+    assert len(all_trades_before) == 8
+
+    # Archive old trades
     archived_count = await temp_db.archive_old_trades(days=30)
-    assert archived_count == 5  # Should count 5 old trades
+    assert archived_count == 5  # Should archive 5 old trades
+
+    # Verify only 3 recent trades remain
+    remaining_trades = await temp_db.get_recent_trades(limit=100)
+    assert len(remaining_trades) == 3  # Only recent trades should remain
 
 
 @pytest.mark.asyncio
