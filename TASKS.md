@@ -48,10 +48,10 @@
 - [x] CORS headers present (`Access-Control-Allow-Origin`)
 
 ### Task 3.2: Verify Frontend Proxy
-- [ ] Check `frontend/next.config.ts` rewrites configuration
-- [ ] Verify `/api/*` routes proxy to `localhost:8000/api/*`
-- [ ] Check browser Network tab for request/response flow
-- [ ] No CORS errors in browser console
+- [x] Check `frontend/next.config.ts` rewrites configuration
+- [x] Verify `/api/*` routes proxy to `localhost:8000/api/*`
+- [x] Check browser Network tab for request/response flow
+- [x] No CORS errors in browser console
 
 ### Task 3.3: Verify API Client
 - [ ] Check `frontend/utils/api.ts` base URL configuration
