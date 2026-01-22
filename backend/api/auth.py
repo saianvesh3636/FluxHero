@@ -27,7 +27,7 @@ Date: 2026-01-22
 
 import os
 import secrets
-from typing import Optional
+
 from backend.core.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -64,7 +64,7 @@ def get_auth_secret() -> str:
     return secret
 
 
-def validate_token(token: Optional[str]) -> bool:
+def validate_token(token: str | None) -> bool:
     """
     Validate an authentication token.
 
@@ -134,7 +134,7 @@ def validate_token(token: Optional[str]) -> bool:
     return is_valid
 
 
-def extract_token_from_header(auth_header: Optional[str]) -> Optional[str]:
+def extract_token_from_header(auth_header: str | None) -> str | None:
     """
     Extract token from Authorization header.
 

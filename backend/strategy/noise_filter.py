@@ -15,10 +15,10 @@ Performance:
     - <50ms for 10k candle validation
 """
 
-import numpy as np
-from numba import njit
 from datetime import datetime, time
 
+import numpy as np
+from numba import njit
 
 # ============================================================================
 # Spread-to-Volatility Ratio Functions

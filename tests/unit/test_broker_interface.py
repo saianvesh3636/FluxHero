@@ -14,14 +14,15 @@ Tests cover:
 """
 
 import pytest
+
 from backend.execution.broker_interface import (
     BrokerInterface,
-    PaperBroker,
     Order,
-    Position,
     OrderSide,
-    OrderType,
     OrderStatus,
+    OrderType,
+    PaperBroker,
+    Position,
 )
 
 

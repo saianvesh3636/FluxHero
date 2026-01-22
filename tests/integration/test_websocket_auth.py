@@ -10,17 +10,19 @@ Requirements: Phase 3 - WebSocket Authentication (AUDIT_TASKS.md)
 """
 
 import os
-import pytest
-from unittest.mock import patch
-from fastapi.testclient import TestClient
 
 # Import the FastAPI app
 import sys
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+from fastapi.testclient import TestClient
+
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from backend.api.server import app
 from backend.api.auth import DEFAULT_SECRET
+from backend.api.server import app
 
 
 class TestWebSocketAuthentication:

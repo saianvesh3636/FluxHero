@@ -31,7 +31,6 @@ from backend.data.fetcher import (
     WebSocketFeed,
 )
 
-
 # ============================================================================
 # Rate Limiter Tests
 # ============================================================================
@@ -437,7 +436,7 @@ async def test_websocket_heartbeat_monitor():
     )
 
     mock_ws = AsyncMock()
-    mock_ws.recv = AsyncMock(side_effect=asyncio.TimeoutError())
+    mock_ws.recv = AsyncMock(side_effect=TimeoutError())
     feed._ws = mock_ws
     feed._connected = True
 
@@ -463,7 +462,7 @@ async def test_websocket_tick_callback():
 
     mock_ws = AsyncMock()
     messages = ['{"price": 100}', '{"price": 101}']
-    mock_ws.recv = AsyncMock(side_effect=messages + [asyncio.TimeoutError()])
+    mock_ws.recv = AsyncMock(side_effect=messages + [TimeoutError()])
     feed._ws = mock_ws
     feed._connected = True
 

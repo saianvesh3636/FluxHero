@@ -18,7 +18,6 @@ Date: 2026-01-20
 from dataclasses import dataclass
 from datetime import datetime
 from enum import IntEnum
-from typing import Optional
 
 
 class PositionSizeResult(IntEnum):
@@ -101,7 +100,7 @@ class PositionSizer:
         self.kill_switch_pct = kill_switch_pct
         self.kill_switch_enabled = kill_switch_enabled
         self.kill_switch_triggered = False  # Track if kill-switch has fired
-        self.kill_switch_trigger_time: Optional[datetime] = None
+        self.kill_switch_trigger_time: datetime | None = None
 
     def calculate_position_size(
         self,

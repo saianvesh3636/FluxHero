@@ -25,27 +25,28 @@ from the backend API. It tests:
 Requirements: Phase 17 - Task 5
 """
 
-import pytest
-from fastapi.testclient import TestClient
-from datetime import datetime, timedelta
 import asyncio
-import tempfile
-from pathlib import Path
-import time
 
 # Add backend to path
 import sys
+import tempfile
+import time
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from backend.api.server import app, app_state
 from backend.storage.sqlite_store import (
+    Position,
+    PositionSide,
     SQLiteStore,
     Trade,
-    Position,
     TradeStatus,
-    PositionSide,
 )
-
 
 # ============================================================================
 # Test Fixtures

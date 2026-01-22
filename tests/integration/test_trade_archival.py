@@ -7,13 +7,12 @@ Tests the complete archive_old_trades() workflow:
 - Verify data integrity
 """
 
-import pytest
 from datetime import datetime, timedelta
-import pandas as pd
 
-from backend.storage.sqlite_store import (
-    SQLiteStore, Trade, TradeStatus, PositionSide
-)
+import pandas as pd
+import pytest
+
+from backend.storage.sqlite_store import PositionSide, SQLiteStore, Trade, TradeStatus
 
 
 @pytest.fixture

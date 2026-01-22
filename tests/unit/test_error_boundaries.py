@@ -39,7 +39,7 @@ def test_async_error_boundary_file_exists():
 def test_error_boundary_has_class_component():
     """Test that ErrorBoundary uses React class component"""
     path = "frontend/components/ErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     # Check for class component definition
@@ -50,7 +50,7 @@ def test_error_boundary_has_class_component():
 def test_error_boundary_has_componentdidcatch():
     """Test that ErrorBoundary implements componentDidCatch"""
     path = "frontend/components/ErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     assert "componentDidCatch" in content, "ErrorBoundary must implement componentDidCatch"
@@ -59,7 +59,7 @@ def test_error_boundary_has_componentdidcatch():
 def test_error_boundary_has_getderivedstatefromerror():
     """Test that ErrorBoundary implements getDerivedStateFromError"""
     path = "frontend/components/ErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     assert (
@@ -70,7 +70,7 @@ def test_error_boundary_has_getderivedstatefromerror():
 def test_error_boundary_has_state_interface():
     """Test that ErrorBoundary has proper state interface"""
     path = "frontend/components/ErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     # Check for state interface with required fields
@@ -81,7 +81,7 @@ def test_error_boundary_has_state_interface():
 def test_error_boundary_exports_default():
     """Test that ErrorBoundary exports default"""
     path = "frontend/components/ErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     assert "export default ErrorBoundary" in content, "ErrorBoundary must export default"
@@ -90,7 +90,7 @@ def test_error_boundary_exports_default():
 def test_error_boundary_has_reset_functionality():
     """Test that ErrorBoundary has reset functionality"""
     path = "frontend/components/ErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     # Check for reset method
@@ -100,7 +100,7 @@ def test_error_boundary_has_reset_functionality():
 def test_error_fallback_has_default_export():
     """Test that ErrorFallback has default export"""
     path = "frontend/components/ErrorFallback.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     assert (
@@ -111,7 +111,7 @@ def test_error_fallback_has_default_export():
 def test_error_fallback_has_props_interface():
     """Test that ErrorFallback has proper props interface"""
     path = "frontend/components/ErrorFallback.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     # Check for props interface
@@ -123,7 +123,7 @@ def test_error_fallback_has_props_interface():
 def test_error_fallback_has_specialized_components():
     """Test that ErrorFallback exports specialized components"""
     path = "frontend/components/ErrorFallback.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     # Check for specialized error fallback components
@@ -141,7 +141,7 @@ def test_error_fallback_has_specialized_components():
 def test_error_fallback_has_styling():
     """Test that ErrorFallback includes styling"""
     path = "frontend/components/ErrorFallback.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     # Check for style jsx or className usage
@@ -152,7 +152,7 @@ def test_error_fallback_has_styling():
 def test_page_error_boundary_exports_default():
     """Test that PageErrorBoundary exports default"""
     path = "frontend/components/PageErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     assert (
@@ -163,7 +163,7 @@ def test_page_error_boundary_exports_default():
 def test_page_error_boundary_wraps_error_boundary():
     """Test that PageErrorBoundary wraps ErrorBoundary"""
     path = "frontend/components/PageErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     # Check that it imports and uses ErrorBoundary
@@ -176,7 +176,7 @@ def test_page_error_boundary_wraps_error_boundary():
 def test_page_error_boundary_has_page_name_prop():
     """Test that PageErrorBoundary accepts pageName prop"""
     path = "frontend/components/PageErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     assert "pageName" in content, "PageErrorBoundary must accept pageName prop"
@@ -185,7 +185,7 @@ def test_page_error_boundary_has_page_name_prop():
 def test_async_error_boundary_exports_default():
     """Test that AsyncErrorBoundary exports default"""
     path = "frontend/components/AsyncErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     assert (
@@ -196,7 +196,7 @@ def test_async_error_boundary_exports_default():
 def test_async_error_boundary_handles_loading_state():
     """Test that AsyncErrorBoundary handles loading state"""
     path = "frontend/components/AsyncErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     assert "isLoading" in content, "AsyncErrorBoundary must handle isLoading prop"
@@ -205,7 +205,7 @@ def test_async_error_boundary_handles_loading_state():
 def test_async_error_boundary_handles_error_state():
     """Test that AsyncErrorBoundary handles error state"""
     path = "frontend/components/AsyncErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     assert "error" in content, "AsyncErrorBoundary must handle error prop"
@@ -214,7 +214,7 @@ def test_async_error_boundary_handles_error_state():
 def test_async_error_boundary_has_retry_functionality():
     """Test that AsyncErrorBoundary has retry functionality"""
     path = "frontend/components/AsyncErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     assert "onRetry" in content, "AsyncErrorBoundary must have onRetry prop"
@@ -223,7 +223,7 @@ def test_async_error_boundary_has_retry_functionality():
 def test_async_error_boundary_exports_hook():
     """Test that AsyncErrorBoundary exports useAsyncError hook"""
     path = "frontend/components/AsyncErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     assert (
@@ -234,7 +234,7 @@ def test_async_error_boundary_exports_hook():
 def test_layout_integrates_error_boundary():
     """Test that root layout integrates ErrorBoundary"""
     path = "frontend/app/layout.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     # Check that ErrorBoundary is imported and used
@@ -254,7 +254,7 @@ def test_all_components_have_client_directive():
     ]
 
     for component_path in components:
-        with open(component_path, "r") as f:
+        with open(component_path) as f:
             content = f.read()
 
         # Check for 'use client' at the top of the file
@@ -266,7 +266,7 @@ def test_all_components_have_client_directive():
 def test_error_boundary_has_reset_keys_support():
     """Test that ErrorBoundary supports resetKeys prop"""
     path = "frontend/components/ErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     # Check for resetKeys prop in interface
@@ -276,7 +276,7 @@ def test_error_boundary_has_reset_keys_support():
 def test_error_boundary_has_custom_error_handler():
     """Test that ErrorBoundary supports custom onError handler"""
     path = "frontend/components/ErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     # Check for onError prop
@@ -286,7 +286,7 @@ def test_error_boundary_has_custom_error_handler():
 def test_error_fallback_has_reset_button():
     """Test that ErrorFallback includes a reset button"""
     path = "frontend/components/ErrorFallback.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     # Check for button element with onClick handler
@@ -297,7 +297,7 @@ def test_error_fallback_has_reset_button():
 def test_error_fallback_has_error_details():
     """Test that ErrorFallback shows error details"""
     path = "frontend/components/ErrorFallback.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     # Check for details/pre elements to show error information
@@ -307,7 +307,7 @@ def test_error_fallback_has_error_details():
 def test_async_error_boundary_uses_state():
     """Test that AsyncErrorBoundary uses React state"""
     path = "frontend/components/AsyncErrorBoundary.tsx"
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
 
     # Check for useState import and usage
@@ -324,7 +324,7 @@ def test_typescript_interfaces_defined():
     }
 
     for component_path, interface_name in components.items():
-        with open(component_path, "r") as f:
+        with open(component_path) as f:
             content = f.read()
 
         assert (
@@ -342,7 +342,7 @@ def test_components_have_documentation():
     ]
 
     for component_path in components:
-        with open(component_path, "r") as f:
+        with open(component_path) as f:
             content = f.read()
 
         # Check for JSDoc comments
@@ -366,7 +366,7 @@ def test_error_boundary_integration_complete():
 
     # Verify layout integration
     layout_path = "frontend/app/layout.tsx"
-    with open(layout_path, "r") as f:
+    with open(layout_path) as f:
         layout_content = f.read()
 
     assert (

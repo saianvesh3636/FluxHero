@@ -13,8 +13,10 @@ Date: 2026-01-22
 """
 
 import os
-import pytest
 from unittest.mock import patch
+
+import pytest
+
 from backend.core.config import Settings, get_settings
 
 

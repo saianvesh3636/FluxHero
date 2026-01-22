@@ -7,11 +7,10 @@ a PaperBroker implementation for testing and paper trading.
 Feature 10: Order Execution Engine (R10.1.1 - R10.1.2)
 """
 
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Dict, List, Optional
-import time
 
 
 class OrderSide(IntEnum):
@@ -61,11 +60,11 @@ class Order:
     qty: int
     side: OrderSide
     order_type: OrderType
-    limit_price: Optional[float] = None
-    stop_price: Optional[float] = None
+    limit_price: float | None = None
+    stop_price: float | None = None
     status: OrderStatus = OrderStatus.PENDING
     filled_qty: int = 0
-    filled_price: Optional[float] = None
+    filled_price: float | None = None
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
 
@@ -136,8 +135,8 @@ class BrokerInterface(ABC):
         qty: int,
         side: OrderSide,
         order_type: OrderType,
-        limit_price: Optional[float] = None,
-        stop_price: Optional[float] = None,
+        limit_price: float | None = None,
+        stop_price: float | None = None,
     ) -> Order:
         """
         Place an order with the broker.
@@ -172,7 +171,7 @@ class BrokerInterface(ABC):
         pass
 
     @abstractmethod
-    async def get_order_status(self, order_id: str) -> Optional[Order]:
+    async def get_order_status(self, order_id: str) -> Order | None:
         """
         Get the current status of an order.
 
@@ -185,7 +184,7 @@ class BrokerInterface(ABC):
         pass
 
     @abstractmethod
-    async def get_positions(self) -> List[Position]:
+    async def get_positions(self) -> list[Position]:
         """
         Get all open positions.
 
@@ -229,10 +228,10 @@ class PaperBroker(BrokerInterface):
         self.initial_capital = initial_capital
         self.cash = initial_capital
         self.equity = initial_capital
-        self.orders: Dict[str, Order] = {}
-        self.positions: Dict[str, Position] = {}
+        self.orders: dict[str, Order] = {}
+        self.positions: dict[str, Position] = {}
         self.order_counter = 0
-        self.market_prices: Dict[str, float] = {}
+        self.market_prices: dict[str, float] = {}
 
     def _generate_order_id(self) -> str:
         """Generate unique order ID."""
@@ -367,8 +366,8 @@ class PaperBroker(BrokerInterface):
         qty: int,
         side: OrderSide,
         order_type: OrderType,
-        limit_price: Optional[float] = None,
-        stop_price: Optional[float] = None,
+        limit_price: float | None = None,
+        stop_price: float | None = None,
     ) -> Order:
         """
         Place an order with the paper broker.
@@ -426,11 +425,11 @@ class PaperBroker(BrokerInterface):
         order.updated_at = time.time()
         return True
 
-    async def get_order_status(self, order_id: str) -> Optional[Order]:
+    async def get_order_status(self, order_id: str) -> Order | None:
         """Get order status."""
         return self.orders.get(order_id)
 
-    async def get_positions(self) -> List[Position]:
+    async def get_positions(self) -> list[Position]:
         """Get all open positions."""
         return list(self.positions.values())
 

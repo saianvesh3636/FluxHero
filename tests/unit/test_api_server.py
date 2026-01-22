@@ -11,25 +11,27 @@ Tests all REST endpoints and WebSocket functionality:
 - Logging functionality
 """
 
-import pytest
-from fastapi.testclient import TestClient
-from datetime import datetime, timedelta
 import asyncio
-import tempfile
-from pathlib import Path
 import logging
 
 # Add backend to path
 import sys
+import tempfile
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from backend.api.server import app, app_state
 from backend.storage.sqlite_store import (
+    Position,
+    PositionSide,
     SQLiteStore,
     Trade,
-    Position,
     TradeStatus,
-    PositionSide,
 )
 
 
@@ -555,6 +557,7 @@ def test_api_documentation(client):
 def test_server_startup_logging(test_db, caplog):
     """Test that server startup logs are generated correctly"""
     from contextlib import asynccontextmanager
+
     from backend.api.server import app_state
 
     with caplog.at_level(logging.INFO):
@@ -646,7 +649,7 @@ def test_websocket_error_logging(client, caplog):
 def test_no_print_statements_in_server():
     """Test that server.py does not contain any print() statements"""
     server_path = Path(__file__).parent.parent.parent / "" / "backend" / "api" / "server.py"
-    with open(server_path, 'r') as f:
+    with open(server_path) as f:
         content = f.read()
 
     # Check that no print( statements exist in the code

@@ -22,31 +22,30 @@ Endpoints:
 
 import asyncio
 import logging
-from datetime import datetime
-from typing import Dict, List, Optional
-from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-import numpy as np
-import time
 
 # Import storage modules
 import sys
+import time
+from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
+
+import numpy as np
+from fastapi import FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
+from backend.api.auth import validate_websocket_auth
+from backend.api.rate_limit import RateLimitMiddleware
+from backend.backtesting.engine import BacktestConfig, BacktestEngine
+from backend.backtesting.metrics import PerformanceMetrics
+from backend.core.config import get_settings
 from backend.storage.sqlite_store import (
     SQLiteStore,
     TradeStatus,
 )
-from backend.backtesting.engine import BacktestEngine, BacktestConfig
-from backend.backtesting.metrics import PerformanceMetrics
-from backend.api.auth import validate_websocket_auth
-from backend.core.config import get_settings
-from backend.api.rate_limit import RateLimitMiddleware
-
 
 # ============================================================================
 # Logger Configuration
@@ -61,7 +60,7 @@ logger = logging.getLogger(__name__)
 
 class PositionResponse(BaseModel):
     """Response model for a position"""
-    id: Optional[int]
+    id: int | None
     symbol: str
     side: int  # 1 = LONG, -1 = SHORT
     shares: int
@@ -69,24 +68,24 @@ class PositionResponse(BaseModel):
     current_price: float
     unrealized_pnl: float
     stop_loss: float
-    take_profit: Optional[float] = None
+    take_profit: float | None = None
     entry_time: str
     updated_at: str
 
 
 class TradeResponse(BaseModel):
     """Response model for a trade"""
-    id: Optional[int]
+    id: int | None
     symbol: str
     side: int
     entry_price: float
     entry_time: str
-    exit_price: Optional[float] = None
-    exit_time: Optional[str] = None
+    exit_price: float | None = None
+    exit_time: str | None = None
     shares: int
     stop_loss: float
-    take_profit: Optional[float] = None
-    realized_pnl: Optional[float] = None
+    take_profit: float | None = None
+    realized_pnl: float | None = None
     status: int
     strategy: str
     regime: str
@@ -95,7 +94,7 @@ class TradeResponse(BaseModel):
 
 class TradeHistoryResponse(BaseModel):
     """Paginated trade history response"""
-    trades: List[TradeResponse]
+    trades: list[TradeResponse]
     total_count: int
     page: int
     page_size: int
@@ -150,8 +149,8 @@ class BacktestResultResponse(BaseModel):
     num_trades: int
     avg_win_loss_ratio: float
     success_criteria_met: bool
-    equity_curve: List[float]
-    timestamps: List[str]
+    equity_curve: list[float]
+    timestamps: list[str]
 
 
 class PriceUpdate(BaseModel):
@@ -159,7 +158,7 @@ class PriceUpdate(BaseModel):
     symbol: str
     price: float
     timestamp: str
-    volume: Optional[int] = None
+    volume: int | None = None
 
 
 # ============================================================================
@@ -169,15 +168,15 @@ class PriceUpdate(BaseModel):
 class AppState:
     """Global application state"""
     def __init__(self):
-        self.sqlite_store: Optional[SQLiteStore] = None
-        self.websocket_clients: List[WebSocket] = []
+        self.sqlite_store: SQLiteStore | None = None
+        self.websocket_clients: list[WebSocket] = []
         self.start_time: datetime = datetime.now()
         self.last_update: datetime = datetime.now()
         self.data_feed_active: bool = False
         # Metrics tracking
-        self.request_latencies: List[float] = []
+        self.request_latencies: list[float] = []
         self.request_count: int = 0
-        self.request_count_by_path: Dict[str, int] = {}
+        self.request_count_by_path: dict[str, int] = {}
 
     def update_timestamp(self):
         """Update last activity timestamp"""
@@ -374,7 +373,7 @@ async def root():
     }
 
 
-@app.get("/api/positions", response_model=List[PositionResponse])
+@app.get("/api/positions", response_model=list[PositionResponse])
 async def get_positions():
     """
     Get all current open positions.
@@ -413,7 +412,7 @@ async def get_positions():
 async def get_trades(
     page: int = Query(default=1, ge=1, description="Page number (1-indexed)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Trades per page"),
-    status: Optional[str] = Query(default=None, description="Filter by status (OPEN, CLOSED, CANCELLED)"),
+    status: str | None = Query(default=None, description="Filter by status (OPEN, CLOSED, CANCELLED)"),
 ):
     """
     Get trade history with pagination.

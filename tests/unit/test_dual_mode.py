@@ -17,32 +17,29 @@ Reference: FLUXHERO_REQUIREMENTS.md Feature 6
 
 import numpy as np
 import pytest
+
 from backend.strategy.dual_mode import (
-    # Signal functions
-    generate_trend_following_signals,
-    generate_mean_reversion_signals,
-    blend_signals,
-
-    # Stop and sizing functions
-    calculate_trailing_stop,
-    calculate_fixed_stop_loss,
-    calculate_position_size,
-    adjust_size_for_regime,
-
-    # Classes
-    StrategyPerformance,
-    DualModeStrategy,
-
-    # Constants
-    SIGNAL_NONE,
-    SIGNAL_LONG,
-    SIGNAL_SHORT,
-    SIGNAL_EXIT_LONG,
-    MODE_TREND_FOLLOWING,
     MODE_MEAN_REVERSION,
     MODE_NEUTRAL,
+    MODE_TREND_FOLLOWING,
+    SIGNAL_EXIT_LONG,
+    SIGNAL_LONG,
+    # Constants
+    SIGNAL_NONE,
+    SIGNAL_SHORT,
+    DualModeStrategy,
+    # Classes
+    StrategyPerformance,
+    adjust_size_for_regime,
+    blend_signals,
+    calculate_fixed_stop_loss,
+    calculate_position_size,
+    # Stop and sizing functions
+    calculate_trailing_stop,
+    generate_mean_reversion_signals,
+    # Signal functions
+    generate_trend_following_signals,
 )
-
 
 # ============================================================================
 # Trend-Following Signal Tests

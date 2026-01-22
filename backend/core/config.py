@@ -20,7 +20,7 @@ Date: 2026-01-22
 """
 
 from functools import lru_cache
-from typing import List
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -74,7 +74,7 @@ class Settings(BaseSettings):
     # CORS Settings
     # ========================================================================
 
-    cors_origins: List[str] = Field(
+    cors_origins: list[str] = Field(
         default=[
             "http://localhost:3000",
             "http://localhost:3001",
@@ -88,12 +88,12 @@ class Settings(BaseSettings):
         description="Allow credentials in CORS requests",
     )
 
-    cors_allow_methods: List[str] = Field(
+    cors_allow_methods: list[str] = Field(
         default=["*"],
         description="Allowed HTTP methods for CORS",
     )
 
-    cors_allow_headers: List[str] = Field(
+    cors_allow_headers: list[str] = Field(
         default=["*"],
         description="Allowed headers for CORS",
     )
@@ -220,7 +220,7 @@ class Settings(BaseSettings):
     )
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """
     Get cached settings instance.

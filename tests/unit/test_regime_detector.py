@@ -14,36 +14,35 @@ Tests cover:
 Reference: FLUXHERO_REQUIREMENTS.md Feature 5
 """
 
+# Add parent directory to path for imports
+import sys
 import time
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-# Add parent directory to path for imports
-import sys
-from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from backend.strategy.regime_detector import (  # noqa: E402
-    calculate_directional_movement,
-    calculate_directional_indicators,
-    calculate_adx,
-    calculate_linear_regression,
-    classify_trend_regime,
-    classify_volatility_regime,
-    apply_regime_persistence,
-    calculate_correlation_matrix,
-    detect_regime,
-    REGIME_MEAN_REVERSION,
-    REGIME_NEUTRAL,
-    REGIME_STRONG_TREND,
-    VOL_LOW,
-    VOL_NORMAL,
-    VOL_HIGH,
-)
 
 from backend.computation.indicators import calculate_atr  # noqa: E402
 from backend.computation.volatility import calculate_atr_ma  # noqa: E402
-
+from backend.strategy.regime_detector import (  # noqa: E402
+    REGIME_MEAN_REVERSION,
+    REGIME_NEUTRAL,
+    REGIME_STRONG_TREND,
+    VOL_HIGH,
+    VOL_LOW,
+    VOL_NORMAL,
+    apply_regime_persistence,
+    calculate_adx,
+    calculate_correlation_matrix,
+    calculate_directional_indicators,
+    calculate_directional_movement,
+    calculate_linear_regression,
+    classify_trend_regime,
+    classify_volatility_regime,
+    detect_regime,
+)
 
 # ============================================================================
 # Directional Movement Tests

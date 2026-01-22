@@ -26,7 +26,7 @@ class TestResponsiveDesign:
 
         if not css_path.exists():
             raise FileNotFoundError(f"globals.css not found at {css_path}")
-        with open(css_path, "r", encoding="utf-8") as f:
+        with open(css_path, encoding="utf-8") as f:
             return f.read()
 
     def test_responsive_section_exists(self):
@@ -224,7 +224,7 @@ class TestResponsiveDesign:
             # Skip test if file doesn't exist
             return
 
-        with open(live_page_path, "r", encoding="utf-8") as f:
+        with open(live_page_path, encoding="utf-8") as f:
             content = f.read()
 
         # Check for responsive classes
@@ -242,7 +242,7 @@ class TestResponsiveDesign:
             # Skip test if file doesn't exist
             return
 
-        with open(analytics_page_path, "r", encoding="utf-8") as f:
+        with open(analytics_page_path, encoding="utf-8") as f:
             content = f.read()
 
         # Check for responsive classes
@@ -259,7 +259,7 @@ class TestResponsiveDesign:
             # Skip test if file doesn't exist
             return
 
-        with open(backtest_page_path, "r", encoding="utf-8") as f:
+        with open(backtest_page_path, encoding="utf-8") as f:
             content = f.read()
 
         # Check for responsive classes
@@ -276,7 +276,7 @@ class TestResponsiveDesign:
             # Skip test if file doesn't exist
             return
 
-        with open(history_page_path, "r", encoding="utf-8") as f:
+        with open(history_page_path, encoding="utf-8") as f:
             content = f.read()
 
         # Check for responsive classes
@@ -328,7 +328,7 @@ class TestResponsiveDesign:
             if not page_path.exists():
                 continue
 
-            with open(page_path, "r", encoding="utf-8") as f:
+            with open(page_path, encoding="utf-8") as f:
                 content = f.read()
 
             # Check that we're using CSS classes

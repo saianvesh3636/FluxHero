@@ -15,7 +15,6 @@ Date: 2026-01-20
 
 from collections import deque
 from dataclasses import dataclass
-from typing import Deque, Optional
 
 import numpy as np
 from numpy.typing import NDArray
@@ -42,9 +41,9 @@ class Candle:
     low: float
     close: float
     volume: float
-    ema: Optional[float] = None
-    atr: Optional[float] = None
-    rsi: Optional[float] = None
+    ema: float | None = None
+    atr: float | None = None
+    rsi: float | None = None
 
 
 class CandleBuffer:
@@ -81,7 +80,7 @@ class CandleBuffer:
             raise ValueError("max_size must be at least 1")
 
         self.max_size = max_size
-        self._buffer: Deque[Candle] = deque(maxlen=max_size)
+        self._buffer: deque[Candle] = deque(maxlen=max_size)
 
     def add_candle(
         self,
@@ -91,9 +90,9 @@ class CandleBuffer:
         low: float,
         close: float,
         volume: float,
-        ema: Optional[float] = None,
-        atr: Optional[float] = None,
-        rsi: Optional[float] = None,
+        ema: float | None = None,
+        atr: float | None = None,
+        rsi: float | None = None,
     ) -> None:
         """Add a new candle to the buffer.
 
@@ -164,7 +163,7 @@ class CandleBuffer:
         """Remove all candles from the buffer."""
         self._buffer.clear()
 
-    def get_latest_candle(self) -> Optional[Candle]:
+    def get_latest_candle(self) -> Candle | None:
         """Get the most recent candle without removing it.
 
         Returns:
@@ -174,7 +173,7 @@ class CandleBuffer:
             return None
         return self._buffer[-1]
 
-    def get_oldest_candle(self) -> Optional[Candle]:
+    def get_oldest_candle(self) -> Candle | None:
         """Get the oldest candle without removing it.
 
         Returns:
@@ -184,7 +183,7 @@ class CandleBuffer:
             return None
         return self._buffer[0]
 
-    def get_candle_at_index(self, index: int) -> Optional[Candle]:
+    def get_candle_at_index(self, index: int) -> Candle | None:
         """Get candle at specific index.
 
         Args:

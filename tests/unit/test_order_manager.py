@@ -6,22 +6,22 @@ Tests order lifecycle management, heartbeat monitoring, and order chasing.
 Feature 10: Order Execution Engine (R10.2.1 - R10.2.3)
 """
 
-import pytest
 import asyncio
 
-from backend.execution.order_manager import (
-    OrderManager,
-    ManagedOrder,
-    ChaseConfig,
-)
-from backend.execution.broker_interface import (
-    PaperBroker,
-    Order,
-    OrderStatus,
-    OrderSide,
-    OrderType,
-)
+import pytest
 
+from backend.execution.broker_interface import (
+    Order,
+    OrderSide,
+    OrderStatus,
+    OrderType,
+    PaperBroker,
+)
+from backend.execution.order_manager import (
+    ChaseConfig,
+    ManagedOrder,
+    OrderManager,
+)
 
 # ============================================================================
 # Fixtures

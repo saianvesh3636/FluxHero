@@ -14,29 +14,29 @@ Requirements tested:
     - R4.3.1-4.3.3: Time-of-day filtering
 """
 
+import os
+import sys
+import time
+from datetime import datetime
+
 import numpy as np
 import pytest
-from datetime import datetime
-import sys
-import os
-import time
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from backend.strategy.noise_filter import (
-    calculate_spread_to_volatility_ratio,
-    validate_spread_ratio,
+    apply_noise_filter,
     calculate_average_volume,
-    validate_volume,
+    calculate_price_gap_ratio,
+    calculate_rejection_reason,
+    calculate_spread_to_volatility_ratio,
     is_illiquid_hour,
     is_near_close,
-    apply_noise_filter,
-    calculate_rejection_reason,
-    calculate_price_gap_ratio,
     validate_price_gap,
+    validate_spread_ratio,
+    validate_volume,
 )
-
 
 # ============================================================================
 # Spread-to-Volatility Ratio Tests

@@ -25,8 +25,8 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from backend.computation.adaptive_ema import (  # noqa: E402
-    calculate_efficiency_ratio,
     calculate_adaptive_smoothing_constant,
+    calculate_efficiency_ratio,
     calculate_kama,
     calculate_kama_with_regime_adjustment,
     validate_kama_bounds,

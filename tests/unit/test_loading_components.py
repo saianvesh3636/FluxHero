@@ -28,7 +28,7 @@ def test_loading_spinner_exports():
     """Test that LoadingSpinner component exports all required components"""
     component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
-    with open(component_path, 'r') as f:
+    with open(component_path) as f:
         content = f.read()
 
     # Check for main LoadingSpinner export
@@ -45,7 +45,7 @@ def test_loading_spinner_variants():
     """Test that LoadingSpinner supports multiple variants"""
     component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
-    with open(component_path, 'r') as f:
+    with open(component_path) as f:
         content = f.read()
 
     # Check for variant type definition
@@ -62,7 +62,7 @@ def test_loading_spinner_sizes():
     """Test that LoadingSpinner supports multiple sizes"""
     component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
-    with open(component_path, 'r') as f:
+    with open(component_path) as f:
         content = f.read()
 
     # Check for size type definition
@@ -79,7 +79,7 @@ def test_loading_overlay_component():
     """Test that LoadingOverlay component is properly implemented"""
     component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
-    with open(component_path, 'r') as f:
+    with open(component_path) as f:
         content = f.read()
 
     # Check for LoadingOverlay interface
@@ -95,7 +95,7 @@ def test_skeleton_components():
     """Test that skeleton loader components are implemented"""
     component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
-    with open(component_path, 'r') as f:
+    with open(component_path) as f:
         content = f.read()
 
     # Check for SkeletonCard
@@ -112,7 +112,7 @@ def test_loading_button_component():
     """Test that LoadingButton component is properly implemented"""
     component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
-    with open(component_path, 'r') as f:
+    with open(component_path) as f:
         content = f.read()
 
     # Check for LoadingButton interface
@@ -128,7 +128,7 @@ def test_live_page_uses_loading_spinner():
     """Test that Live Trading page imports and uses loading components"""
     page_path = PROJECT_ROOT / 'frontend/app/live/page.tsx'
 
-    with open(page_path, 'r') as f:
+    with open(page_path) as f:
         content = f.read()
 
     # Check for loading state
@@ -143,7 +143,7 @@ def test_analytics_page_uses_loading_components():
     """Test that Analytics page imports and uses loading components"""
     page_path = PROJECT_ROOT / 'frontend/app/analytics/page.tsx'
 
-    with open(page_path, 'r') as f:
+    with open(page_path) as f:
         content = f.read()
 
     # Check for import
@@ -163,7 +163,7 @@ def test_history_page_uses_loading_components():
     """Test that Trade History page imports and uses loading components"""
     page_path = PROJECT_ROOT / 'frontend/pages/history.tsx'
 
-    with open(page_path, 'r') as f:
+    with open(page_path) as f:
         content = f.read()
 
     # Check for import
@@ -182,7 +182,7 @@ def test_backtest_page_uses_loading_button():
     """Test that Backtest page imports and uses LoadingButton"""
     page_path = PROJECT_ROOT / 'frontend/app/backtest/page.tsx'
 
-    with open(page_path, 'r') as f:
+    with open(page_path) as f:
         content = f.read()
 
     # Check for import
@@ -206,7 +206,7 @@ def test_all_pages_have_initial_load_states():
     ]
 
     for page_path in pages:
-        with open(page_path, 'r') as f:
+        with open(page_path) as f:
             content = f.read()
 
         # Check for loading state management
@@ -220,7 +220,7 @@ def test_loading_components_accessibility():
     """Test that loading components have proper accessibility attributes"""
     component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
-    with open(component_path, 'r') as f:
+    with open(component_path) as f:
         content = f.read()
 
     # Check for ARIA attributes
@@ -238,7 +238,7 @@ def test_loading_states_properly_cleared():
     ]
 
     for page_path in pages:
-        with open(page_path, 'r') as f:
+        with open(page_path) as f:
             content = f.read()
 
         # Check for finally blocks that clear loading states
@@ -250,7 +250,7 @@ def test_loading_messages_are_descriptive():
     """Test that loading messages are descriptive and user-friendly"""
     component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
-    with open(component_path, 'r') as f:
+    with open(component_path) as f:
         content = f.read()
 
     # Check for message prop
@@ -262,7 +262,7 @@ def test_skeleton_loaders_have_proper_structure():
     """Test that skeleton loaders have proper HTML structure"""
     component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
-    with open(component_path, 'r') as f:
+    with open(component_path) as f:
         content = f.read()
 
     # Check for SkeletonCard structure
@@ -278,7 +278,7 @@ def test_loading_spinner_has_proper_animations():
     """Test that loading components use proper CSS animations"""
     component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
-    with open(component_path, 'r') as f:
+    with open(component_path) as f:
         content = f.read()
 
     # Check for Tailwind animation classes
@@ -291,7 +291,7 @@ def test_loading_overlay_has_proper_z_index():
     """Test that LoadingOverlay has proper z-index for overlay effect"""
     component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
-    with open(component_path, 'r') as f:
+    with open(component_path) as f:
         content = f.read()
 
     # Check for z-index in overlay
@@ -309,7 +309,7 @@ def test_all_async_operations_have_loading_states():
     }
 
     for page_path, async_operations in pages.items():
-        with open(page_path, 'r') as f:
+        with open(page_path) as f:
             content = f.read()
 
         # For each async operation, check that loading state is managed

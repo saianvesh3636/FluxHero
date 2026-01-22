@@ -8,13 +8,13 @@ Date: 2026-01-20
 """
 
 import pytest
+
 from backend.execution.position_sizer import (
     AccountState,
     PositionSize,
-    PositionSizeResult,
     PositionSizer,
+    PositionSizeResult,
 )
-
 
 # ============================================================================
 # Test Fixtures

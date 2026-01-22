@@ -8,15 +8,17 @@ Tests cover:
 """
 
 import time
+
 import numpy as np
 import pytest
+
 from backend.computation.indicators import (
+    calculate_atr,
+    calculate_bollinger_bands,
     calculate_ema,
     calculate_rsi,
-    calculate_true_range,
-    calculate_atr,
     calculate_sma,
-    calculate_bollinger_bands,
+    calculate_true_range,
 )
 
 

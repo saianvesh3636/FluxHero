@@ -9,22 +9,27 @@ Tests cover:
 Reference: FLUXHERO_REQUIREMENTS.md Feature 9
 """
 
-import pytest
 import numpy as np
-from backend.backtesting.engine import (
-    BacktestEngine, BacktestConfig, Order, OrderSide, OrderType
-)
+import pytest
+
+from backend.backtesting.engine import BacktestConfig, BacktestEngine, Order, OrderSide, OrderType
 from backend.backtesting.fills import (
-    get_next_bar_fill_price, simulate_intrabar_stop_execution,
-    simulate_intrabar_target_execution, check_stop_and_target,
-    validate_no_lookahead
+    check_stop_and_target,
+    get_next_bar_fill_price,
+    simulate_intrabar_stop_execution,
+    simulate_intrabar_target_execution,
+    validate_no_lookahead,
 )
 from backend.backtesting.metrics import (
-    calculate_returns, calculate_sharpe_ratio, calculate_max_drawdown,
-    calculate_win_rate, calculate_avg_win_loss_ratio, calculate_total_return,
-    calculate_annualized_return, PerformanceMetrics
+    PerformanceMetrics,
+    calculate_annualized_return,
+    calculate_avg_win_loss_ratio,
+    calculate_max_drawdown,
+    calculate_returns,
+    calculate_sharpe_ratio,
+    calculate_total_return,
+    calculate_win_rate,
 )
-
 
 # ============================================================================
 # Tests for fills.py - Next-Bar Fill Logic

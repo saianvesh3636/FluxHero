@@ -19,25 +19,20 @@ Success criteria:
 - Database size after 1 year: <100 MB
 """
 
-import pytest
-import pytest_asyncio
 import asyncio
-import tempfile
 import os
+import sys
+import tempfile
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import sys
+import pytest
+import pytest_asyncio
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / ""))
 
-from backend.storage.sqlite_store import (
-    SQLiteStore,
-    Trade,
-    Position,
-    PositionSide,
-    TradeStatus
-)
+from backend.storage.sqlite_store import Position, PositionSide, SQLiteStore, Trade, TradeStatus
 
 
 @pytest_asyncio.fixture
@@ -985,8 +980,8 @@ async def test_write_worker_logs_sqlite_errors(temp_db, caplog):
     Verifies that errors in the write worker are logged with proper
     error messages for debugging.
     """
-    import sqlite3
     import logging
+    import sqlite3
 
     # Set logging level to capture error logs
     caplog.set_level(logging.ERROR, logger='backend.storage.sqlite_store')

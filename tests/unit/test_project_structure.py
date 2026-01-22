@@ -7,7 +7,6 @@ Tests that all required directories and __init__.py files exist.
 import os
 from pathlib import Path
 
-
 # Get project root directory (3 levels up from this test file)
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 

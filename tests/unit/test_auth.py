@@ -18,11 +18,11 @@ import os
 from unittest.mock import patch
 
 from backend.api.auth import (
+    DEFAULT_SECRET,
+    extract_token_from_header,
     get_auth_secret,
     validate_token,
-    extract_token_from_header,
     validate_websocket_auth,
-    DEFAULT_SECRET,
 )
 
 
@@ -49,7 +49,7 @@ class TestAuthSecretConfiguration:
         project_root = test_dir.parent.parent
         env_example_path = project_root / "" / "backend" / ".env.example"
 
-        with open(env_example_path, 'r') as f:
+        with open(env_example_path) as f:
             content = f.read()
 
         assert "FLUXHERO_AUTH_SECRET" in content, ".env.example must document FLUXHERO_AUTH_SECRET"

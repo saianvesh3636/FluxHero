@@ -23,12 +23,13 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-import numpy as np  # noqa: E402
 from datetime import datetime, timedelta  # noqa: E402
-from typing import List, Optional  # noqa: E402
+
+import numpy as np  # noqa: E402
+
 from backend.backtesting.engine import (  # noqa: E402
-    BacktestEngine,
     BacktestConfig,
+    BacktestEngine,
     Order,
     OrderSide,
     OrderType,
@@ -36,24 +37,24 @@ from backend.backtesting.engine import (  # noqa: E402
     PositionSide,
 )
 from backend.backtesting.metrics import PerformanceMetrics  # noqa: E402
+from backend.computation.adaptive_ema import calculate_kama_with_regime_adjustment  # noqa: E402
 from backend.computation.indicators import (  # noqa: E402
-    calculate_rsi,
     calculate_atr,
     calculate_bollinger_bands,
-)
-from backend.computation.adaptive_ema import calculate_kama_with_regime_adjustment  # noqa: E402
-from backend.strategy.regime_detector import (  # noqa: E402
-    detect_regime,
-    REGIME_STRONG_TREND,
-    REGIME_MEAN_REVERSION,
+    calculate_rsi,
 )
 from backend.strategy.dual_mode import (  # noqa: E402
-    generate_trend_following_signals,
-    generate_mean_reversion_signals,
-    calculate_position_size,
-    SIGNAL_LONG,
     SIGNAL_EXIT_LONG,
+    SIGNAL_LONG,
     SIGNAL_NONE,
+    calculate_position_size,
+    generate_mean_reversion_signals,
+    generate_trend_following_signals,
+)
+from backend.strategy.regime_detector import (  # noqa: E402
+    REGIME_MEAN_REVERSION,
+    REGIME_STRONG_TREND,
+    detect_regime,
 )
 
 
@@ -201,8 +202,8 @@ class DualModeStrategy:
         self,
         bars: np.ndarray,
         current_index: int,
-        position: Optional[Position]
-    ) -> List[Order]:
+        position: Position | None
+    ) -> list[Order]:
         """
         Generate orders based on current bar and position.
 

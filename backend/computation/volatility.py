@@ -18,7 +18,6 @@ Performance targets: <200ms for 10,000 candles
 import numpy as np
 from numba import njit
 
-
 # Volatility states (constants for regime classification)
 VOL_STATE_LOW = 0
 VOL_STATE_NORMAL = 1

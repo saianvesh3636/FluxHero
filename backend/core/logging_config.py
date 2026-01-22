@@ -16,12 +16,12 @@ Usage:
     logger.info("Message", extra={"symbol": "AAPL", "price": 150.0})
 """
 
+import json
 import logging
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional, Dict, Any
-import json
-from datetime import datetime, timezone
+from typing import Any
 
 
 class StructuredFormatter(logging.Formatter):
@@ -42,8 +42,8 @@ class StructuredFormatter(logging.Formatter):
         Returns:
             JSON-formatted log string
         """
-        log_data: Dict[str, Any] = {
-            "timestamp": datetime.fromtimestamp(record.created, timezone.utc).isoformat(),
+        log_data: dict[str, Any] = {
+            "timestamp": datetime.fromtimestamp(record.created, UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -112,7 +112,7 @@ class HumanReadableFormatter(logging.Formatter):
             Formatted log string
         """
         # Base format: timestamp [LEVEL] logger - message
-        timestamp = datetime.fromtimestamp(record.created, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = datetime.fromtimestamp(record.created, UTC).strftime("%Y-%m-%d %H:%M:%S")
         level = record.levelname
 
         if self.use_colors:
@@ -148,8 +148,8 @@ class HumanReadableFormatter(logging.Formatter):
 
 def setup_logging(
     log_level: str = "INFO",
-    log_file: Optional[str] = None,
-    log_dir: Optional[str] = None,
+    log_file: str | None = None,
+    log_dir: str | None = None,
     json_format: bool = False,
     console_output: bool = True,
     max_bytes: int = 10 * 1024 * 1024,  # 10MB

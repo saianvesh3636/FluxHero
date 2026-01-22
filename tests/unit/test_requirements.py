@@ -22,7 +22,7 @@ def test_requirements_contains_core_dependencies():
     """Test that requirements.txt contains all required core dependencies."""
     requirements_path = Path("requirements.txt")
 
-    with open(requirements_path, "r") as f:
+    with open(requirements_path) as f:
         content = f.read()
 
     # Required core dependencies from the task
@@ -44,7 +44,7 @@ def test_requirements_contains_testing_dependencies():
     """Test that requirements.txt contains testing dependencies."""
     requirements_path = Path("requirements.txt")
 
-    with open(requirements_path, "r") as f:
+    with open(requirements_path) as f:
         content = f.read()
 
     # Testing dependencies
@@ -60,7 +60,7 @@ def test_requirements_valid_format():
     """Test that requirements.txt has valid format (no empty package names)."""
     requirements_path = Path("requirements.txt")
 
-    with open(requirements_path, "r") as f:
+    with open(requirements_path) as f:
         lines = f.readlines()
 
     for line in lines:
@@ -81,7 +81,7 @@ def test_requirements_contains_version_specs():
     """Test that core dependencies have version specifications."""
     requirements_path = Path("requirements.txt")
 
-    with open(requirements_path, "r") as f:
+    with open(requirements_path) as f:
         content = f.read()
 
     # Core dependencies that should have version specs
@@ -111,7 +111,7 @@ def test_sqlite3_note_present():
     """Test that requirements.txt mentions sqlite3 is in standard library."""
     requirements_path = Path("requirements.txt")
 
-    with open(requirements_path, "r") as f:
+    with open(requirements_path) as f:
         content = f.read()
 
     # Should mention sqlite3 in comments

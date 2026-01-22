@@ -36,8 +36,8 @@ Date: 2026-01-21
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
 from enum import IntEnum
+from typing import Any
 
 
 class OrderSide(IntEnum):
@@ -75,12 +75,12 @@ class ScheduledOrder:
     side: OrderSide
     quantity: float
     order_type: OrderType
-    limit_price: Optional[float] = None
-    stop_price: Optional[float] = None
-    scheduled_time: Optional[datetime] = None
-    signal_check_time: Optional[datetime] = None
+    limit_price: float | None = None
+    stop_price: float | None = None
+    scheduled_time: datetime | None = None
+    signal_check_time: datetime | None = None
     signal_reason: str = ""
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class HourlyCloseOptimizer:
@@ -136,8 +136,8 @@ class HourlyCloseOptimizer:
         self.order_submit_minute = order_submit_minute
         self.max_history_size = max_history_size
 
-        self.scheduled_orders: List[ScheduledOrder] = []
-        self.submitted_orders_history: List[ScheduledOrder] = []
+        self.scheduled_orders: list[ScheduledOrder] = []
+        self.submitted_orders_history: list[ScheduledOrder] = []
 
     def is_signal_check_time(self, current_time: datetime) -> bool:
         """
@@ -250,7 +250,7 @@ class HourlyCloseOptimizer:
         self,
         current_time: datetime,
         window_seconds: int = 60
-    ) -> List[ScheduledOrder]:
+    ) -> list[ScheduledOrder]:
         """
         Get orders scheduled for submission at the current time.
 

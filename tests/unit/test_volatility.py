@@ -11,31 +11,31 @@ Tests cover:
 - Performance benchmarks
 """
 
-import time
-import numpy as np
-import pytest
+import os
 
 # Import volatility functions
 import sys
-import os
+import time
+
+import numpy as np
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 
+from backend.computation.indicators import calculate_atr
 from backend.computation.volatility import (
-    calculate_atr_ma,
-    classify_volatility_state,
-    adjust_period_for_volatility,
-    detect_volatility_spike,
-    calculate_volatility_alpha,
-    calculate_adaptive_ema_with_volatility,
-    get_stop_loss_multiplier,
-    get_position_size_multiplier,
+    VOL_STATE_HIGH,
     VOL_STATE_LOW,
     VOL_STATE_NORMAL,
-    VOL_STATE_HIGH,
+    adjust_period_for_volatility,
+    calculate_adaptive_ema_with_volatility,
+    calculate_atr_ma,
+    calculate_volatility_alpha,
+    classify_volatility_state,
+    detect_volatility_spike,
+    get_position_size_multiplier,
+    get_stop_loss_multiplier,
 )
-
-from backend.computation.indicators import calculate_atr
-
 
 # ========================
 # ATR Moving Average Tests

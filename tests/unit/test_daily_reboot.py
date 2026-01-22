@@ -13,11 +13,11 @@ Tests cover:
 
 import json
 import os
+import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-import sys
 
 import numpy as np
 import pytest
@@ -25,13 +25,12 @@ import pytest
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / ""))
 
+from backend.data.fetcher import Candle
 from backend.maintenance.daily_reboot import (
-    RebootConfig,
     DailyRebootOrchestrator,
+    RebootConfig,
 )
 from backend.storage.parquet_store import CandleData
-from backend.data.fetcher import Candle
-
 
 # ============================================================================
 # Configuration Tests
@@ -226,7 +225,7 @@ async def test_fetch_candles_cache_hit():
             symbol="SPY",
             timeframe="1h",
             timestamp=np.array(
-                [datetime.now(timezone.utc) for _ in range(500)], dtype="datetime64[ns]"
+                [datetime.now(UTC) for _ in range(500)], dtype="datetime64[ns]"
             ),
             open=np.random.uniform(400, 410, 500),
             high=np.random.uniform(410, 420, 500),
@@ -268,7 +267,7 @@ async def test_fetch_candles_cache_miss():
             Candle(
                 symbol="SPY",
                 timeframe="1h",
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 open=400.0 + i,
                 high=410.0 + i,
                 low=390.0 + i,
@@ -513,7 +512,7 @@ async def test_run_full_reboot_success():
             Candle(
                 symbol="SPY",
                 timeframe="1h",
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 open=400.0,
                 high=410.0,
                 low=390.0,
@@ -596,7 +595,7 @@ async def test_reboot_performance_single_symbol():
             Candle(
                 symbol="SPY",
                 timeframe="1h",
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 open=400.0,
                 high=410.0,
                 low=390.0,

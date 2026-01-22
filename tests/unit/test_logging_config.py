@@ -9,15 +9,15 @@ import json
 import logging
 import tempfile
 from pathlib import Path
-from typing import List
+
 import pytest
 
 from backend.core.logging_config import (
-    setup_logging,
+    HumanReadableFormatter,
+    StructuredFormatter,
     get_logger,
     log_with_context,
-    StructuredFormatter,
-    HumanReadableFormatter,
+    setup_logging,
 )
 
 
@@ -26,7 +26,7 @@ class LogCapture(logging.Handler):
 
     def __init__(self):
         super().__init__()
-        self.records: List[logging.LogRecord] = []
+        self.records: list[logging.LogRecord] = []
 
     def emit(self, record: logging.LogRecord):
         self.records.append(record)

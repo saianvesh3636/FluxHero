@@ -12,12 +12,12 @@ Requirements:
 """
 
 import asyncio
+import logging
 import time
-from typing import List, Dict, Optional
+
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.status import HTTP_429_TOO_MANY_REQUESTS
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class RateLimiter:
         self.window_seconds = window_seconds
 
         # Track requests per client IP: {ip: [timestamp1, timestamp2, ...]}
-        self.requests: Dict[str, List[float]] = {}
+        self.requests: dict[str, list[float]] = {}
         self._lock = asyncio.Lock()
 
     async def is_allowed(self, client_id: str) -> bool:
@@ -117,7 +117,7 @@ class RateLimiter:
             wait_time = int(self.window_seconds - (now - oldest) + 1)
             return max(0, wait_time)
 
-    def reset(self, client_id: Optional[str] = None) -> None:
+    def reset(self, client_id: str | None = None) -> None:
         """
         Reset rate limiter for specific client or all clients.
 
@@ -157,7 +157,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         app,
         max_requests: int = 100,
         window_seconds: int = 60,
-        exclude_paths: Optional[List[str]] = None,
+        exclude_paths: list[str] | None = None,
     ):
         """
         Initialize rate limiting middleware.

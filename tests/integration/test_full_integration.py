@@ -24,22 +24,22 @@ import pytest
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+from backend.computation.adaptive_ema import calculate_kama_with_regime_adjustment  # noqa: E402
 from backend.computation.indicators import (  # noqa: E402
     calculate_atr,
     calculate_bollinger_bands,
     calculate_ema,
     calculate_rsi,
 )
-from backend.computation.adaptive_ema import calculate_kama_with_regime_adjustment  # noqa: E402
 from backend.computation.volatility import calculate_atr_ma  # noqa: E402
-from backend.strategy.regime_detector import detect_regime  # noqa: E402
+from backend.storage.candle_buffer import CandleBuffer  # noqa: E402
+from backend.storage.parquet_store import CandleData, ParquetStore  # noqa: E402
 from backend.strategy.dual_mode import (  # noqa: E402
     DualModeStrategy,
-    generate_trend_following_signals,
     generate_mean_reversion_signals,
+    generate_trend_following_signals,
 )
-from backend.storage.candle_buffer import CandleBuffer  # noqa: E402
-from backend.storage.parquet_store import ParquetStore, CandleData  # noqa: E402
+from backend.strategy.regime_detector import detect_regime  # noqa: E402
 
 
 def generate_synthetic_market_data(num_candles: int = 500, regime: str = "trending"):

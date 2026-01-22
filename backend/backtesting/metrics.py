@@ -16,10 +16,11 @@ Reference:
 - algorithmic-trading-guide.md → Key Metrics to Track
 """
 
-from typing import Dict, Any
+from typing import Any
+
 import numpy as np
-from numpy.typing import NDArray
 from numba import njit
+from numpy.typing import NDArray
 
 
 @njit(cache=True)
@@ -375,7 +376,7 @@ class PerformanceMetrics:
         initial_capital: float,
         risk_free_rate: float = 0.04,
         periods_per_year: int = 252
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Calculate all performance metrics.
 
@@ -461,7 +462,7 @@ class PerformanceMetrics:
         }
 
     @staticmethod
-    def format_metrics_report(metrics: Dict[str, Any]) -> str:
+    def format_metrics_report(metrics: dict[str, Any]) -> str:
         """
         Format metrics as human-readable report.
 
@@ -505,7 +506,7 @@ class PerformanceMetrics:
         return report
 
     @staticmethod
-    def check_success_criteria(metrics: Dict[str, Any]) -> Dict[str, bool]:
+    def check_success_criteria(metrics: dict[str, Any]) -> dict[str, bool]:
         """
         Check if metrics meet success criteria from FLUXHERO_REQUIREMENTS.md.
 

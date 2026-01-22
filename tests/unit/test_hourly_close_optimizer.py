@@ -8,13 +8,15 @@ Author: FluxHero Team
 Date: 2026-01-21
 """
 
-import pytest
 from datetime import datetime
+
+import pytest
+
 from backend.execution.hourly_close_optimizer import (
     HourlyCloseOptimizer,
-    ScheduledOrder,
     OrderSide,
     OrderType,
+    ScheduledOrder,
 )
 
 

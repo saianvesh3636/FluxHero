@@ -13,7 +13,7 @@ Reference:
 - FLUXHERO_REQUIREMENTS.md Feature 9.1: Next-Bar Fill Logic
 """
 
-from typing import Optional, Tuple
+
 import numpy as np
 from numba import njit
 
@@ -23,7 +23,7 @@ def get_next_bar_fill_price(
     signal_bar_index: int,
     open_prices: np.ndarray,
     delay_bars: int = 1
-) -> Tuple[float, int]:
+) -> tuple[float, int]:
     """
     Get fill price at next bar's open.
 
@@ -76,7 +76,7 @@ def simulate_intrabar_stop_execution(
     close: float,
     stop_price: float,
     is_long: bool
-) -> Tuple[bool, float]:
+) -> tuple[bool, float]:
     """
     Simulate stop loss execution within a bar.
 
@@ -133,7 +133,7 @@ def simulate_intrabar_target_execution(
     close: float,
     target_price: float,
     is_long: bool
-) -> Tuple[bool, float]:
+) -> tuple[bool, float]:
     """
     Simulate take profit execution within a bar.
 
@@ -188,10 +188,10 @@ def check_stop_and_target(
     high: float,
     low: float,
     close: float,
-    stop_price: Optional[float],
-    target_price: Optional[float],
+    stop_price: float | None,
+    target_price: float | None,
     is_long: bool
-) -> Tuple[bool, float, str]:
+) -> tuple[bool, float, str]:
     """
     Check both stop loss and take profit in order of execution.
 

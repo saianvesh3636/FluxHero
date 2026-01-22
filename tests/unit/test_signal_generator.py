@@ -11,15 +11,16 @@ Tests verify:
 """
 
 import time
+
 import numpy as np
 
 from backend.strategy.signal_generator import (
-    SignalGenerator,
-    SignalExplanation,
-    SignalType,
     RegimeType,
-    VolatilityState,
+    SignalExplanation,
+    SignalGenerator,
+    SignalType,
     StrategyMode,
+    VolatilityState,
 )
 
 

@@ -11,12 +11,14 @@ Requirements Coverage:
 """
 
 import time
+
 import numpy as np
 import pytest
-from backend.computation.indicators import calculate_ema, calculate_rsi, calculate_atr
+
 from backend.computation.adaptive_ema import calculate_kama
+from backend.computation.indicators import calculate_atr, calculate_ema, calculate_rsi
 from backend.computation.volatility import classify_volatility_state
-from backend.strategy.regime_detector import detect_regime, calculate_adx
+from backend.strategy.regime_detector import calculate_adx, detect_regime
 
 
 class TestPerformanceBenchmark:

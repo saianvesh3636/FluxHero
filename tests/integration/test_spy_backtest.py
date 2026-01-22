@@ -8,6 +8,7 @@ thresholds.
 
 import sys
 from pathlib import Path
+
 import numpy as np
 
 # Add project root to path
@@ -15,12 +16,12 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import the backtest script's main function and classes
-from scripts.run_spy_backtest import (  # noqa: E402
-    generate_synthetic_spy_data,
-    DualModeStrategy,
-)
-from backend.backtesting.engine import BacktestEngine, BacktestConfig  # noqa: E402
+from backend.backtesting.engine import BacktestConfig, BacktestEngine  # noqa: E402
 from backend.backtesting.metrics import PerformanceMetrics  # noqa: E402
+from scripts.run_spy_backtest import (  # noqa: E402
+    DualModeStrategy,
+    generate_synthetic_spy_data,
+)
 
 
 def test_spy_backtest_completes_successfully():

@@ -11,19 +11,20 @@ Verifies:
 - Edge cases
 """
 
-import pytest
 import asyncio
-import time
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-from pathlib import Path
 
 # Add backend to path
 import sys
+import time
+from pathlib import Path
+
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from backend.api.rate_limit import RateLimiter, RateLimitMiddleware
-
 
 # ============================================================================
 # RateLimiter Core Tests

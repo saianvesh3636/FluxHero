@@ -8,19 +8,17 @@ Feature 10: Order Execution Engine (R10.2.1 - R10.2.3)
 """
 
 import asyncio
+import logging
 import time
 from dataclasses import dataclass, field
-from typing import Dict, Optional, List
-import logging
 
 from .broker_interface import (
     BrokerInterface,
     Order,
-    OrderStatus,
     OrderSide,
+    OrderStatus,
     OrderType,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +100,7 @@ class OrderManager:
     def __init__(
         self,
         broker: BrokerInterface,
-        config: Optional[ChaseConfig] = None,
+        config: ChaseConfig | None = None,
         get_mid_price_func=None,
     ):
         """
@@ -117,8 +115,8 @@ class OrderManager:
         self.broker = broker
         self.config = config or ChaseConfig()
         self.get_mid_price_func = get_mid_price_func
-        self.managed_orders: Dict[str, ManagedOrder] = {}
-        self.monitoring_task: Optional[asyncio.Task] = None
+        self.managed_orders: dict[str, ManagedOrder] = {}
+        self.monitoring_task: asyncio.Task | None = None
         self.is_running = False
 
     async def start(self):
@@ -159,8 +157,8 @@ class OrderManager:
         qty: int,
         side: OrderSide,
         order_type: OrderType,
-        limit_price: Optional[float] = None,
-        stop_price: Optional[float] = None,
+        limit_price: float | None = None,
+        stop_price: float | None = None,
     ) -> Order:
         """
         Place an order and add it to monitoring.
@@ -330,7 +328,7 @@ class OrderManager:
             logger.error(f"Failed to rechase order {order.order_id}: {e}")
             managed_order.is_abandoned = True
 
-    def get_managed_order(self, order_id: str) -> Optional[ManagedOrder]:
+    def get_managed_order(self, order_id: str) -> ManagedOrder | None:
         """
         Get a managed order by ID.
 
@@ -342,7 +340,7 @@ class OrderManager:
         """
         return self.managed_orders.get(order_id)
 
-    def get_all_managed_orders(self) -> List[ManagedOrder]:
+    def get_all_managed_orders(self) -> list[ManagedOrder]:
         """
         Get all currently managed orders.
 

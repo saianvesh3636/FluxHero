@@ -21,22 +21,23 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-import pytest  # noqa: E402
-import numpy as np  # noqa: E402
 from datetime import datetime  # noqa: E402
-from backend.risk.kill_switch import (  # noqa: E402
-    DrawdownLevel,
-    TradingStatus,
-    Position,
-    DrawdownCircuitBreakerConfig,
-    EquityTracker,
-    DrawdownCircuitBreaker,
-    calculate_risk_metrics,
-    calculate_correlation_matrix,
-    generate_daily_risk_report,
-    format_daily_risk_report,
-)
 
+import numpy as np  # noqa: E402
+import pytest  # noqa: E402
+
+from backend.risk.kill_switch import (  # noqa: E402
+    DrawdownCircuitBreaker,
+    DrawdownCircuitBreakerConfig,
+    DrawdownLevel,
+    EquityTracker,
+    Position,
+    TradingStatus,
+    calculate_correlation_matrix,
+    calculate_risk_metrics,
+    format_daily_risk_report,
+    generate_daily_risk_report,
+)
 
 # ============================================================================
 # EquityTracker Tests (R11.3.1)

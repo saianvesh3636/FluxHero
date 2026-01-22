@@ -20,10 +20,10 @@ Author: FluxHero
 Date: 2026-01-20
 """
 
-import numpy as np
-from enum import IntEnum
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from enum import IntEnum
+
+import numpy as np
 from numba import njit
 
 from backend.core.config import Settings, get_settings
@@ -101,7 +101,7 @@ def calculate_position_size_from_risk(
     entry_price: float,
     stop_loss: float,
     strategy_type: StrategyType,
-    config: Optional[Settings] = None
+    config: Settings | None = None
 ) -> float:
     """
     Calculate position size based on risk percentage.
@@ -155,11 +155,11 @@ def calculate_position_size_from_risk(
 def validate_position_level_risk(
     account_balance: float,
     entry_price: float,
-    stop_loss: Optional[float],
+    stop_loss: float | None,
     shares: float,
     strategy_type: StrategyType,
-    config: Optional[Settings] = None
-) -> Tuple[RiskCheckResult, str]:
+    config: Settings | None = None
+) -> tuple[RiskCheckResult, str]:
     """
     Validate position-level risk constraints.
 
@@ -223,7 +223,7 @@ def calculate_atr_stop_loss(
     atr: float,
     side: int,  # 1 for long, -1 for short
     strategy_type: StrategyType,
-    config: Optional[Settings] = None
+    config: Settings | None = None
 ) -> float:
     """
     Calculate ATR-based stop loss price.
@@ -267,10 +267,10 @@ def calculate_atr_stop_loss(
 
 def validate_portfolio_level_risk(
     account_balance: float,
-    open_positions: List[Position],
+    open_positions: list[Position],
     new_position_value: float,
-    config: Optional[Settings] = None
-) -> Tuple[RiskCheckResult, str]:
+    config: Settings | None = None
+) -> tuple[RiskCheckResult, str]:
     """
     Validate portfolio-level risk constraints.
 
@@ -371,10 +371,10 @@ def calculate_correlation(prices1: np.ndarray, prices2: np.ndarray) -> float:
 
 def check_correlation_with_existing_positions(
     new_symbol_prices: np.ndarray,
-    open_positions: List[Position],
+    open_positions: list[Position],
     position_prices_map: dict,  # {symbol: np.ndarray of recent prices}
-    config: Optional[Settings] = None
-) -> Tuple[bool, float, Optional[str]]:
+    config: Settings | None = None
+) -> tuple[bool, float, str | None]:
     """
     Check if new position is highly correlated with existing positions.
 
@@ -441,14 +441,14 @@ def check_correlation_with_existing_positions(
 def validate_new_position(
     account_balance: float,
     entry_price: float,
-    stop_loss: Optional[float],
+    stop_loss: float | None,
     shares: float,
     strategy_type: StrategyType,
-    open_positions: List[Position],
-    new_symbol_prices: Optional[np.ndarray] = None,
-    position_prices_map: Optional[dict] = None,
-    config: Optional[Settings] = None
-) -> Tuple[RiskCheckResult, str, float]:
+    open_positions: list[Position],
+    new_symbol_prices: np.ndarray | None = None,
+    position_prices_map: dict | None = None,
+    config: Settings | None = None
+) -> tuple[RiskCheckResult, str, float]:
     """
     Comprehensive risk validation for new position.
 
@@ -527,8 +527,8 @@ def validate_new_position(
 # ============================================================================
 
 def calculate_total_portfolio_risk(
-    open_positions: List[Position]
-) -> Tuple[float, float]:
+    open_positions: list[Position]
+) -> tuple[float, float]:
     """
     Calculate total portfolio risk and exposure.
 
@@ -557,8 +557,8 @@ def calculate_total_portfolio_risk(
 
 
 def get_largest_position(
-    open_positions: List[Position]
-) -> Optional[Position]:
+    open_positions: list[Position]
+) -> Position | None:
     """
     Get the largest position by market value.
 
@@ -578,7 +578,7 @@ def get_largest_position(
 
 
 def calculate_worst_case_loss(
-    open_positions: List[Position]
+    open_positions: list[Position]
 ) -> float:
     """
     Calculate worst-case scenario if all stops are hit.

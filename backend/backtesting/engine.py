@@ -17,9 +17,11 @@ Reference:
 - algorithmic-trading-guide.md → Backtesting & Transaction Costs
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import List, Optional, Callable, Dict, Any
+from typing import Any
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -92,10 +94,10 @@ class Order:
     side: OrderSide
     shares: int
     order_type: OrderType = OrderType.MARKET
-    limit_price: Optional[float] = None
+    limit_price: float | None = None
     status: OrderStatus = OrderStatus.PENDING
-    fill_price: Optional[float] = None
-    fill_bar_index: Optional[int] = None
+    fill_price: float | None = None
+    fill_bar_index: int | None = None
     commission: float = 0.0
     slippage: float = 0.0
 
@@ -118,8 +120,8 @@ class Position:
     shares: int
     entry_price: float
     entry_bar_index: int
-    stop_loss: Optional[float] = None
-    take_profit: Optional[float] = None
+    stop_loss: float | None = None
+    take_profit: float | None = None
 
 
 @dataclass
@@ -147,10 +149,10 @@ class Trade:
     shares: int
     entry_price: float
     entry_bar_index: int
-    entry_time: Optional[float] = None
-    exit_price: Optional[float] = None
-    exit_bar_index: Optional[int] = None
-    exit_time: Optional[float] = None
+    entry_time: float | None = None
+    exit_price: float | None = None
+    exit_bar_index: int | None = None
+    exit_time: float | None = None
     pnl: float = 0.0
     pnl_pct: float = 0.0
     commission: float = 0.0
@@ -175,10 +177,10 @@ class BacktestState:
     current_bar: int = 0
     cash: float = 0.0
     equity: float = 0.0
-    position: Optional[Position] = None
-    pending_orders: List[Order] = field(default_factory=list)
-    trades: List[Trade] = field(default_factory=list)
-    equity_curve: List[float] = field(default_factory=list)
+    position: Position | None = None
+    pending_orders: list[Order] = field(default_factory=list)
+    trades: list[Trade] = field(default_factory=list)
+    equity_curve: list[float] = field(default_factory=list)
     peak_equity: float = 0.0
 
 
@@ -223,10 +225,10 @@ class BacktestEngine:
     def run(
         self,
         bars: NDArray,
-        strategy_func: Callable[[NDArray, int, Optional[Position]], List[Order]],
+        strategy_func: Callable[[NDArray, int, Position | None], list[Order]],
         symbol: str = 'SPY',
-        timestamps: Optional[NDArray] = None,
-        volumes: Optional[NDArray] = None
+        timestamps: NDArray | None = None,
+        volumes: NDArray | None = None
     ) -> BacktestState:
         """
         Run backtest on historical data.
@@ -321,7 +323,7 @@ class BacktestEngine:
         open_price: float,
         volume: float,
         avg_volume: float,
-        timestamps: Optional[NDArray],
+        timestamps: NDArray | None,
         bar_index: int
     ) -> None:
         """
@@ -503,7 +505,7 @@ class BacktestEngine:
         low: float,
         close: float,
         bar_index: int,
-        timestamps: Optional[NDArray]
+        timestamps: NDArray | None
     ) -> None:
         """
         Check if stop loss or take profit is hit.
@@ -605,7 +607,7 @@ class BacktestEngine:
             current_cost = position.shares * current_price
             return entry_proceeds - current_cost
 
-    def get_performance_summary(self, state: BacktestState) -> Dict[str, Any]:
+    def get_performance_summary(self, state: BacktestState) -> dict[str, Any]:
         """
         Get basic performance summary.
 

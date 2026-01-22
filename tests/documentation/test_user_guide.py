@@ -7,8 +7,8 @@ and references valid files/commands.
 
 import re
 from pathlib import Path
-import pytest
 
+import pytest
 
 # Path to project root and docs
 PROJECT_ROOT = Path(__file__).parent.parent.parent
@@ -25,7 +25,7 @@ class TestUserGuideExists:
 
     def test_user_guide_is_readable(self):
         """Verify USER_GUIDE.md is readable."""
-        with open(USER_GUIDE, "r", encoding="utf-8") as f:
+        with open(USER_GUIDE, encoding="utf-8") as f:
             content = f.read()
         assert len(content) > 1000, "USER_GUIDE.md appears to be empty or too short"
 
@@ -36,7 +36,7 @@ class TestUserGuideStructure:
     @pytest.fixture
     def guide_content(self):
         """Load user guide content."""
-        with open(USER_GUIDE, "r", encoding="utf-8") as f:
+        with open(USER_GUIDE, encoding="utf-8") as f:
             return f.read()
 
     def test_has_title(self, guide_content):
@@ -91,7 +91,7 @@ class TestReferencedFilesExist:
     @pytest.fixture
     def guide_content(self):
         """Load user guide content."""
-        with open(USER_GUIDE, "r", encoding="utf-8") as f:
+        with open(USER_GUIDE, encoding="utf-8") as f:
             return f.read()
 
     def test_requirements_txt_exists(self, guide_content):
@@ -129,7 +129,7 @@ class TestConfigurationGuidance:
     @pytest.fixture
     def guide_content(self):
         """Load user guide content."""
-        with open(USER_GUIDE, "r", encoding="utf-8") as f:
+        with open(USER_GUIDE, encoding="utf-8") as f:
             return f.read()
 
     def test_environment_variables_documented(self, guide_content):
@@ -168,7 +168,7 @@ class TestCommandsAreValid:
     @pytest.fixture
     def guide_content(self):
         """Load user guide content."""
-        with open(USER_GUIDE, "r", encoding="utf-8") as f:
+        with open(USER_GUIDE, encoding="utf-8") as f:
             return f.read()
 
     def test_pip_commands_are_valid(self, guide_content):
@@ -193,7 +193,7 @@ class TestTroubleshootingSection:
     @pytest.fixture
     def guide_content(self):
         """Load user guide content."""
-        with open(USER_GUIDE, "r", encoding="utf-8") as f:
+        with open(USER_GUIDE, encoding="utf-8") as f:
             return f.read()
 
     def test_common_issues_covered(self, guide_content):
@@ -221,7 +221,7 @@ class TestBestPractices:
     @pytest.fixture
     def guide_content(self):
         """Load user guide content."""
-        with open(USER_GUIDE, "r", encoding="utf-8") as f:
+        with open(USER_GUIDE, encoding="utf-8") as f:
             return f.read()
 
     def test_risk_management_guidance(self, guide_content):
@@ -251,7 +251,7 @@ class TestQuickReference:
     @pytest.fixture
     def guide_content(self):
         """Load user guide content."""
-        with open(USER_GUIDE, "r", encoding="utf-8") as f:
+        with open(USER_GUIDE, encoding="utf-8") as f:
             return f.read()
 
     def test_has_quick_reference(self, guide_content):
@@ -271,7 +271,7 @@ class TestDocumentationQuality:
     @pytest.fixture
     def guide_content(self):
         """Load user guide content."""
-        with open(USER_GUIDE, "r", encoding="utf-8") as f:
+        with open(USER_GUIDE, encoding="utf-8") as f:
             return f.read()
 
     def test_has_sufficient_length(self, guide_content):

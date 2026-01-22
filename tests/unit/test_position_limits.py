@@ -12,26 +12,26 @@ Author: FluxHero
 Date: 2026-01-20
 """
 
-import pytest
 import numpy as np
-from backend.risk.position_limits import (
-    calculate_position_size_from_risk,
-    validate_position_level_risk,
-    calculate_atr_stop_loss,
-    validate_portfolio_level_risk,
-    calculate_correlation,
-    check_correlation_with_existing_positions,
-    validate_new_position,
-    calculate_total_portfolio_risk,
-    get_largest_position,
-    calculate_worst_case_loss,
-    Position,
-    StrategyType,
-    RiskCheckResult,
-    PositionLimitsConfig,
-)
-from backend.core.config import Settings
+import pytest
 
+from backend.core.config import Settings
+from backend.risk.position_limits import (
+    Position,
+    PositionLimitsConfig,
+    RiskCheckResult,
+    StrategyType,
+    calculate_atr_stop_loss,
+    calculate_correlation,
+    calculate_position_size_from_risk,
+    calculate_total_portfolio_risk,
+    calculate_worst_case_loss,
+    check_correlation_with_existing_positions,
+    get_largest_position,
+    validate_new_position,
+    validate_portfolio_level_risk,
+    validate_position_level_risk,
+)
 
 # ============================================================================
 # Position-Level Risk Tests (R11.1)

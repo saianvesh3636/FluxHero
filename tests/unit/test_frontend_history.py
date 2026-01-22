@@ -12,8 +12,9 @@ Tests:
 - Edge cases (empty trades, pagination edge cases)
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 
 def test_history_page_exists():

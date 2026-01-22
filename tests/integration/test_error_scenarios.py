@@ -33,7 +33,6 @@ Requirements coverage:
 - All components handle edge cases gracefully
 """
 
-import asyncio
 import time
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -42,6 +41,13 @@ import numpy as np
 import pytest
 from websockets.exceptions import ConnectionClosed, WebSocketException
 
+from backend.computation.adaptive_ema import calculate_kama
+from backend.computation.indicators import (
+    calculate_atr,
+    calculate_ema,
+    calculate_rsi,
+)
+
 # Import backend modules
 from backend.data.fetcher import (
     AsyncAPIClient,
@@ -49,14 +55,7 @@ from backend.data.fetcher import (
     RateLimiter,
     WebSocketFeed,
 )
-from backend.computation.indicators import (
-    calculate_ema,
-    calculate_rsi,
-    calculate_atr,
-)
-from backend.computation.adaptive_ema import calculate_kama
 from backend.strategy.regime_detector import detect_regime
-
 
 # ============================================================================
 # API Failure Scenarios
@@ -279,7 +278,7 @@ class TestWebSocketDisconnects:
 
         # Mock WebSocket that never sends data
         mock_ws = AsyncMock()
-        mock_ws.recv = AsyncMock(side_effect=asyncio.TimeoutError())
+        mock_ws.recv = AsyncMock(side_effect=TimeoutError())
         feed._ws = mock_ws
         feed._connected = True
 
@@ -298,7 +297,7 @@ class TestWebSocketDisconnects:
         async def mock_connect_auth_fail(*args, **kwargs):
             mock_ws = AsyncMock()
             # Simulate auth failure by timing out
-            mock_ws.recv = AsyncMock(side_effect=asyncio.TimeoutError())
+            mock_ws.recv = AsyncMock(side_effect=TimeoutError())
             return mock_ws
 
         with patch("websockets.connect", side_effect=mock_connect_auth_fail):
@@ -560,7 +559,7 @@ class TestInvalidDataScenarios:
         mock_ws = AsyncMock()
         # Send non-JSON message
         mock_ws.recv = AsyncMock(
-            side_effect=["not valid json", asyncio.TimeoutError()]
+            side_effect=["not valid json", TimeoutError()]
         )
         feed._ws = mock_ws
         feed._connected = True

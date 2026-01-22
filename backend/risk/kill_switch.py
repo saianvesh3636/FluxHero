@@ -19,11 +19,11 @@ Author: FluxHero
 Date: 2026-01-20
 """
 
-import numpy as np
-from enum import IntEnum
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Tuple
 from datetime import datetime
+from enum import IntEnum
+
+import numpy as np
 
 
 class DrawdownLevel(IntEnum):
@@ -99,11 +99,11 @@ class RiskMetrics:
     # Risk metrics (R11.4.2)
     total_risk_deployed: float
     worst_case_loss: float
-    largest_position_symbol: Optional[str]
+    largest_position_symbol: str | None
     largest_position_value: float
 
     # Correlation (R11.4.1)
-    correlation_matrix: Optional[Dict[Tuple[str, str], float]] = None
+    correlation_matrix: dict[tuple[str, str], float] | None = None
 
 
 @dataclass
@@ -118,10 +118,10 @@ class DailyRiskReport:
     exposure_pct: float
     total_risk_deployed: float
     worst_case_loss: float
-    largest_position: Optional[str]
+    largest_position: str | None
     largest_position_value: float
     trading_status: TradingStatus
-    alerts: List[str]
+    alerts: list[str]
 
 
 # ============================================================================
@@ -145,9 +145,9 @@ class EquityTracker:
         """
         self.equity_peak = initial_equity
         self.current_equity = initial_equity
-        self.equity_history: List[Tuple[datetime, float]] = []
+        self.equity_history: list[tuple[datetime, float]] = []
 
-    def update_equity(self, new_equity: float, timestamp: Optional[datetime] = None) -> float:
+    def update_equity(self, new_equity: float, timestamp: datetime | None = None) -> float:
         """
         Update current equity and track peak.
 
@@ -228,7 +228,7 @@ class DrawdownCircuitBreaker:
     - R11.3.3: At 20% DD: close all, disable trading
     """
 
-    def __init__(self, config: Optional[DrawdownCircuitBreakerConfig] = None):
+    def __init__(self, config: DrawdownCircuitBreakerConfig | None = None):
         """
         Initialize circuit breaker.
 
@@ -241,7 +241,7 @@ class DrawdownCircuitBreaker:
         self.config = config
         self.trading_status = TradingStatus.ACTIVE
         self.manual_review_required = False
-        self.alerts: List[Tuple[datetime, str]] = []
+        self.alerts: list[tuple[datetime, str]] = []
 
     def check_drawdown_level(self, drawdown_pct: float) -> DrawdownLevel:
         """
@@ -268,8 +268,8 @@ class DrawdownCircuitBreaker:
     def update_trading_status(
         self,
         drawdown_pct: float,
-        timestamp: Optional[datetime] = None
-    ) -> Tuple[TradingStatus, List[str]]:
+        timestamp: datetime | None = None
+    ) -> tuple[TradingStatus, list[str]]:
         """
         Update trading status based on drawdown.
 
@@ -374,7 +374,7 @@ class DrawdownCircuitBreaker:
         else:
             return self.config.normal_stop_multiplier
 
-    def can_open_new_position(self) -> Tuple[bool, str]:
+    def can_open_new_position(self) -> tuple[bool, str]:
         """
         Check if new positions can be opened.
 
@@ -420,7 +420,7 @@ class DrawdownCircuitBreaker:
         self.manual_review_required = False
         self.trading_status = TradingStatus.ACTIVE
 
-    def get_recent_alerts(self, n: int = 10) -> List[Tuple[datetime, str]]:
+    def get_recent_alerts(self, n: int = 10) -> list[tuple[datetime, str]]:
         """
         Get recent alerts.
 
@@ -441,8 +441,8 @@ def calculate_risk_metrics(
     account_balance: float,
     equity_peak: float,
     current_equity: float,
-    open_positions: List[Position],
-    config: Optional[DrawdownCircuitBreakerConfig] = None
+    open_positions: list[Position],
+    config: DrawdownCircuitBreakerConfig | None = None
 ) -> RiskMetrics:
     """
     Calculate comprehensive risk metrics for monitoring.
@@ -514,8 +514,8 @@ def calculate_risk_metrics(
 
 
 def calculate_correlation_matrix(
-    position_prices_map: Dict[str, np.ndarray]
-) -> Dict[Tuple[str, str], float]:
+    position_prices_map: dict[str, np.ndarray]
+) -> dict[tuple[str, str], float]:
     """
     Calculate correlation matrix for all open positions.
 
@@ -572,9 +572,9 @@ def calculate_correlation_matrix(
 def generate_daily_risk_report(
     account_balance: float,
     equity_tracker: EquityTracker,
-    open_positions: List[Position],
+    open_positions: list[Position],
     circuit_breaker: DrawdownCircuitBreaker,
-    timestamp: Optional[datetime] = None
+    timestamp: datetime | None = None
 ) -> DailyRiskReport:
     """
     Generate comprehensive daily risk report.

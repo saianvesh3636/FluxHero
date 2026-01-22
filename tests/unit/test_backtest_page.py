@@ -12,8 +12,8 @@ This test file validates the backtest page implementation including:
 - Success criteria validation display
 """
 
-import unittest
 import os
+import unittest
 
 
 class TestBacktestPage(unittest.TestCase):
@@ -42,7 +42,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_backtest_page_is_client_component(self):
         """Test that the page uses 'use client' directive."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         self.assertIn(
@@ -53,7 +53,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_backtest_config_interface_defined(self):
         """Test that BacktestConfig interface is properly defined."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for BacktestConfig interface
@@ -75,7 +75,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_backtest_result_interface_defined(self):
         """Test that BacktestResult interface is properly defined."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for BacktestResult interface
@@ -97,7 +97,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_symbol_selector_present(self):
         """Test that symbol selector dropdown exists."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for symbol selector
@@ -115,7 +115,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_date_pickers_present(self):
         """Test that start and end date pickers exist."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for date inputs
@@ -127,7 +127,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_initial_capital_input_present(self):
         """Test that initial capital input exists."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         self.assertIn('Initial Capital', content)
@@ -136,7 +136,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_commission_slippage_inputs_present(self):
         """Test that commission and slippage inputs exist."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         self.assertIn('Commission', content)
@@ -146,7 +146,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_strategy_parameter_sliders_present(self):
         """Test that strategy parameter sliders exist."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for parameter labels
@@ -177,7 +177,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_risk_parameter_sliders_present(self):
         """Test that risk parameter sliders exist."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for risk parameters
@@ -188,7 +188,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_run_backtest_button_present(self):
         """Test that run backtest button exists."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         self.assertIn('Run Backtest', content)
@@ -197,7 +197,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_loading_spinner_present(self):
         """Test that loading spinner is implemented."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for loading state
@@ -207,7 +207,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_api_call_implementation(self):
         """Test that API call to backend is implemented."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for API call
@@ -218,7 +218,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_error_handling_present(self):
         """Test that error handling is implemented."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         self.assertIn('setError', content)
@@ -228,7 +228,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_results_modal_present(self):
         """Test that results modal is implemented."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for modal structure
@@ -242,7 +242,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_performance_metrics_display(self):
         """Test that performance metrics are displayed in results."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for metric displays
@@ -260,7 +260,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_success_criteria_validation_display(self):
         """Test that success criteria validation is displayed."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for success criteria section
@@ -286,7 +286,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_trade_log_table_present(self):
         """Test that trade log table is displayed."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for trade log section
@@ -308,7 +308,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_csv_export_functionality(self):
         """Test that CSV export functionality is implemented."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for export function
@@ -322,7 +322,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_color_coding_for_metrics(self):
         """Test that metrics have color coding (green/red for profit/loss)."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for color coding logic
@@ -332,7 +332,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_close_results_button_present(self):
         """Test that close button for results modal exists."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         self.assertIn('closeResults', content)
@@ -341,7 +341,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_default_config_values_set(self):
         """Test that default configuration values are set."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for useState with config
@@ -358,7 +358,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_responsive_design_classes(self):
         """Test that responsive design classes are used."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for responsive grid classes
@@ -372,7 +372,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_accessibility_labels(self):
         """Test that form inputs have proper labels."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for label tags
@@ -388,7 +388,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_focus_styles_present(self):
         """Test that focus styles are implemented for accessibility."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for focus styles
@@ -398,7 +398,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_modal_z_index_high(self):
         """Test that modal has high z-index for proper layering."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for z-index on modal
@@ -406,7 +406,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_modal_overflow_handling(self):
         """Test that modal has overflow handling for long results."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for overflow handling
@@ -415,7 +415,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_file_structure_valid_typescript(self):
         """Test that the file has valid TypeScript structure."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for TypeScript features
@@ -435,7 +435,7 @@ class TestBacktestPage(unittest.TestCase):
 
     def test_all_sections_present(self):
         """Test that all major sections are present."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         sections = [
@@ -474,7 +474,7 @@ class TestBacktestPageIntegration(unittest.TestCase):
 
     def test_config_change_handler_present(self):
         """Test that configuration change handler is implemented."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         self.assertIn('handleConfigChange', content)
@@ -482,7 +482,7 @@ class TestBacktestPageIntegration(unittest.TestCase):
 
     def test_run_backtest_function_present(self):
         """Test that runBacktest function is implemented."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for runBacktest function
@@ -492,7 +492,7 @@ class TestBacktestPageIntegration(unittest.TestCase):
 
     def test_state_management_complete(self):
         """Test that all necessary state variables are managed."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         states = ['config', 'isRunning', 'results', 'showResults', 'error']
@@ -506,7 +506,7 @@ class TestBacktestPageIntegration(unittest.TestCase):
 
     def test_min_max_values_set_on_sliders(self):
         """Test that sliders have min and max values."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for min/max attributes
@@ -515,7 +515,7 @@ class TestBacktestPageIntegration(unittest.TestCase):
 
     def test_step_values_set_where_needed(self):
         """Test that step values are set for decimal inputs."""
-        with open(self.backtest_page_path, 'r') as f:
+        with open(self.backtest_page_path) as f:
             content = f.read()
 
         # Check for step attributes

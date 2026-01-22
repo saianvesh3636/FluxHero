@@ -14,30 +14,29 @@ Reference: FLUXHERO_REQUIREMENTS.md Feature 5 - Regime Detection System
 Phase 17 - Task 4: Test regime detection accuracy
 """
 
+# Add parent directory to path for imports
+import sys
 import time
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-# Add parent directory to path for imports
-import sys
-from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from backend.strategy.regime_detector import (  # noqa: E402
-    detect_regime,
-    calculate_adx,
-    calculate_linear_regression,
-    REGIME_MEAN_REVERSION,
-    REGIME_NEUTRAL,
-    REGIME_STRONG_TREND,
-    VOL_LOW,
-    VOL_NORMAL,
-    VOL_HIGH,
-)
 
 from backend.computation.indicators import calculate_atr  # noqa: E402
 from backend.computation.volatility import calculate_atr_ma  # noqa: E402
-
+from backend.strategy.regime_detector import (  # noqa: E402
+    REGIME_MEAN_REVERSION,
+    REGIME_NEUTRAL,
+    REGIME_STRONG_TREND,
+    VOL_HIGH,
+    VOL_LOW,
+    VOL_NORMAL,
+    calculate_adx,
+    calculate_linear_regression,
+    detect_regime,
+)
 
 # ============================================================================
 # Historical Market Generators

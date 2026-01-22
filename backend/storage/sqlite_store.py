@@ -17,14 +17,14 @@ Performance targets:
 - Database size after 1 year: <100 MB
 """
 
-import sqlite3
 import asyncio
 import logging
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Optional, List, Dict, Any
+import sqlite3
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from enum import IntEnum
+from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -47,22 +47,22 @@ class TradeStatus(IntEnum):
 @dataclass
 class Trade:
     """Trade record data class"""
-    id: Optional[int] = None
+    id: int | None = None
     symbol: str = ""
     side: int = PositionSide.LONG  # 1 = LONG, -1 = SHORT
     entry_price: float = 0.0
     entry_time: str = ""  # ISO 8601 format
-    exit_price: Optional[float] = None
-    exit_time: Optional[str] = None
+    exit_price: float | None = None
+    exit_time: str | None = None
     shares: int = 0
     stop_loss: float = 0.0
-    take_profit: Optional[float] = None
-    realized_pnl: Optional[float] = None
+    take_profit: float | None = None
+    realized_pnl: float | None = None
     status: int = TradeStatus.OPEN
     strategy: str = ""  # "TREND" or "MEAN_REVERSION"
     regime: str = ""  # "STRONG_TREND", "MEAN_REVERSION", "NEUTRAL"
     signal_reason: str = ""  # Explanation for signal
-    signal_explanation: Optional[str] = None  # JSON signal explanation from SignalExplanation.to_dict()
+    signal_explanation: str | None = None  # JSON signal explanation from SignalExplanation.to_dict()
     created_at: str = ""
     updated_at: str = ""
 
@@ -70,7 +70,7 @@ class Trade:
 @dataclass
 class Position:
     """Current position data class"""
-    id: Optional[int] = None
+    id: int | None = None
     symbol: str = ""
     side: int = PositionSide.LONG
     shares: int = 0
@@ -78,7 +78,7 @@ class Position:
     current_price: float = 0.0
     unrealized_pnl: float = 0.0
     stop_loss: float = 0.0
-    take_profit: Optional[float] = None
+    take_profit: float | None = None
     entry_time: str = ""
     updated_at: str = ""
 
@@ -120,9 +120,9 @@ class SQLiteStore:
         """
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._connection: Optional[sqlite3.Connection] = None
+        self._connection: sqlite3.Connection | None = None
         self._write_queue: asyncio.Queue = asyncio.Queue()
-        self._write_task: Optional[asyncio.Task] = None
+        self._write_task: asyncio.Task | None = None
 
     def _get_connection(self) -> sqlite3.Connection:
         """Get or create database connection."""
@@ -380,7 +380,7 @@ class SQLiteStore:
         """
         await self._async_write(self._update_trade_sync, trade_id, kwargs)
 
-    async def get_trade(self, trade_id: int) -> Optional[Trade]:
+    async def get_trade(self, trade_id: int) -> Trade | None:
         """
         Get trade by ID.
 
@@ -403,7 +403,7 @@ class SQLiteStore:
 
         return result
 
-    async def get_open_trades(self) -> List[Trade]:
+    async def get_open_trades(self) -> list[Trade]:
         """
         Get all open trades.
 
@@ -420,7 +420,7 @@ class SQLiteStore:
         logger.debug("Open trades fetched", extra={"count": len(trades)})
         return trades
 
-    async def get_recent_trades(self, limit: int = 50) -> List[Trade]:
+    async def get_recent_trades(self, limit: int = 50) -> list[Trade]:
         """
         Get recent trades (any status).
 
@@ -440,7 +440,7 @@ class SQLiteStore:
         logger.debug("Recent trades fetched", extra={"count": len(trades), "limit": limit})
         return trades
 
-    async def get_trades_by_date_range(self, start_date: str, end_date: str) -> List[Trade]:
+    async def get_trades_by_date_range(self, start_date: str, end_date: str) -> list[Trade]:
         """
         Get trades within date range.
 
@@ -548,7 +548,7 @@ class SQLiteStore:
         """
         await self._async_write(self._delete_position_sync, symbol)
 
-    async def get_position(self, symbol: str) -> Optional[Position]:
+    async def get_position(self, symbol: str) -> Position | None:
         """
         Get position by symbol.
 
@@ -571,7 +571,7 @@ class SQLiteStore:
 
         return result
 
-    async def get_open_positions(self) -> List[Position]:
+    async def get_open_positions(self) -> list[Position]:
         """
         Get all open positions.
 
@@ -618,7 +618,7 @@ class SQLiteStore:
         """
         await self._async_write(self._set_setting_sync, key, value, description)
 
-    async def get_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
+    async def get_setting(self, key: str, default: str | None = None) -> str | None:
         """
         Get system setting by key.
 
@@ -642,7 +642,7 @@ class SQLiteStore:
 
         return result
 
-    async def get_all_settings(self) -> Dict[str, str]:
+    async def get_all_settings(self) -> dict[str, str]:
         """
         Get all system settings.
 

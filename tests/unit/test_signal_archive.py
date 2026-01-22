@@ -12,9 +12,10 @@ Tests cover:
 - Edge cases
 """
 
-import pytest
 import json
 from datetime import datetime, timedelta
+
+import pytest
 
 
 # Mock Trade data for testing

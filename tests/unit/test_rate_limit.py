@@ -13,18 +13,19 @@ Requirements tested:
 """
 
 import asyncio
-import pytest
-import time
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
 # Add parent directory to path for imports
 import sys
+import time
 from pathlib import Path
+
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / ""))
 
 from backend.api.rate_limit import RateLimiter, RateLimitMiddleware
-
 
 # ============================================================================
 # RateLimiter Core Tests

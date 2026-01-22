@@ -19,15 +19,14 @@ import asyncio
 import json
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any
 
 from backend.core.config import get_settings
-from backend.data.fetcher import AsyncAPIClient, WebSocketFeed, DataPipeline
+from backend.data.fetcher import AsyncAPIClient, DataPipeline, WebSocketFeed
 from backend.storage.candle_buffer import CandleBuffer
 from backend.storage.parquet_store import ParquetStore
-
 
 # ============================================================================
 # Configuration
@@ -39,7 +38,7 @@ class RebootConfig:
 
     def __init__(
         self,
-        symbols: List[str],
+        symbols: list[str],
         timeframe: str | None = None,
         initial_candles: int | None = None,
         api_url: str | None = None,
@@ -143,10 +142,10 @@ class DailyRebootOrchestrator:
         self.config = config
         self.logger = self._setup_logging()
         self.parquet_store = ParquetStore(cache_dir=config.cache_dir)
-        self.candle_buffers: Dict[str, CandleBuffer] = {}
+        self.candle_buffers: dict[str, CandleBuffer] = {}
         self.rest_client: AsyncAPIClient | None = None
-        self.ws_feeds: Dict[str, WebSocketFeed] = {}
-        self.pipelines: Dict[str, DataPipeline] = {}
+        self.ws_feeds: dict[str, WebSocketFeed] = {}
+        self.pipelines: dict[str, DataPipeline] = {}
 
     def _setup_logging(self) -> logging.Logger:
         """
@@ -170,7 +169,7 @@ class DailyRebootOrchestrator:
         )
         return logging.getLogger("DailyReboot")
 
-    async def run(self) -> Dict[str, Any]:
+    async def run(self) -> dict[str, Any]:
         """
         Execute daily reboot sequence.
 
@@ -182,7 +181,7 @@ class DailyRebootOrchestrator:
         """
         self.logger.info("=" * 80)
         self.logger.info("FluxHero Daily Reboot - Starting")
-        self.logger.info(f"Timestamp: {datetime.now(timezone.utc).isoformat()}")
+        self.logger.info(f"Timestamp: {datetime.now(UTC).isoformat()}")
         self.logger.info(f"Symbols: {self.config.symbols}")
         self.logger.info(f"Timeframe: {self.config.timeframe}")
         self.logger.info("=" * 80)
@@ -297,8 +296,9 @@ class DailyRebootOrchestrator:
         self.logger.info(f"  Fetched {len(candles)} candles from API")
 
         # Save to cache
-        from backend.storage.parquet_store import CandleData
         import numpy as np
+
+        from backend.storage.parquet_store import CandleData
 
         cache_data = CandleData(
             symbol=symbol,

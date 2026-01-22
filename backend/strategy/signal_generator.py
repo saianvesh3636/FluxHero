@@ -16,7 +16,7 @@ Reference:
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional
+
 import numpy as np
 
 
@@ -113,9 +113,9 @@ class SignalExplanation:
     # Indicator values
     atr: float
     kama: float
-    rsi: Optional[float] = None
-    adx: Optional[float] = None
-    r_squared: Optional[float] = None
+    rsi: float | None = None
+    adx: float | None = None
+    r_squared: float | None = None
 
     # Risk parameters
     risk_amount: float = 0.0
@@ -304,9 +304,9 @@ class SignalGenerator:
         entry_trigger: str,
         risk_percent: float = 0.01,
         stop_loss: float = 0.0,
-        rsi: Optional[float] = None,
-        adx: Optional[float] = None,
-        r_squared: Optional[float] = None,
+        rsi: float | None = None,
+        adx: float | None = None,
+        r_squared: float | None = None,
         noise_filtered: bool = True,
         volume_validated: bool = True,
     ) -> SignalExplanation:
@@ -401,9 +401,9 @@ class SignalGenerator:
         entry_triggers: list,
         stop_losses: np.ndarray,
         risk_percent: float = 0.01,
-        rsi_values: Optional[np.ndarray] = None,
-        adx_values: Optional[np.ndarray] = None,
-        r_squared_values: Optional[np.ndarray] = None,
+        rsi_values: np.ndarray | None = None,
+        adx_values: np.ndarray | None = None,
+        r_squared_values: np.ndarray | None = None,
     ) -> list:
         """
         Generate explanations for a batch of signals.

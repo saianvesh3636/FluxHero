@@ -21,7 +21,6 @@ Reference:
 import numpy as np
 from numba import njit
 
-
 # Regime constants
 REGIME_MEAN_REVERSION = 0
 REGIME_NEUTRAL = 1

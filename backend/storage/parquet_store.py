@@ -15,11 +15,10 @@ Performance Targets:
 - Write 500 candles to Parquet: <100ms
 """
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
-import logging
 
 import numpy as np
 import pandas as pd
@@ -55,9 +54,9 @@ class CandleData:
     low: np.ndarray
     close: np.ndarray
     volume: np.ndarray
-    ema: Optional[np.ndarray] = None
-    atr: Optional[np.ndarray] = None
-    rsi: Optional[np.ndarray] = None
+    ema: np.ndarray | None = None
+    atr: np.ndarray | None = None
+    rsi: np.ndarray | None = None
 
 
 class ParquetStore:
@@ -203,7 +202,7 @@ class ParquetStore:
             )
             raise
 
-    def load_candles(self, symbol: str, timeframe: str) -> Optional[CandleData]:
+    def load_candles(self, symbol: str, timeframe: str) -> CandleData | None:
         """
         Load candle data from Parquet cache.
 
@@ -345,7 +344,7 @@ class ParquetStore:
 
         return is_fresh
 
-    def get_cache_age(self, symbol: str, timeframe: str) -> Optional[timedelta]:
+    def get_cache_age(self, symbol: str, timeframe: str) -> timedelta | None:
         """
         Get the age of cached data.
 
@@ -444,7 +443,7 @@ class ParquetStore:
         )
         return count
 
-    def get_cache_size(self, symbol: str, timeframe: str) -> Optional[int]:
+    def get_cache_size(self, symbol: str, timeframe: str) -> int | None:
         """
         Get size of cached file in bytes.
 
@@ -479,7 +478,7 @@ class ParquetStore:
                     symbols.append(tuple(parts))
         return symbols
 
-    def get_cache_metadata(self, symbol: str, timeframe: str) -> Optional[dict]:
+    def get_cache_metadata(self, symbol: str, timeframe: str) -> dict | None:
         """
         Get metadata about cached file.
 
