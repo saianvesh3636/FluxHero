@@ -29,7 +29,6 @@ import asyncio
 
 # Add backend to path
 import sys
-import tempfile
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -53,13 +52,12 @@ from backend.storage.sqlite_store import (
 # ============================================================================
 
 @pytest.fixture
-def test_db():
+def test_db(tmp_path):
     """Create a temporary test database"""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = Path(tmpdir) / "test.db"
-        store = SQLiteStore(db_path=str(db_path))
-        asyncio.run(store.initialize())
-        yield store
+    db_path = tmp_path / "test.db"
+    store = SQLiteStore(db_path=str(db_path))
+    asyncio.run(store.initialize())
+    yield store
 
 
 @pytest.fixture

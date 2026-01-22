@@ -14,7 +14,6 @@ Tests cover:
 import json
 import os
 import sys
-import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -75,7 +74,7 @@ def test_reboot_config_custom_values():
     assert config.log_file == "custom/log.log"
 
 
-def test_reboot_config_from_file():
+def test_reboot_config_from_file(tmp_path):
     """Test loading RebootConfig from JSON file."""
     config_data = {
         "symbols": ["SPY", "QQQ", "IWM"],
@@ -89,20 +88,16 @@ def test_reboot_config_from_file():
         "log_file": "logs/daily_reboot.log",
     }
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-        json.dump(config_data, f)
-        config_path = f.name
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps(config_data))
 
-    try:
-        config = RebootConfig.from_file(config_path)
+    config = RebootConfig.from_file(str(config_file))
 
-        assert config.symbols == ["SPY", "QQQ", "IWM"]
-        assert config.timeframe == "1h"
-        assert config.initial_candles == 500
-        assert config.api_key == "file_key"
-        assert config.api_secret == "file_secret"
-    finally:
-        Path(config_path).unlink()
+    assert config.symbols == ["SPY", "QQQ", "IWM"]
+    assert config.timeframe == "1h"
+    assert config.initial_candles == 500
+    assert config.api_key == "file_key"
+    assert config.api_secret == "file_secret"
 
 
 def test_reboot_config_from_args():
@@ -195,15 +190,14 @@ def test_orchestrator_initialization():
     assert orchestrator.pipelines == {}
 
 
-def test_orchestrator_logging_setup():
+def test_orchestrator_logging_setup(tmp_path):
     """Test logging setup creates log directory."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        log_file = Path(tmpdir) / "logs" / "test_reboot.log"
-        config = RebootConfig(symbols=["SPY"], log_file=str(log_file))
-        orchestrator = DailyRebootOrchestrator(config)
+    log_file = tmp_path / "logs" / "test_reboot.log"
+    config = RebootConfig(symbols=["SPY"], log_file=str(log_file))
+    orchestrator = DailyRebootOrchestrator(config)
 
-        assert log_file.parent.exists()
-        assert orchestrator.logger.name == "DailyReboot"
+    assert log_file.parent.exists()
+    assert orchestrator.logger.name == "DailyReboot"
 
 
 # ============================================================================
@@ -212,104 +206,98 @@ def test_orchestrator_logging_setup():
 
 
 @pytest.mark.asyncio
-async def test_fetch_candles_cache_hit():
+async def test_fetch_candles_cache_hit(tmp_path):
     """Test fetching candles with cache hit (fresh cache)."""
     config = RebootConfig(symbols=["SPY"], initial_candles=500)
+    config.cache_dir = str(tmp_path)
+    orchestrator = DailyRebootOrchestrator(config)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config.cache_dir = tmpdir
-        orchestrator = DailyRebootOrchestrator(config)
+    # Mock cache hit (fresh)
+    mock_candle_data = CandleData(
+        symbol="SPY",
+        timeframe="1h",
+        timestamp=np.array(
+            [datetime.now(UTC) for _ in range(500)], dtype="datetime64[ns]"
+        ),
+        open=np.random.uniform(400, 410, 500),
+        high=np.random.uniform(410, 420, 500),
+        low=np.random.uniform(390, 400, 500),
+        close=np.random.uniform(400, 410, 500),
+        volume=np.random.uniform(1e6, 2e6, 500),
+    )
 
-        # Mock cache hit (fresh)
-        mock_candle_data = CandleData(
-            symbol="SPY",
-            timeframe="1h",
-            timestamp=np.array(
-                [datetime.now(UTC) for _ in range(500)], dtype="datetime64[ns]"
-            ),
-            open=np.random.uniform(400, 410, 500),
-            high=np.random.uniform(410, 420, 500),
-            low=np.random.uniform(390, 400, 500),
-            close=np.random.uniform(400, 410, 500),
-            volume=np.random.uniform(1e6, 2e6, 500),
-        )
+    orchestrator.parquet_store.is_cache_fresh = MagicMock(return_value=True)
+    orchestrator.parquet_store.load_candles = MagicMock(return_value=mock_candle_data)
 
-        orchestrator.parquet_store.is_cache_fresh = MagicMock(return_value=True)
-        orchestrator.parquet_store.load_candles = MagicMock(return_value=mock_candle_data)
+    # Initialize mock REST client
+    orchestrator.rest_client = AsyncMock()
 
-        # Initialize mock REST client
-        orchestrator.rest_client = AsyncMock()
+    await orchestrator._fetch_and_cache_candles("SPY")
 
-        await orchestrator._fetch_and_cache_candles("SPY")
+    # Verify cache was used (no API call)
+    orchestrator.rest_client.fetch_candles.assert_not_called()
 
-        # Verify cache was used (no API call)
-        orchestrator.rest_client.fetch_candles.assert_not_called()
-
-        # Verify buffer populated
-        assert "SPY" in orchestrator.candle_buffers
-        assert orchestrator.candle_buffers["SPY"].size() == 500
+    # Verify buffer populated
+    assert "SPY" in orchestrator.candle_buffers
+    assert orchestrator.candle_buffers["SPY"].size() == 500
 
 
 @pytest.mark.asyncio
-async def test_fetch_candles_cache_miss():
+async def test_fetch_candles_cache_miss(tmp_path):
     """Test fetching candles with cache miss (stale/missing)."""
     config = RebootConfig(symbols=["SPY"], initial_candles=500)
+    config.cache_dir = str(tmp_path)
+    orchestrator = DailyRebootOrchestrator(config)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config.cache_dir = tmpdir
-        orchestrator = DailyRebootOrchestrator(config)
+    # Mock cache miss
+    orchestrator.parquet_store.is_cache_fresh = MagicMock(return_value=False)
 
-        # Mock cache miss
-        orchestrator.parquet_store.is_cache_fresh = MagicMock(return_value=False)
-
-        # Mock API response
-        mock_candles = [
-            Candle(
-                symbol="SPY",
-                timeframe="1h",
-                timestamp=datetime.now(UTC),
-                open=400.0 + i,
-                high=410.0 + i,
-                low=390.0 + i,
-                close=405.0 + i,
-                volume=1e6,
-            )
-            for i in range(500)
-        ]
-
-        mock_rest_client = AsyncMock()
-        mock_rest_client.fetch_candles = AsyncMock(return_value=mock_candles)
-        orchestrator.rest_client = mock_rest_client
-
-        await orchestrator._fetch_and_cache_candles("SPY")
-
-        # Verify API was called
-        mock_rest_client.fetch_candles.assert_called_once_with(
-            symbol="SPY", timeframe="1h", limit=500
+    # Mock API response
+    mock_candles = [
+        Candle(
+            symbol="SPY",
+            timeframe="1h",
+            timestamp=datetime.now(UTC),
+            open=400.0 + i,
+            high=410.0 + i,
+            low=390.0 + i,
+            close=405.0 + i,
+            volume=1e6,
         )
+        for i in range(500)
+    ]
 
-        # Verify buffer populated
-        assert "SPY" in orchestrator.candle_buffers
-        assert orchestrator.candle_buffers["SPY"].size() == 500
+    mock_rest_client = AsyncMock()
+    mock_rest_client.fetch_candles = AsyncMock(return_value=mock_candles)
+    orchestrator.rest_client = mock_rest_client
+
+    await orchestrator._fetch_and_cache_candles("SPY")
+
+    # Verify API was called
+    mock_rest_client.fetch_candles.assert_called_once_with(
+        symbol="SPY", timeframe="1h", limit=500
+    )
+
+    # Verify buffer populated
+    assert "SPY" in orchestrator.candle_buffers
+    assert orchestrator.candle_buffers["SPY"].size() == 500
 
 
 @pytest.mark.asyncio
-async def test_fetch_candles_no_data():
+async def test_fetch_candles_no_data(tmp_path):
     """Test fetching candles with empty API response."""
     config = RebootConfig(symbols=["SPY"], initial_candles=500)
+    config.cache_dir = str(tmp_path)
+    orchestrator = DailyRebootOrchestrator(config)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config.cache_dir = tmpdir
-        orchestrator = DailyRebootOrchestrator(config)
+    orchestrator.parquet_store.is_cache_fresh = MagicMock(return_value=False)
 
-        orchestrator.parquet_store.is_cache_fresh = MagicMock(return_value=False)
+    mock_rest_client = AsyncMock()
+    mock_rest_client.fetch_candles = AsyncMock(return_value=[])
+    orchestrator.rest_client = mock_rest_client
 
-        mock_rest_client = AsyncMock()
-        mock_rest_client.fetch_candles = AsyncMock(return_value=[])
-        orchestrator.rest_client = mock_rest_client
-
-        with pytest.raises(ValueError, match="No candles returned"):
-            await orchestrator._fetch_and_cache_candles("SPY")
+    with pytest.raises(ValueError, match="No candles returned"):
+        await orchestrator._fetch_and_cache_candles("SPY")
 
 
 # ============================================================================
@@ -318,34 +306,32 @@ async def test_fetch_candles_no_data():
 
 
 @pytest.mark.asyncio
-async def test_initialize_websocket_success():
+async def test_initialize_websocket_success(tmp_path):
     """Test WebSocket initialization success."""
     config = RebootConfig(symbols=["SPY"])
+    config.cache_dir = str(tmp_path)
+    orchestrator = DailyRebootOrchestrator(config)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config.cache_dir = tmpdir
-        orchestrator = DailyRebootOrchestrator(config)
+    # Mock WebSocketFeed
+    mock_ws = AsyncMock()
+    mock_ws.connect = AsyncMock()
+    mock_ws.subscribe = AsyncMock()
 
-        # Mock WebSocketFeed
-        mock_ws = AsyncMock()
-        mock_ws.connect = AsyncMock()
-        mock_ws.subscribe = AsyncMock()
+    mock_rest_client = AsyncMock()
+    orchestrator.rest_client = mock_rest_client
 
-        mock_rest_client = AsyncMock()
-        orchestrator.rest_client = mock_rest_client
+    with patch(
+        "backend.maintenance.daily_reboot.WebSocketFeed", return_value=mock_ws
+    ):
+        await orchestrator._initialize_websocket("SPY")
 
-        with patch(
-            "backend.maintenance.daily_reboot.WebSocketFeed", return_value=mock_ws
-        ):
-            await orchestrator._initialize_websocket("SPY")
+    # Verify WebSocket connected and subscribed
+    mock_ws.connect.assert_called_once()
+    mock_ws.subscribe.assert_called_once_with(["SPY"])
 
-        # Verify WebSocket connected and subscribed
-        mock_ws.connect.assert_called_once()
-        mock_ws.subscribe.assert_called_once_with(["SPY"])
-
-        # Verify stored
-        assert "SPY" in orchestrator.ws_feeds
-        assert "SPY" in orchestrator.pipelines
+    # Verify stored
+    assert "SPY" in orchestrator.ws_feeds
+    assert "SPY" in orchestrator.pipelines
 
 
 # ============================================================================
@@ -354,93 +340,85 @@ async def test_initialize_websocket_success():
 
 
 @pytest.mark.asyncio
-async def test_verify_system_readiness_success():
+async def test_verify_system_readiness_success(tmp_path):
     """Test system readiness verification with all checks passing."""
     config = RebootConfig(symbols=["SPY", "QQQ"], initial_candles=500)
+    config.cache_dir = str(tmp_path)
+    orchestrator = DailyRebootOrchestrator(config)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config.cache_dir = tmpdir
-        orchestrator = DailyRebootOrchestrator(config)
+    # Mock buffers
+    mock_buffer_spy = MagicMock()
+    mock_buffer_spy.size = MagicMock(return_value=500)
+    orchestrator.candle_buffers["SPY"] = mock_buffer_spy
 
-        # Mock buffers
-        mock_buffer_spy = MagicMock()
-        mock_buffer_spy.size = MagicMock(return_value=500)
-        orchestrator.candle_buffers["SPY"] = mock_buffer_spy
+    mock_buffer_qqq = MagicMock()
+    mock_buffer_qqq.size = MagicMock(return_value=500)
+    orchestrator.candle_buffers["QQQ"] = mock_buffer_qqq
 
-        mock_buffer_qqq = MagicMock()
-        mock_buffer_qqq.size = MagicMock(return_value=500)
-        orchestrator.candle_buffers["QQQ"] = mock_buffer_qqq
+    # Mock WebSocket feeds
+    mock_ws_spy = MagicMock()
+    mock_ws_spy.is_stale = MagicMock(return_value=False)
+    orchestrator.ws_feeds["SPY"] = mock_ws_spy
 
-        # Mock WebSocket feeds
-        mock_ws_spy = MagicMock()
-        mock_ws_spy.is_stale = MagicMock(return_value=False)
-        orchestrator.ws_feeds["SPY"] = mock_ws_spy
+    mock_ws_qqq = MagicMock()
+    mock_ws_qqq.is_stale = MagicMock(return_value=False)
+    orchestrator.ws_feeds["QQQ"] = mock_ws_qqq
 
-        mock_ws_qqq = MagicMock()
-        mock_ws_qqq.is_stale = MagicMock(return_value=False)
-        orchestrator.ws_feeds["QQQ"] = mock_ws_qqq
+    # Should not raise
+    await orchestrator._verify_system_readiness()
 
-        # Should not raise
+
+@pytest.mark.asyncio
+async def test_verify_system_readiness_missing_buffer(tmp_path):
+    """Test system readiness fails with missing buffer."""
+    config = RebootConfig(symbols=["SPY", "QQQ"], initial_candles=500)
+    config.cache_dir = str(tmp_path)
+    orchestrator = DailyRebootOrchestrator(config)
+
+    # Only SPY buffer, missing QQQ
+    mock_buffer = MagicMock()
+    mock_buffer.size = MagicMock(return_value=500)
+    orchestrator.candle_buffers["SPY"] = mock_buffer
+
+    with pytest.raises(RuntimeError, match="Missing candle buffer for QQQ"):
         await orchestrator._verify_system_readiness()
 
 
 @pytest.mark.asyncio
-async def test_verify_system_readiness_missing_buffer():
-    """Test system readiness fails with missing buffer."""
-    config = RebootConfig(symbols=["SPY", "QQQ"], initial_candles=500)
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config.cache_dir = tmpdir
-        orchestrator = DailyRebootOrchestrator(config)
-
-        # Only SPY buffer, missing QQQ
-        mock_buffer = MagicMock()
-        mock_buffer.size = MagicMock(return_value=500)
-        orchestrator.candle_buffers["SPY"] = mock_buffer
-
-        with pytest.raises(RuntimeError, match="Missing candle buffer for QQQ"):
-            await orchestrator._verify_system_readiness()
-
-
-@pytest.mark.asyncio
-async def test_verify_system_readiness_insufficient_candles():
+async def test_verify_system_readiness_insufficient_candles(tmp_path):
     """Test system readiness fails with insufficient candles."""
     config = RebootConfig(symbols=["SPY"], initial_candles=500)
+    config.cache_dir = str(tmp_path)
+    orchestrator = DailyRebootOrchestrator(config)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config.cache_dir = tmpdir
-        orchestrator = DailyRebootOrchestrator(config)
+    # Buffer with only 100 candles
+    mock_buffer = MagicMock()
+    mock_buffer.size = MagicMock(return_value=100)
+    orchestrator.candle_buffers["SPY"] = mock_buffer
 
-        # Buffer with only 100 candles
-        mock_buffer = MagicMock()
-        mock_buffer.size = MagicMock(return_value=100)
-        orchestrator.candle_buffers["SPY"] = mock_buffer
-
-        with pytest.raises(RuntimeError, match="Insufficient candles for SPY"):
-            await orchestrator._verify_system_readiness()
+    with pytest.raises(RuntimeError, match="Insufficient candles for SPY"):
+        await orchestrator._verify_system_readiness()
 
 
 @pytest.mark.asyncio
-async def test_verify_system_readiness_stale_websocket():
+async def test_verify_system_readiness_stale_websocket(tmp_path):
     """Test system readiness fails with stale WebSocket."""
     config = RebootConfig(symbols=["SPY"], initial_candles=500)
+    config.cache_dir = str(tmp_path)
+    orchestrator = DailyRebootOrchestrator(config)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config.cache_dir = tmpdir
-        orchestrator = DailyRebootOrchestrator(config)
+    # Valid buffer
+    mock_buffer = MagicMock()
+    mock_buffer.size = MagicMock(return_value=500)
+    orchestrator.candle_buffers["SPY"] = mock_buffer
 
-        # Valid buffer
-        mock_buffer = MagicMock()
-        mock_buffer.size = MagicMock(return_value=500)
-        orchestrator.candle_buffers["SPY"] = mock_buffer
+    # Stale WebSocket
+    mock_ws = MagicMock()
+    mock_ws.is_stale = MagicMock(return_value=True)
+    orchestrator.ws_feeds["SPY"] = mock_ws
 
-        # Stale WebSocket
-        mock_ws = MagicMock()
-        mock_ws.is_stale = MagicMock(return_value=True)
-        orchestrator.ws_feeds["SPY"] = mock_ws
-
-        with pytest.raises(RuntimeError, match="WebSocket connection stale for SPY"):
-            await orchestrator._verify_system_readiness()
+    with pytest.raises(RuntimeError, match="WebSocket connection stale for SPY"):
+        await orchestrator._verify_system_readiness()
 
 
 # ============================================================================
@@ -449,47 +427,43 @@ async def test_verify_system_readiness_stale_websocket():
 
 
 @pytest.mark.asyncio
-async def test_cleanup_all_resources():
+async def test_cleanup_all_resources(tmp_path):
     """Test cleanup closes all resources."""
     config = RebootConfig(symbols=["SPY"])
+    config.cache_dir = str(tmp_path)
+    orchestrator = DailyRebootOrchestrator(config)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config.cache_dir = tmpdir
-        orchestrator = DailyRebootOrchestrator(config)
+    # Mock WebSocket
+    mock_ws = AsyncMock()
+    mock_ws.disconnect = AsyncMock()
+    orchestrator.ws_feeds["SPY"] = mock_ws
 
-        # Mock WebSocket
-        mock_ws = AsyncMock()
-        mock_ws.disconnect = AsyncMock()
-        orchestrator.ws_feeds["SPY"] = mock_ws
+    # Mock REST client
+    mock_rest = AsyncMock()
+    mock_rest.close = AsyncMock()
+    orchestrator.rest_client = mock_rest
 
-        # Mock REST client
-        mock_rest = AsyncMock()
-        mock_rest.close = AsyncMock()
-        orchestrator.rest_client = mock_rest
+    await orchestrator.cleanup()
 
-        await orchestrator.cleanup()
-
-        # Verify cleanup
-        mock_ws.disconnect.assert_called_once()
-        mock_rest.close.assert_called_once()
+    # Verify cleanup
+    mock_ws.disconnect.assert_called_once()
+    mock_rest.close.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_cleanup_handles_errors():
+async def test_cleanup_handles_errors(tmp_path):
     """Test cleanup handles errors gracefully."""
     config = RebootConfig(symbols=["SPY"])
+    config.cache_dir = str(tmp_path)
+    orchestrator = DailyRebootOrchestrator(config)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config.cache_dir = tmpdir
-        orchestrator = DailyRebootOrchestrator(config)
+    # Mock WebSocket that raises error
+    mock_ws = AsyncMock()
+    mock_ws.disconnect = AsyncMock(side_effect=Exception("Disconnect error"))
+    orchestrator.ws_feeds["SPY"] = mock_ws
 
-        # Mock WebSocket that raises error
-        mock_ws = AsyncMock()
-        mock_ws.disconnect = AsyncMock(side_effect=Exception("Disconnect error"))
-        orchestrator.ws_feeds["SPY"] = mock_ws
-
-        # Should not raise
-        await orchestrator.cleanup()
+    # Should not raise
+    await orchestrator.cleanup()
 
 
 # ============================================================================
@@ -498,81 +472,77 @@ async def test_cleanup_handles_errors():
 
 
 @pytest.mark.asyncio
-async def test_run_full_reboot_success():
+async def test_run_full_reboot_success(tmp_path):
     """Test full reboot sequence succeeds."""
     config = RebootConfig(symbols=["SPY"], initial_candles=100)
+    config.cache_dir = str(tmp_path)
+    config.log_file = str(tmp_path / "reboot.log")
+    orchestrator = DailyRebootOrchestrator(config)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config.cache_dir = tmpdir
-        config.log_file = str(Path(tmpdir) / "reboot.log")
-        orchestrator = DailyRebootOrchestrator(config)
+    # Mock all dependencies
+    mock_candles = [
+        Candle(
+            symbol="SPY",
+            timeframe="1h",
+            timestamp=datetime.now(UTC),
+            open=400.0,
+            high=410.0,
+            low=390.0,
+            close=405.0,
+            volume=1e6,
+        )
+        for _ in range(100)
+    ]
 
-        # Mock all dependencies
-        mock_candles = [
-            Candle(
-                symbol="SPY",
-                timeframe="1h",
-                timestamp=datetime.now(UTC),
-                open=400.0,
-                high=410.0,
-                low=390.0,
-                close=405.0,
-                volume=1e6,
-            )
-            for _ in range(100)
-        ]
+    mock_rest_client = AsyncMock()
+    mock_rest_client.fetch_candles = AsyncMock(return_value=mock_candles)
+    mock_rest_client.close = AsyncMock()
 
-        mock_rest_client = AsyncMock()
-        mock_rest_client.fetch_candles = AsyncMock(return_value=mock_candles)
-        mock_rest_client.close = AsyncMock()
+    mock_ws = AsyncMock()
+    mock_ws.connect = AsyncMock()
+    mock_ws.subscribe = AsyncMock()
+    mock_ws.is_stale = MagicMock(return_value=False)
+    mock_ws.disconnect = AsyncMock()
 
-        mock_ws = AsyncMock()
-        mock_ws.connect = AsyncMock()
-        mock_ws.subscribe = AsyncMock()
-        mock_ws.is_stale = MagicMock(return_value=False)
-        mock_ws.disconnect = AsyncMock()
-
+    with patch(
+        "backend.maintenance.daily_reboot.AsyncAPIClient",
+        return_value=mock_rest_client,
+    ):
         with patch(
-            "backend.maintenance.daily_reboot.AsyncAPIClient",
-            return_value=mock_rest_client,
+            "backend.maintenance.daily_reboot.WebSocketFeed",
+            return_value=mock_ws,
         ):
-            with patch(
-                "backend.maintenance.daily_reboot.WebSocketFeed",
-                return_value=mock_ws,
-            ):
-                results = await orchestrator.run()
+            results = await orchestrator.run()
 
-        # Verify success
-        assert results["success"] is True
-        assert results["symbols"] == ["SPY"]
-        assert "total_duration_seconds" in results["metrics"]
-        assert results["metrics"]["total_candles_loaded"] == 100
-        assert len(results["errors"]) == 0
+    # Verify success
+    assert results["success"] is True
+    assert results["symbols"] == ["SPY"]
+    assert "total_duration_seconds" in results["metrics"]
+    assert results["metrics"]["total_candles_loaded"] == 100
+    assert len(results["errors"]) == 0
 
 
 @pytest.mark.asyncio
-async def test_run_reboot_failure():
+async def test_run_reboot_failure(tmp_path):
     """Test reboot sequence fails and reports error."""
     config = RebootConfig(symbols=["SPY"], initial_candles=100)
+    config.cache_dir = str(tmp_path)
+    config.log_file = str(tmp_path / "reboot.log")
+    orchestrator = DailyRebootOrchestrator(config)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config.cache_dir = tmpdir
-        config.log_file = str(Path(tmpdir) / "reboot.log")
-        orchestrator = DailyRebootOrchestrator(config)
+    # Mock REST client that raises error
+    mock_rest_client = AsyncMock()
+    mock_rest_client.fetch_candles = AsyncMock(
+        side_effect=Exception("API connection failed")
+    )
+    mock_rest_client.close = AsyncMock()
 
-        # Mock REST client that raises error
-        mock_rest_client = AsyncMock()
-        mock_rest_client.fetch_candles = AsyncMock(
-            side_effect=Exception("API connection failed")
-        )
-        mock_rest_client.close = AsyncMock()
-
-        with patch(
-            "backend.maintenance.daily_reboot.AsyncAPIClient",
-            return_value=mock_rest_client,
-        ):
-            with pytest.raises(Exception, match="API connection failed"):
-                await orchestrator.run()
+    with patch(
+        "backend.maintenance.daily_reboot.AsyncAPIClient",
+        return_value=mock_rest_client,
+    ):
+        with pytest.raises(Exception, match="API connection failed"):
+            await orchestrator.run()
 
 
 # ============================================================================
@@ -581,55 +551,53 @@ async def test_run_reboot_failure():
 
 
 @pytest.mark.asyncio
-async def test_reboot_performance_single_symbol():
+async def test_reboot_performance_single_symbol(tmp_path):
     """Test reboot completes in reasonable time for single symbol."""
     config = RebootConfig(symbols=["SPY"], initial_candles=500)
+    config.cache_dir = str(tmp_path)
+    config.log_file = str(tmp_path / "reboot.log")
+    orchestrator = DailyRebootOrchestrator(config)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config.cache_dir = tmpdir
-        config.log_file = str(Path(tmpdir) / "reboot.log")
-        orchestrator = DailyRebootOrchestrator(config)
+    # Mock dependencies
+    mock_candles = [
+        Candle(
+            symbol="SPY",
+            timeframe="1h",
+            timestamp=datetime.now(UTC),
+            open=400.0,
+            high=410.0,
+            low=390.0,
+            close=405.0,
+            volume=1e6,
+        )
+        for _ in range(500)
+    ]
 
-        # Mock dependencies
-        mock_candles = [
-            Candle(
-                symbol="SPY",
-                timeframe="1h",
-                timestamp=datetime.now(UTC),
-                open=400.0,
-                high=410.0,
-                low=390.0,
-                close=405.0,
-                volume=1e6,
-            )
-            for _ in range(500)
-        ]
+    mock_rest_client = AsyncMock()
+    mock_rest_client.fetch_candles = AsyncMock(return_value=mock_candles)
+    mock_rest_client.close = AsyncMock()
 
-        mock_rest_client = AsyncMock()
-        mock_rest_client.fetch_candles = AsyncMock(return_value=mock_candles)
-        mock_rest_client.close = AsyncMock()
+    mock_ws = AsyncMock()
+    mock_ws.connect = AsyncMock()
+    mock_ws.subscribe = AsyncMock()
+    mock_ws.is_stale = MagicMock(return_value=False)
+    mock_ws.disconnect = AsyncMock()
 
-        mock_ws = AsyncMock()
-        mock_ws.connect = AsyncMock()
-        mock_ws.subscribe = AsyncMock()
-        mock_ws.is_stale = MagicMock(return_value=False)
-        mock_ws.disconnect = AsyncMock()
-
+    with patch(
+        "backend.maintenance.daily_reboot.AsyncAPIClient",
+        return_value=mock_rest_client,
+    ):
         with patch(
-            "backend.maintenance.daily_reboot.AsyncAPIClient",
-            return_value=mock_rest_client,
+            "backend.maintenance.daily_reboot.WebSocketFeed",
+            return_value=mock_ws,
         ):
-            with patch(
-                "backend.maintenance.daily_reboot.WebSocketFeed",
-                return_value=mock_ws,
-            ):
-                start = datetime.now()
-                results = await orchestrator.run()
-                duration = (datetime.now() - start).total_seconds()
+            start = datetime.now()
+            results = await orchestrator.run()
+            duration = (datetime.now() - start).total_seconds()
 
-        # Verify reasonable performance (<10 seconds for mocked version)
-        assert duration < 10.0
-        assert results["success"] is True
+    # Verify reasonable performance (<10 seconds for mocked version)
+    assert duration < 10.0
+    assert results["success"] is True
 
 
 # ============================================================================

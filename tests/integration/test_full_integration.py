@@ -12,7 +12,6 @@ This validates that all components work together correctly.
 """
 
 import sys
-import tempfile
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -96,14 +95,7 @@ def generate_synthetic_market_data(num_candles: int = 500, regime: str = "trendi
     return timestamps, opens, highs, lows, closes, volumes
 
 
-@pytest.fixture
-def temp_cache_dir():
-    """Create temporary cache directory for testing."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        yield tmpdir
-
-
-def test_full_integration_workflow(temp_cache_dir):
+def test_full_integration_workflow(tmp_path):
     """
     Test complete workflow: startup → data fetch → indicators → signals → regime → storage.
 
@@ -113,7 +105,7 @@ def test_full_integration_workflow(temp_cache_dir):
 
     # 1. SYSTEM STARTUP: Initialize storage components
     print("1. Initializing storage components...")
-    parquet_store = ParquetStore(temp_cache_dir)
+    parquet_store = ParquetStore(str(tmp_path))
     candle_buffer = CandleBuffer(max_size=500)
     print("   ✓ Storage initialized")
 
@@ -292,7 +284,7 @@ def test_integration_performance_benchmarks():
     print(f"✓ Full indicator suite on 10k candles: {elapsed_ms:.1f}ms (target: <500ms)\n")
 
 
-def test_integration_system_startup_sequence(temp_cache_dir):
+def test_integration_system_startup_sequence(tmp_path):
     """
     Test the system startup sequence completes successfully.
 
@@ -306,7 +298,7 @@ def test_integration_system_startup_sequence(temp_cache_dir):
 
     # 1. Initialize storage
     print("1. Initializing storage...")
-    parquet_store = ParquetStore(temp_cache_dir)
+    parquet_store = ParquetStore(str(tmp_path))
     candle_buffer = CandleBuffer(max_size=500)
     print("   ✓ Storage initialized")
 

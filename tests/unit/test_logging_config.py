@@ -7,8 +7,6 @@ log setup, and context logging.
 
 import json
 import logging
-import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -47,11 +45,6 @@ def cleanup_logging():
     root.setLevel(logging.WARNING)
 
 
-@pytest.fixture
-def temp_log_dir():
-    """Fixture providing a temporary directory for log files."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        yield tmpdir
 
 
 class TestStructuredFormatter:
@@ -219,9 +212,9 @@ class TestSetupLogging:
         with pytest.raises(ValueError, match="Invalid log level"):
             setup_logging(log_level="INVALID")
 
-    def test_setup_with_file_output(self, cleanup_logging, temp_log_dir):
+    def test_setup_with_file_output(self, cleanup_logging, tmp_path):
         """Test logging setup with file output."""
-        log_file = Path(temp_log_dir) / "test.log"
+        log_file = tmp_path / "test.log"
         setup_logging(log_file=str(log_file))
 
         root = logging.getLogger()
@@ -230,16 +223,16 @@ class TestSetupLogging:
         # Verify file was created
         assert log_file.exists()
 
-    def test_setup_with_log_dir(self, cleanup_logging, temp_log_dir):
+    def test_setup_with_log_dir(self, cleanup_logging, tmp_path):
         """Test logging setup with separate log directory."""
-        setup_logging(log_file="app.log", log_dir=temp_log_dir)
+        setup_logging(log_file="app.log", log_dir=str(tmp_path))
 
-        log_file = Path(temp_log_dir) / "app.log"
+        log_file = tmp_path / "app.log"
         assert log_file.exists()
 
-    def test_setup_json_format(self, cleanup_logging, temp_log_dir):
+    def test_setup_json_format(self, cleanup_logging, tmp_path):
         """Test logging setup with JSON formatting."""
-        log_file = Path(temp_log_dir) / "test.log"
+        log_file = tmp_path / "test.log"
         setup_logging(log_file=str(log_file), json_format=True)
 
         logger = get_logger(__name__)
@@ -252,19 +245,19 @@ class TestSetupLogging:
         assert log_entry["message"] == "Test message"
         assert log_entry["key"] == "value"
 
-    def test_setup_no_console(self, cleanup_logging, temp_log_dir):
+    def test_setup_no_console(self, cleanup_logging, tmp_path):
         """Test logging setup without console output."""
-        log_file = Path(temp_log_dir) / "test.log"
+        log_file = tmp_path / "test.log"
         setup_logging(log_file=str(log_file), console_output=False)
 
         root = logging.getLogger()
         assert len(root.handlers) == 1  # File handler only
 
-    def test_log_rotation_config(self, cleanup_logging, temp_log_dir):
+    def test_log_rotation_config(self, cleanup_logging, tmp_path):
         """Test that log rotation is configured correctly."""
         from logging.handlers import RotatingFileHandler
 
-        log_file = Path(temp_log_dir) / "test.log"
+        log_file = tmp_path / "test.log"
         max_bytes = 5 * 1024 * 1024  # 5MB
         backup_count = 3
 
@@ -349,9 +342,9 @@ class TestLogWithContext:
 class TestIntegration:
     """Integration tests for the logging system."""
 
-    def test_end_to_end_file_logging(self, cleanup_logging, temp_log_dir):
+    def test_end_to_end_file_logging(self, cleanup_logging, tmp_path):
         """Test complete logging workflow with file output."""
-        log_file = Path(temp_log_dir) / "app.log"
+        log_file = tmp_path / "app.log"
 
         # Setup logging
         setup_logging(
@@ -374,9 +367,9 @@ class TestIntegration:
         assert "Warning message" in content
         assert "key=value" in content
 
-    def test_end_to_end_json_logging(self, cleanup_logging, temp_log_dir):
+    def test_end_to_end_json_logging(self, cleanup_logging, tmp_path):
         """Test complete logging workflow with JSON output."""
-        log_file = Path(temp_log_dir) / "app.log"
+        log_file = tmp_path / "app.log"
 
         # Setup logging
         setup_logging(

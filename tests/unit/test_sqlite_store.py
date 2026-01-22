@@ -20,9 +20,7 @@ Success criteria:
 """
 
 import asyncio
-import os
 import sys
-import tempfile
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -36,14 +34,13 @@ from backend.storage.sqlite_store import Position, PositionSide, SQLiteStore, Tr
 
 
 @pytest_asyncio.fixture
-async def temp_db():
+async def temp_db(tmp_path):
     """Create temporary database for testing."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = os.path.join(tmpdir, "test_system.db")
-        store = SQLiteStore(db_path)
-        await store.initialize()
-        yield store
-        await store.close()
+    db_path = tmp_path / "test_system.db"
+    store = SQLiteStore(str(db_path))
+    await store.initialize()
+    yield store
+    await store.close()
 
 
 @pytest.fixture
@@ -1010,7 +1007,7 @@ async def test_write_worker_logs_sqlite_errors(temp_db, caplog):
 
 
 @pytest.mark.asyncio
-async def test_structured_logging_on_initialize(temp_db, caplog):
+async def test_structured_logging_on_initialize(temp_db, caplog, tmp_path):
     """
     Test that database initialization logs with structured data.
 
@@ -1022,21 +1019,20 @@ async def test_structured_logging_on_initialize(temp_db, caplog):
     caplog.set_level(logging.INFO, logger='backend.storage.sqlite_store')
 
     # Create a new temporary database to capture initialization logs
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = os.path.join(tmpdir, "test_logging.db")
-        store = SQLiteStore(db_path)
-        await store.initialize()
+    db_path = tmp_path / "test_logging.db"
+    store = SQLiteStore(str(db_path))
+    await store.initialize()
 
-        # Verify initialization was logged with db_path in extra
-        found_init_log = False
-        for record in caplog.records:
-            if "Initializing SQLite database" in record.message:
-                assert hasattr(record, 'db_path')
-                found_init_log = True
-                break
+    # Verify initialization was logged with db_path in extra
+    found_init_log = False
+    for record in caplog.records:
+        if "Initializing SQLite database" in record.message:
+            assert hasattr(record, 'db_path')
+            found_init_log = True
+            break
 
-        assert found_init_log, "Initialization log not found"
-        await store.close()
+    assert found_init_log, "Initialization log not found"
+    await store.close()
 
 
 @pytest.mark.asyncio

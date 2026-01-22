@@ -11,10 +11,7 @@ Tests cover:
 """
 
 import os
-import shutil
-import tempfile
 import time
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -23,12 +20,9 @@ from backend.storage.parquet_store import CandleData, ParquetStore
 
 
 @pytest.fixture
-def temp_cache_dir():
+def temp_cache_dir(tmp_path):
     """Create a temporary directory for cache testing."""
-    temp_dir = tempfile.mkdtemp()
-    yield temp_dir
-    # Cleanup after test
-    shutil.rmtree(temp_dir, ignore_errors=True)
+    return tmp_path
 
 
 @pytest.fixture
@@ -90,18 +84,14 @@ def test_parquet_store_initialization(temp_cache_dir):
     assert store.cache_ttl_hours == 24
 
 
-def test_cache_directory_auto_creation():
+def test_cache_directory_auto_creation(tmp_path):
     """Test cache directory is created automatically if it doesn't exist."""
-    temp_dir = tempfile.mkdtemp()
-    cache_path = Path(temp_dir) / "subdir" / "cache"
+    cache_path = tmp_path / "subdir" / "cache"
 
     _ = ParquetStore(cache_dir=str(cache_path))
 
     assert cache_path.exists()
     assert cache_path.is_dir()
-
-    # Cleanup
-    shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 # ============================================================================

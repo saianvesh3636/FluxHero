@@ -16,7 +16,6 @@ import logging
 
 # Add backend to path
 import sys
-import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -36,16 +35,15 @@ from backend.storage.sqlite_store import (
 
 
 @pytest.fixture
-def test_db():
+def test_db(tmp_path):
     """Create a temporary test database"""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = Path(tmpdir) / "test.db"
-        store = SQLiteStore(db_path=str(db_path))
-        # Initialize database schema synchronously
-        asyncio.run(store.initialize())
-        yield store
-        # Note: We don't await close() here because fixture is not async
-        # The store will be cleaned up by the temp directory removal
+    db_path = tmp_path / "test.db"
+    store = SQLiteStore(db_path=str(db_path))
+    # Initialize database schema synchronously
+    asyncio.run(store.initialize())
+    yield store
+    # Note: We don't await close() here because fixture is not async
+    # The store will be cleaned up by pytest's tmp_path cleanup
 
 
 @pytest.fixture
