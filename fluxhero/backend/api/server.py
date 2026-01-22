@@ -21,6 +21,7 @@ Endpoints:
 """
 
 import asyncio
+import logging
 from datetime import datetime
 from typing import List, Optional
 from contextlib import asynccontextmanager
@@ -41,6 +42,13 @@ from backend.storage.sqlite_store import (
 )
 from backend.backtesting.engine import BacktestEngine, BacktestConfig
 from backend.backtesting.metrics import PerformanceMetrics
+
+
+# ============================================================================
+# Logger Configuration
+# ============================================================================
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -190,36 +198,36 @@ async def lifespan(app: FastAPI):
     - Close WebSocket connections
     """
     # Startup
-    print("🚀 Starting FluxHero API server...")
+    logger.info("Starting FluxHero API server")
 
     # Initialize SQLite store
     db_path = Path(__file__).parent.parent.parent.parent / "data" / "system.db"
     app_state.sqlite_store = SQLiteStore(db_path=str(db_path))
     await app_state.sqlite_store.initialize()
-    print(f"✓ SQLite store initialized: {db_path}")
+    logger.info("SQLite store initialized", extra={"db_path": str(db_path)})
 
     # Mark data feed as inactive (will be activated when WebSocket connects)
     app_state.data_feed_active = False
     app_state.start_time = datetime.now()
 
-    print("✓ FluxHero API server ready")
+    logger.info("FluxHero API server ready")
 
     yield
 
     # Shutdown
-    print("🛑 Shutting down FluxHero API server...")
+    logger.info("Shutting down FluxHero API server")
 
     # Close SQLite store
     if app_state.sqlite_store:
         await app_state.sqlite_store.close()
-        print("✓ SQLite store closed")
+        logger.info("SQLite store closed")
 
     # Close all WebSocket connections
     for client in app_state.websocket_clients:
         await client.close()
-    print("✓ WebSocket connections closed")
+    logger.info("WebSocket connections closed", extra={"client_count": len(app_state.websocket_clients)})
 
-    print("✓ FluxHero API server stopped")
+    logger.info("FluxHero API server stopped")
 
 
 # ============================================================================
@@ -596,7 +604,7 @@ async def websocket_prices(websocket: WebSocket):
     app_state.websocket_clients.append(websocket)
     app_state.data_feed_active = True
 
-    print(f"✓ WebSocket client connected. Total clients: {len(app_state.websocket_clients)}")
+    logger.info("WebSocket client connected", extra={"total_clients": len(app_state.websocket_clients)})
 
     try:
         # Send initial connection message
@@ -626,9 +634,9 @@ async def websocket_prices(websocket: WebSocket):
             await asyncio.sleep(5.0)
 
     except WebSocketDisconnect:
-        print("✓ WebSocket client disconnected")
+        logger.info("WebSocket client disconnected")
     except Exception as e:
-        print(f"✗ WebSocket error: {e}")
+        logger.error("WebSocket error", extra={"error": str(e)}, exc_info=True)
     finally:
         # Remove client from list
         if websocket in app_state.websocket_clients:
@@ -638,7 +646,7 @@ async def websocket_prices(websocket: WebSocket):
         if len(app_state.websocket_clients) == 0:
             app_state.data_feed_active = False
 
-        print(f"✓ Client removed. Total clients: {len(app_state.websocket_clients)}")
+        logger.info("WebSocket client removed", extra={"total_clients": len(app_state.websocket_clients)})
 
 
 # ============================================================================
@@ -658,12 +666,12 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
 
-    print("=" * 60)
-    print("FluxHero API Server")
-    print("=" * 60)
-    print("Starting server on http://localhost:8000")
-    print("API docs available at http://localhost:8000/docs")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("FluxHero API Server")
+    logger.info("=" * 60)
+    logger.info("Starting server on http://localhost:8000")
+    logger.info("API docs available at http://localhost:8000/docs")
+    logger.info("=" * 60)
 
     uvicorn.run(
         app,
