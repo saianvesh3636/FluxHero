@@ -125,7 +125,7 @@
 
 - [x] Simulated live price updates (WebSocket replays CSV data)
 - [x] Multiple test symbols (AAPL, MSFT)
-- [ ] Visual regression tests with Playwright screenshots
+- [x] Visual regression tests with Playwright screenshots
 
 ---
 
