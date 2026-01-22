@@ -66,11 +66,11 @@
 ### Task 4.1: Fix Integration Issue
 **Goal**: Frontend displays live data instead of static text
 
-- [ ] Identify root cause (backend not running / proxy misconfigured / code bug)
-- [ ] Fix the specific integration failure
-- [ ] Live page (`/live`) displays real position data
-- [ ] Live page displays real account data
-- [ ] No unhandled promise rejections or fetch failures
+- [x] Identify root cause (backend not running / proxy misconfigured / code bug)
+- [x] Fix the specific integration failure
+- [x] Live page (`/live`) displays real position data
+- [x] Live page displays real account data
+- [x] No unhandled promise rejections or fetch failures
 
 ### Task 4.2: SPY Test Data Endpoint
 **Goal**: Backend endpoint serving static SPY data for development
