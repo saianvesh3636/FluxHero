@@ -41,7 +41,7 @@ Fix critical issues, improve observability, and address architecture gaps identi
 
 ## Phase 3: WebSocket Authentication
 
-- [ ] Create authentication middleware at `backend/api/auth.py` with token validation function
+- [x] Create authentication middleware at `backend/api/auth.py` with token validation function
 - [ ] Update WebSocket endpoint in `backend/api/server.py:587-591` to validate token before `websocket.accept()`
 - [ ] Add configuration for auth secret key (prepare for Phase 4 centralized config)
 - [ ] Add tests for WebSocket authentication (valid token, invalid token, missing token)
