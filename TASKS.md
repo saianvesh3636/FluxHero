@@ -54,10 +54,10 @@
 - [x] No CORS errors in browser console
 
 ### Task 3.3: Verify API Client
-- [ ] Check `frontend/utils/api.ts` base URL configuration
-- [ ] Verify `apiClient.getPositions()` makes correct request
-- [ ] Verify `apiClient.getAccountInfo()` makes correct request
-- [ ] Verify `apiClient.getSystemStatus()` makes correct request
+- [x] Check `frontend/utils/api.ts` base URL configuration
+- [x] Verify `apiClient.getPositions()` makes correct request
+- [x] Verify `apiClient.getAccountInfo()` makes correct request
+- [x] Verify `apiClient.getSystemStatus()` makes correct request
 
 ---
 

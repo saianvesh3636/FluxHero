@@ -42,3 +42,20 @@
   - All tests pass with parallel execution
 
 **Result**: All Phase 3.2 acceptance criteria met. Frontend proxy is correctly configured and functioning. No CORS issues detected.
+
+## 2026-01-22 - Phase 3.3: Verify API Client
+
+**Task:** Verify API Client implementation
+**Files Changed:** TASKS.md
+
+**What was done:**
+- Verified `frontend/utils/api.ts` base URL configuration (correctly set to `/api`)
+- Confirmed Next.js rewrites in `next.config.ts` proxy `/api/*` to `http://localhost:8000/api/*`
+- Tested backend endpoints:
+  - `GET /api/positions` - returns empty array (no positions) ✓
+  - `GET /api/account` - returns account info with initial capital $10,000 ✓
+  - `GET /api/status` - returns system status "ACTIVE" ✓
+- All three API client methods (`getPositions()`, `getAccountInfo()`, `getSystemStatus()`) are correctly implemented and working
+- Backend server is running on port 8000 and responding to requests
+
+**Status:** Phase 3.3 complete. All API client verification checks passed.
