@@ -95,14 +95,14 @@
 ### Task 4.4: Playwright E2E Tests
 **Goal**: Automated tests verifying frontend-backend integration
 
-- [ ] Install Playwright: `npm install -D @playwright/test`
-- [ ] Create `frontend/e2e/` directory
-- [ ] Test: Home page loads without errors
-- [ ] Test: `/live` page displays position data (not placeholders)
-- [ ] Test: `/backtest` form submits and shows results
-- [ ] Test: Error state shown when backend is offline
-- [ ] Tests run in headless mode (CI-compatible)
-- [ ] Add `npm run test:e2e` script to package.json
+- [x] Install Playwright: `npm install -D @playwright/test`
+- [x] Create `frontend/e2e/` directory
+- [x] Test: Home page loads without errors
+- [x] Test: `/live` page displays position data (not placeholders)
+- [x] Test: `/backtest` form submits and shows results
+- [x] Test: Error state shown when backend is offline
+- [x] Tests run in headless mode (CI-compatible)
+- [x] Add `npm run test:e2e` script to package.json
 
 ---
 

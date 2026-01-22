@@ -178,3 +178,36 @@
    - All tests pass successfully
 
 **Result**: All Task 4.3 acceptance criteria met. Frontend now handles API errors gracefully with proper loading states, error messages, backend offline indicators, and retry buttons.
+
+## 2026-01-22 18:00 - Playwright E2E Tests (Task 4.4)
+
+**Task**: Implement Playwright E2E Tests for Frontend-Backend Integration
+**Files Changed**:
+- frontend/package.json (added test:e2e scripts)
+- frontend/playwright.config.ts (created)
+- frontend/e2e/home.spec.ts (created)
+- frontend/e2e/live.spec.ts (created)
+- frontend/e2e/backtest.spec.ts (created)
+- frontend/e2e/error-states.spec.ts (created)
+- TASKS.md
+- .context/history.md
+
+**Summary**:
+- Installed Playwright and Chromium browser
+- Created comprehensive E2E test suite with 22 tests covering:
+  - Home page loading and responsiveness
+  - Live trading page with position/account data display
+  - Backtest form submission and results modal
+  - Error states (backend offline, API failures, network timeouts)
+  - Loading spinners and retry functionality
+- Configured Playwright for headless CI-compatible execution
+- Added npm scripts: `test:e2e`, `test:e2e:ui`, `test:e2e:headed`
+- All 22 tests passing successfully
+
+**Test Coverage**:
+- Home page: 3 tests (loading, navigation, responsiveness)
+- Live page: 6 tests (data display, error handling, auto-refresh, system status)
+- Backtest page: 8 tests (form, submission, results, error states)
+- Error states: 5 tests (offline detection, retry, timeouts, loading)
+
+**Result**: Task 4.4 complete. Frontend has automated E2E tests validating integration with backend APIs.
