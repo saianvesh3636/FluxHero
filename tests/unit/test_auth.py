@@ -29,6 +29,32 @@ from fluxhero.backend.api.auth import (
 class TestAuthSecretConfiguration:
     """Test authentication secret configuration and retrieval."""
 
+    def test_env_example_file_exists(self):
+        """Test that .env.example file exists in backend directory."""
+        import pathlib
+
+        # Get the project root (going up from tests/unit/)
+        test_dir = pathlib.Path(__file__).parent
+        project_root = test_dir.parent.parent
+        env_example_path = project_root / "fluxhero" / "backend" / ".env.example"
+
+        assert env_example_path.exists(), f".env.example file not found at {env_example_path}"
+
+    def test_env_example_contains_auth_secret(self):
+        """Test that .env.example file documents FLUXHERO_AUTH_SECRET."""
+        import pathlib
+
+        # Get the project root
+        test_dir = pathlib.Path(__file__).parent
+        project_root = test_dir.parent.parent
+        env_example_path = project_root / "fluxhero" / "backend" / ".env.example"
+
+        with open(env_example_path, 'r') as f:
+            content = f.read()
+
+        assert "FLUXHERO_AUTH_SECRET" in content, ".env.example must document FLUXHERO_AUTH_SECRET"
+        assert "authentication" in content.lower(), ".env.example must explain authentication configuration"
+
     def test_default_secret_when_env_not_set(self):
         """Test that default secret is used when environment variable is not set."""
         with patch.dict(os.environ, {}, clear=True):
