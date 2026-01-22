@@ -84,3 +84,16 @@ Next Task: Phase 18 - Task 6: Write maintenance guide (dependency updates, data 
 
 **Status**: ✅ COMPLETE - All 118 tasks in FluxHero implementation are now complete!
 
+
+---
+Date: 2026-01-21
+Task: Fix bare exception handler in parquet_store.py (AUDIT_TASKS Phase 1)
+Changes:
+- Added logging import to fluxhero/backend/storage/parquet_store.py
+- Replaced bare 'except Exception' at line 344 with 'except pa.ArrowException as e'
+- Added error logging for failed Parquet metadata reads
+- Added test_corrupted_parquet_file_handling() to tests/unit/test_parquet_store.py
+- Test verifies graceful handling of corrupted Parquet files with proper logging
+Status: Complete
+Tests: All related tests pass (test_corrupted_parquet_file_handling, test_get_cache_metadata)
+Linting: Passed

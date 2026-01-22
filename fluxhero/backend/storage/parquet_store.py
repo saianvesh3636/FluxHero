@@ -19,10 +19,14 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
+import logging
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pyarrow.parquet as pq
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -341,7 +345,8 @@ class ParquetStore:
         try:
             parquet_file = pq.ParquetFile(cache_path)
             num_rows = parquet_file.metadata.num_rows
-        except Exception:
+        except pa.ArrowException as e:
+            logger.error(f"Failed to read Parquet metadata for {cache_path}: {e}")
             num_rows = None
 
         return {

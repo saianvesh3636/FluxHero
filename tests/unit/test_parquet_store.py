@@ -494,6 +494,29 @@ def test_multiple_timeframes_same_symbol(parquet_store, sample_candle_data):
     assert np.all(loaded_1d.close == 999.0)
 
 
+def test_corrupted_parquet_file_handling(parquet_store, sample_candle_data, caplog):
+    """Test handling of corrupted Parquet file in get_cache_metadata."""
+    import logging
+
+    # Save valid data first
+    parquet_store.save_candles(sample_candle_data)
+    cache_path = parquet_store._get_cache_path('SPY', '1h')
+
+    # Corrupt the file by writing invalid data
+    with open(cache_path, 'wb') as f:
+        f.write(b'corrupted data that is not valid parquet format')
+
+    # Attempt to get metadata - should handle ArrowException gracefully
+    with caplog.at_level(logging.ERROR):
+        metadata = parquet_store.get_cache_metadata('SPY', '1h')
+
+    # Should return metadata with num_rows=None instead of crashing
+    assert metadata is not None
+    assert metadata['num_rows'] is None
+    # Verify error was logged
+    assert any('Failed to read Parquet metadata' in record.message for record in caplog.records)
+
+
 # ============================================================================
 # Success Criteria Tests (Feature 7.2)
 # ============================================================================
