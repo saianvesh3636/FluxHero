@@ -3,7 +3,7 @@
 # This script runs Ralphy with the correct settings for FluxHero development
 
 # Configuration
-RALPHY_PATH="/Users/anvesh/Developer/QuantTrading/ralphy/ralphy.sh"
+RALPHY_PATH="/Users/anvesh/Developer/ralphy/ralphy.sh"
 TASK_FILE="FLUXHERO_TASKS.md"
 PROJECT_DIR="/Users/anvesh/Developer/QuantTrading/project"
 

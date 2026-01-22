@@ -95,3 +95,21 @@ The logging configuration module is ready for use. Next tasks in Phase 2:
 - Add structured logging to sqlite_store.py
 - Replace print() statements in api/server.py
 - Verify consistency with order_manager.py logging pattern
+
+[2026-01-22 - Phase 2: Structured Logging - Task 2]
+Task: Add structured logging to backend/storage/parquet_store.py
+
+Changes:
+- Added structured logging to all read/write operations in parquet_store.py
+  - save_candles(): debug log on start, info log on success, error log on failure
+  - load_candles(): debug log on start and for non-existent files, info log on success, error log on failure
+  - is_cache_fresh(): debug logs for cache state checks
+  - delete_cache(): info log on successful deletion, debug for non-existent files, error on failure
+  - clear_all_cache(): info logs for start and completion with counts
+- All logging includes structured context (symbol, timeframe, num_candles, cache_path, etc.)
+- Added 11 new tests for logging functionality in test_parquet_store.py
+- All tests pass (42/42)
+- Linting passes with auto-fix applied for f-string issues
+
+Status: COMPLETE
+Next task: Add structured logging to backend/storage/sqlite_store.py

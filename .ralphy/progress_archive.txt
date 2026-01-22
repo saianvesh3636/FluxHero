@@ -7709,3 +7709,97 @@ All checks passed!
 Continue to Phase 17 - Task 7: Performance benchmark (ensure 10k candle indicator calculation completes in <500ms)
 
 ---
+   - SSL/TLS with Let's Encrypt (Certbot)
+   - UFW firewall configuration
+
+4. Monitoring & Operations:
+   - Log rotation setup
+   - Automated health check scripts
+   - Email alerting configuration
+   - Performance monitoring with cron jobs
+
+5. Backup & Disaster Recovery:
+   - Automated daily backups (SQLite + Parquet)
+   - 30-day retention policy
+   - Optional S3 offsite backup
+   - Complete restoration procedure
+
+6. Security Hardening:
+   - SSH configuration (disable root, key-only auth)
+   - fail2ban for intrusion prevention
+   - Automatic security updates
+   - Minimal attack surface
+
+7. Cost Optimization:
+   - Reserved instance savings (AWS)
+   - Storage optimization strategies
+   - Data transfer monitoring
+   - Log compression
+
+8. Troubleshooting Section:
+   - Common deployment issues and fixes
+   - Service restart procedures
+   - Database recovery steps
+   - SSL certificate renewal
+
+Key Features:
+- Comparison matrix for selecting hosting provider
+- Complete commands for 4 major cloud providers
+- Security-first approach with hardening steps
+- Production-ready systemd configurations
+- Automated backup and monitoring scripts
+- Cost optimization strategies
+- Comprehensive troubleshooting guide
+
+Files Created:
+- docs/DEPLOYMENT_GUIDE.md (1,144 lines)
+
+Files Modified:
+- FLUXHERO_TASKS.md (marked task as complete)
+
+Next Task: Phase 18 - Task 6: Write maintenance guide (dependency updates, data backup, monitoring)
+
+
+## 2026-01-21 - Phase 18, Task 6: Write Maintenance Guide
+
+**Task**: Write maintenance guide (dependency updates, data backup, monitoring)
+
+**Implementation**:
+- Created comprehensive maintenance guide at docs/MAINTENANCE_GUIDE.md
+- Covered all critical maintenance areas:
+  * Dependency management (Python and Node.js) with update procedures
+  * Data backup and recovery with automated scripts
+  * System monitoring with health checks and alerts
+  * Database maintenance (VACUUM, archival)
+  * Log management and rotation
+  * Performance optimization
+  * Security updates
+  * Disaster recovery procedures
+  * Troubleshooting common issues
+  * Maintenance schedules (daily, weekly, monthly, quarterly)
+
+**Files Created**:
+- docs/MAINTENANCE_GUIDE.md (comprehensive maintenance documentation)
+
+**Files Modified**:
+- FLUXHERO_TASKS.md (marked task as complete)
+
+**Key Features**:
+- Automated backup scripts with 3-2-1 backup strategy
+- Health check monitoring every 5 minutes
+- Database optimization scripts (weekly VACUUM)
+- Monthly dependency update procedures with rollback plans
+- Log rotation and analysis
+- Emergency procedures and disaster recovery
+- Comprehensive maintenance schedules and checklists
+
+**Status**: ✅ COMPLETE - All 118 tasks in FluxHero implementation are now complete!
+
+
+---
+Date: 2026-01-21
+Task: Fix bare exception handler in parquet_store.py (AUDIT_TASKS Phase 1)
+Changes:
+- Added logging import to fluxhero/backend/storage/parquet_store.py
+- Replaced bare 'except Exception' at line 344 with 'except pa.ArrowException as e'
+- Added error logging for failed Parquet metadata reads

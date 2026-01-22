@@ -129,39 +129,79 @@ class ParquetStore:
         Performance: <100ms for 500 candles
         """
         cache_path = self._get_cache_path(data.symbol, data.timeframe)
+        num_candles = len(data.timestamp)
 
-        # Build dictionary for DataFrame
-        df_dict = {
-            'timestamp': data.timestamp,
-            'open': data.open,
-            'high': data.high,
-            'low': data.low,
-            'close': data.close,
-            'volume': data.volume,
-        }
-
-        # Add indicators if present (R7.2.3)
-        if data.ema is not None:
-            df_dict['ema'] = data.ema
-        if data.atr is not None:
-            df_dict['atr'] = data.atr
-        if data.rsi is not None:
-            df_dict['rsi'] = data.rsi
-
-        # Create DataFrame
-        df = pd.DataFrame(df_dict)
-
-        # Convert timestamp to datetime if it's not already
-        if not pd.api.types.is_datetime64_any_dtype(df['timestamp']):
-            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
-
-        # Write to Parquet with Snappy compression (R7.2.4)
-        df.to_parquet(
-            cache_path,
-            engine='pyarrow',
-            compression=self.compression,
-            index=False
+        logger.debug(
+            f"Saving {num_candles} candles to cache",
+            extra={
+                "symbol": data.symbol,
+                "timeframe": data.timeframe,
+                "num_candles": num_candles,
+                "cache_path": str(cache_path)
+            }
         )
+
+        try:
+            # Build dictionary for DataFrame
+            df_dict = {
+                'timestamp': data.timestamp,
+                'open': data.open,
+                'high': data.high,
+                'low': data.low,
+                'close': data.close,
+                'volume': data.volume,
+            }
+
+            # Add indicators if present (R7.2.3)
+            indicators_saved = []
+            if data.ema is not None:
+                df_dict['ema'] = data.ema
+                indicators_saved.append('ema')
+            if data.atr is not None:
+                df_dict['atr'] = data.atr
+                indicators_saved.append('atr')
+            if data.rsi is not None:
+                df_dict['rsi'] = data.rsi
+                indicators_saved.append('rsi')
+
+            # Create DataFrame
+            df = pd.DataFrame(df_dict)
+
+            # Convert timestamp to datetime if it's not already
+            if not pd.api.types.is_datetime64_any_dtype(df['timestamp']):
+                df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+
+            # Write to Parquet with Snappy compression (R7.2.4)
+            df.to_parquet(
+                cache_path,
+                engine='pyarrow',
+                compression=self.compression,
+                index=False
+            )
+
+            logger.info(
+                f"Successfully saved {num_candles} candles to cache",
+                extra={
+                    "symbol": data.symbol,
+                    "timeframe": data.timeframe,
+                    "num_candles": num_candles,
+                    "indicators": indicators_saved,
+                    "cache_path": str(cache_path)
+                }
+            )
+
+        except Exception as e:
+            logger.error(
+                f"Failed to save candles to cache: {e}",
+                extra={
+                    "symbol": data.symbol,
+                    "timeframe": data.timeframe,
+                    "num_candles": num_candles,
+                    "cache_path": str(cache_path)
+                },
+                exc_info=True
+            )
+            raise
 
     def load_candles(self, symbol: str, timeframe: str) -> Optional[CandleData]:
         """
@@ -183,33 +223,83 @@ class ParquetStore:
         cache_path = self._get_cache_path(symbol, timeframe)
 
         if not cache_path.exists():
+            logger.debug(
+                "Cache file not found",
+                extra={
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "cache_path": str(cache_path)
+                }
+            )
             return None
 
-        # Read Parquet file
-        df = pd.read_parquet(cache_path, engine='pyarrow')
-
-        # Convert timestamp to numpy array (unix timestamp)
-        if pd.api.types.is_datetime64_any_dtype(df['timestamp']):
-            timestamps = df['timestamp'].astype('int64') / 10**9  # Convert to seconds
-        else:
-            timestamps = df['timestamp'].values
-
-        # Extract OHLCV data
-        data = CandleData(
-            symbol=symbol,
-            timeframe=timeframe,
-            timestamp=timestamps.astype(np.float64),
-            open=df['open'].values,
-            high=df['high'].values,
-            low=df['low'].values,
-            close=df['close'].values,
-            volume=df['volume'].values,
-            ema=df['ema'].values if 'ema' in df.columns else None,
-            atr=df['atr'].values if 'atr' in df.columns else None,
-            rsi=df['rsi'].values if 'rsi' in df.columns else None,
+        logger.debug(
+            "Loading candles from cache",
+            extra={
+                "symbol": symbol,
+                "timeframe": timeframe,
+                "cache_path": str(cache_path)
+            }
         )
 
-        return data
+        try:
+            # Read Parquet file
+            df = pd.read_parquet(cache_path, engine='pyarrow')
+            num_candles = len(df)
+
+            # Convert timestamp to numpy array (unix timestamp)
+            if pd.api.types.is_datetime64_any_dtype(df['timestamp']):
+                timestamps = df['timestamp'].astype('int64') / 10**9  # Convert to seconds
+            else:
+                timestamps = df['timestamp'].values
+
+            # Extract OHLCV data
+            indicators_loaded = []
+            if 'ema' in df.columns:
+                indicators_loaded.append('ema')
+            if 'atr' in df.columns:
+                indicators_loaded.append('atr')
+            if 'rsi' in df.columns:
+                indicators_loaded.append('rsi')
+
+            data = CandleData(
+                symbol=symbol,
+                timeframe=timeframe,
+                timestamp=timestamps.astype(np.float64),
+                open=df['open'].values,
+                high=df['high'].values,
+                low=df['low'].values,
+                close=df['close'].values,
+                volume=df['volume'].values,
+                ema=df['ema'].values if 'ema' in df.columns else None,
+                atr=df['atr'].values if 'atr' in df.columns else None,
+                rsi=df['rsi'].values if 'rsi' in df.columns else None,
+            )
+
+            logger.info(
+                f"Successfully loaded {num_candles} candles from cache",
+                extra={
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "num_candles": num_candles,
+                    "indicators": indicators_loaded,
+                    "cache_path": str(cache_path)
+                }
+            )
+
+            return data
+
+        except Exception as e:
+            logger.error(
+                f"Failed to load candles from cache: {e}",
+                extra={
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "cache_path": str(cache_path)
+                },
+                exc_info=True
+            )
+            raise
 
     def is_cache_fresh(self, symbol: str, timeframe: str) -> bool:
         """
@@ -227,13 +317,33 @@ class ParquetStore:
         cache_path = self._get_cache_path(symbol, timeframe)
 
         if not cache_path.exists():
+            logger.debug(
+                "Cache freshness check: file not found",
+                extra={
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "cache_path": str(cache_path)
+                }
+            )
             return False
 
         # Get file modification time
         mtime = datetime.fromtimestamp(cache_path.stat().st_mtime)
         age = datetime.now() - mtime
+        is_fresh = age < timedelta(hours=self.cache_ttl_hours)
 
-        return age < timedelta(hours=self.cache_ttl_hours)
+        logger.debug(
+            f"Cache freshness check: {'fresh' if is_fresh else 'stale'}",
+            extra={
+                "symbol": symbol,
+                "timeframe": timeframe,
+                "age_hours": age.total_seconds() / 3600,
+                "ttl_hours": self.cache_ttl_hours,
+                "is_fresh": is_fresh
+            }
+        )
+
+        return is_fresh
 
     def get_cache_age(self, symbol: str, timeframe: str) -> Optional[timedelta]:
         """
@@ -268,8 +378,37 @@ class ParquetStore:
         cache_path = self._get_cache_path(symbol, timeframe)
 
         if cache_path.exists():
-            cache_path.unlink()
-            return True
+            try:
+                cache_path.unlink()
+                logger.info(
+                    "Deleted cache file",
+                    extra={
+                        "symbol": symbol,
+                        "timeframe": timeframe,
+                        "cache_path": str(cache_path)
+                    }
+                )
+                return True
+            except Exception as e:
+                logger.error(
+                    f"Failed to delete cache file: {e}",
+                    extra={
+                        "symbol": symbol,
+                        "timeframe": timeframe,
+                        "cache_path": str(cache_path)
+                    },
+                    exc_info=True
+                )
+                raise
+
+        logger.debug(
+            "Cache file not found for deletion",
+            extra={
+                "symbol": symbol,
+                "timeframe": timeframe,
+                "cache_path": str(cache_path)
+            }
+        )
         return False
 
     def clear_all_cache(self) -> int:
@@ -279,10 +418,30 @@ class ParquetStore:
         Returns:
             Number of files deleted
         """
+        logger.info("Clearing all cache files", extra={"cache_dir": str(self.cache_dir)})
+
         count = 0
+        errors = 0
         for cache_file in self.cache_dir.glob("*.parquet"):
-            cache_file.unlink()
-            count += 1
+            try:
+                cache_file.unlink()
+                count += 1
+            except Exception as e:
+                errors += 1
+                logger.error(
+                    f"Failed to delete cache file: {e}",
+                    extra={"cache_file": str(cache_file)},
+                    exc_info=True
+                )
+
+        logger.info(
+            f"Cache cleared: {count} files deleted",
+            extra={
+                "cache_dir": str(self.cache_dir),
+                "files_deleted": count,
+                "errors": errors
+            }
+        )
         return count
 
     def get_cache_size(self, symbol: str, timeframe: str) -> Optional[int]:

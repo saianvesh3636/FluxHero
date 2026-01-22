@@ -575,5 +575,181 @@ def test_success_criteria_snappy_compression(parquet_store, sample_candle_data):
             assert 'SNAPPY' in str(column_meta.compression).upper()
 
 
+# ============================================================================
+# Logging Tests
+# ============================================================================
+
+def test_save_candles_logging(parquet_store, sample_candle_data, caplog):
+    """Test that save_candles logs appropriate messages."""
+    import logging
+
+    with caplog.at_level(logging.DEBUG):
+        parquet_store.save_candles(sample_candle_data)
+
+    # Check for debug message about saving
+    debug_records = [r for r in caplog.records if r.levelname == 'DEBUG']
+    assert any('Saving' in r.message for r in debug_records)
+    assert any(r.symbol == 'SPY' for r in debug_records if hasattr(r, 'symbol'))
+
+    # Check for info message about successful save
+    info_records = [r for r in caplog.records if r.levelname == 'INFO']
+    assert any('Successfully saved' in r.message for r in info_records)
+    assert any(r.num_candles == 100 for r in info_records if hasattr(r, 'num_candles'))
+
+
+def test_save_candles_with_indicators_logging(parquet_store, sample_candle_data_with_indicators, caplog):
+    """Test that saving with indicators logs indicator names."""
+    import logging
+
+    with caplog.at_level(logging.INFO):
+        parquet_store.save_candles(sample_candle_data_with_indicators)
+
+    # Check that indicators are logged
+    info_records = [r for r in caplog.records if r.levelname == 'INFO']
+    assert any('Successfully saved' in r.message for r in info_records)
+    # Verify indicators field is in the log record
+    indicator_records = [r for r in info_records if hasattr(r, 'indicators')]
+    assert len(indicator_records) > 0
+    assert 'ema' in indicator_records[0].indicators
+    assert 'atr' in indicator_records[0].indicators
+    assert 'rsi' in indicator_records[0].indicators
+
+
+def test_load_candles_logging(parquet_store, sample_candle_data, caplog):
+    """Test that load_candles logs appropriate messages."""
+    import logging
+
+    # Save first
+    parquet_store.save_candles(sample_candle_data)
+    caplog.clear()
+
+    # Load with debug logging
+    with caplog.at_level(logging.DEBUG):
+        parquet_store.load_candles('SPY', '1h')
+
+    # Check for debug message about loading
+    debug_records = [r for r in caplog.records if r.levelname == 'DEBUG']
+    assert any('Loading candles' in r.message for r in debug_records)
+
+    # Check for info message about successful load
+    info_records = [r for r in caplog.records if r.levelname == 'INFO']
+    assert any('Successfully loaded' in r.message for r in info_records)
+    assert any(r.num_candles == 100 for r in info_records if hasattr(r, 'num_candles'))
+
+
+def test_load_non_existent_logging(parquet_store, caplog):
+    """Test that loading non-existent cache logs debug message."""
+    import logging
+
+    with caplog.at_level(logging.DEBUG):
+        parquet_store.load_candles('NONEXISTENT', '1h')
+
+    # Check for debug message about cache not found
+    debug_records = [r for r in caplog.records if r.levelname == 'DEBUG']
+    assert any('Cache file not found' in r.message for r in debug_records)
+
+
+def test_delete_cache_logging(parquet_store, sample_candle_data, caplog):
+    """Test that delete_cache logs appropriate messages."""
+    import logging
+
+    # Save first
+    parquet_store.save_candles(sample_candle_data)
+    caplog.clear()
+
+    # Delete with logging
+    with caplog.at_level(logging.INFO):
+        parquet_store.delete_cache('SPY', '1h')
+
+    # Check for info message about deletion
+    info_records = [r for r in caplog.records if r.levelname == 'INFO']
+    assert any('Deleted cache file' in r.message for r in info_records)
+
+
+def test_delete_non_existent_logging(parquet_store, caplog):
+    """Test that deleting non-existent cache logs debug message."""
+    import logging
+
+    with caplog.at_level(logging.DEBUG):
+        parquet_store.delete_cache('NONEXISTENT', '1h')
+
+    # Check for debug message about cache not found
+    debug_records = [r for r in caplog.records if r.levelname == 'DEBUG']
+    assert any('Cache file not found for deletion' in r.message for r in debug_records)
+
+
+def test_clear_all_cache_logging(parquet_store, sample_candle_data, sample_candle_data_with_indicators, caplog):
+    """Test that clear_all_cache logs appropriate messages."""
+    import logging
+
+    # Save multiple files
+    parquet_store.save_candles(sample_candle_data)
+    parquet_store.save_candles(sample_candle_data_with_indicators)
+    caplog.clear()
+
+    # Clear all with logging
+    with caplog.at_level(logging.INFO):
+        parquet_store.clear_all_cache()
+
+    # Check for info messages
+    info_records = [r for r in caplog.records if r.levelname == 'INFO']
+    assert any('Clearing all cache files' in r.message for r in info_records)
+    assert any('Cache cleared' in r.message for r in info_records)
+    assert any(r.files_deleted == 2 for r in info_records if hasattr(r, 'files_deleted'))
+
+
+def test_is_cache_fresh_logging(parquet_store, sample_candle_data, caplog):
+    """Test that is_cache_fresh logs debug messages."""
+    import logging
+
+    # Test with existing fresh cache
+    parquet_store.save_candles(sample_candle_data)
+    caplog.clear()
+
+    with caplog.at_level(logging.DEBUG):
+        parquet_store.is_cache_fresh('SPY', '1h')
+
+    debug_records = [r for r in caplog.records if r.levelname == 'DEBUG']
+    assert any('Cache freshness check' in r.message for r in debug_records)
+    assert any('fresh' in r.message.lower() for r in debug_records)
+
+
+def test_is_cache_fresh_non_existent_logging(parquet_store, caplog):
+    """Test that is_cache_fresh logs debug for non-existent cache."""
+    import logging
+
+    with caplog.at_level(logging.DEBUG):
+        parquet_store.is_cache_fresh('NONEXISTENT', '1h')
+
+    debug_records = [r for r in caplog.records if r.levelname == 'DEBUG']
+    assert any('file not found' in r.message for r in debug_records)
+
+
+def test_load_candles_error_logging(parquet_store, sample_candle_data, caplog):
+    """Test that load errors are logged properly when file is corrupted."""
+    import logging
+
+    # Save valid data first
+    parquet_store.save_candles(sample_candle_data)
+    cache_path = parquet_store._get_cache_path('SPY', '1h')
+
+    # Corrupt the file by writing invalid data
+    with open(cache_path, 'wb') as f:
+        f.write(b'corrupted data that is not valid parquet format')
+
+    caplog.clear()
+
+    # Attempt to load - should log error and raise exception
+    with caplog.at_level(logging.ERROR):
+        try:
+            parquet_store.load_candles('SPY', '1h')
+        except Exception:
+            pass  # Expected to fail
+
+    # Check for error message
+    error_records = [r for r in caplog.records if r.levelname == 'ERROR']
+    assert any('Failed to load candles' in r.message for r in error_records)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
