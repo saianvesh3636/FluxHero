@@ -102,7 +102,7 @@ class TestReferencedFilesExist:
     def test_backend_api_server_exists(self, guide_content):
         """Verify backend API server file exists."""
         assert "backend.api.server" in guide_content or "backend/api/server.py" in guide_content
-        server_path = PROJECT_ROOT / "fluxhero" / "backend" / "api" / "server.py"
+        server_path = PROJECT_ROOT / "" / "backend" / "api" / "server.py"
         assert server_path.exists(), f"Backend server not found at {server_path}"
 
     def test_env_file_referenced(self, guide_content):

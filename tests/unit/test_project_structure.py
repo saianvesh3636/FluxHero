@@ -15,9 +15,9 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 class TestProjectStructure:
     """Test suite for verifying project folder structure."""
 
-    def test_fluxhero_root_exists(self):
-        """Verify fluxhero root directory exists."""
-        assert (PROJECT_ROOT / "fluxhero").is_dir()
+    def test_project_root_exists(self):
+        """Verify project root directory exists."""
+        assert PROJECT_ROOT.is_dir()
 
     def test_backend_directories_exist(self):
         """Verify all backend module directories exist."""
@@ -33,14 +33,13 @@ class TestProjectStructure:
         ]
 
         for module in backend_modules:
-            module_path = PROJECT_ROOT / "fluxhero" / "backend" / module
+            module_path = PROJECT_ROOT / "backend" / module
             assert module_path.is_dir(), f"Backend module '{module}' directory not found"
 
     def test_backend_init_files_exist(self):
         """Verify __init__.py files exist for all backend modules."""
         backend_modules = [
-            "",  # fluxhero/__init__.py
-            "backend",  # fluxhero/backend/__init__.py
+            "backend",  # backend/__init__.py
             "backend/computation",
             "backend/strategy",
             "backend/storage",
@@ -52,8 +51,8 @@ class TestProjectStructure:
         ]
 
         for module in backend_modules:
-            init_file = PROJECT_ROOT / "fluxhero" / module / "__init__.py"
-            assert init_file.is_file(), f"__init__.py not found in fluxhero/{module}"
+            init_file = PROJECT_ROOT / module / "__init__.py"
+            assert init_file.is_file(), f"__init__.py not found in {module}"
 
     def test_frontend_directories_exist(self):
         """Verify all frontend module directories exist."""
@@ -65,7 +64,7 @@ class TestProjectStructure:
         ]
 
         for module in frontend_modules:
-            module_path = PROJECT_ROOT / "fluxhero" / "frontend" / module
+            module_path = PROJECT_ROOT / "frontend" / module
             assert module_path.is_dir(), f"Frontend module '{module}' directory not found"
 
     def test_test_directories_exist(self):
@@ -112,15 +111,14 @@ class TestProjectStructure:
         """Verify config directory exists."""
         assert (PROJECT_ROOT / "config").is_dir()
 
-    def test_fluxhero_readme_exists(self):
-        """Verify FluxHero README documentation exists."""
-        readme_path = PROJECT_ROOT / "fluxhero" / "README.md"
-        assert readme_path.is_file(), "fluxhero/README.md not found"
+    def test_readme_exists(self):
+        """Verify README documentation exists."""
+        readme_path = PROJECT_ROOT / "README.md"
+        assert readme_path.is_file(), "README.md not found"
 
         # Verify README has content
         content = readme_path.read_text()
-        assert len(content) > 0, "fluxhero/README.md is empty"
-        assert "FluxHero Project Structure" in content, "README missing expected header"
+        assert len(content) > 0, "README.md is empty"
 
     def test_python_packages_are_importable(self):
         """Verify Python packages can be imported (have __init__.py)."""
@@ -128,16 +126,15 @@ class TestProjectStructure:
         # Actual imports would require the modules to be in sys.path
 
         required_packages = [
-            "fluxhero",
-            "fluxhero/backend",
-            "fluxhero/backend/computation",
-            "fluxhero/backend/strategy",
-            "fluxhero/backend/storage",
-            "fluxhero/backend/data",
-            "fluxhero/backend/backtesting",
-            "fluxhero/backend/execution",
-            "fluxhero/backend/risk",
-            "fluxhero/backend/api",
+            "backend",
+            "backend/computation",
+            "backend/strategy",
+            "backend/storage",
+            "backend/data",
+            "backend/backtesting",
+            "backend/execution",
+            "backend/risk",
+            "backend/api",
         ]
 
         for package in required_packages:

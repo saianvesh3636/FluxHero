@@ -43,19 +43,19 @@ import pytest
 from websockets.exceptions import ConnectionClosed, WebSocketException
 
 # Import backend modules
-from fluxhero.backend.data.fetcher import (
+from backend.data.fetcher import (
     AsyncAPIClient,
     DataPipeline,
     RateLimiter,
     WebSocketFeed,
 )
-from fluxhero.backend.computation.indicators import (
+from backend.computation.indicators import (
     calculate_ema,
     calculate_rsi,
     calculate_atr,
 )
-from fluxhero.backend.computation.adaptive_ema import calculate_kama
-from fluxhero.backend.strategy.regime_detector import detect_regime
+from backend.computation.adaptive_ema import calculate_kama
+from backend.strategy.regime_detector import detect_regime
 
 
 # ============================================================================
@@ -520,7 +520,7 @@ class TestInvalidDataScenarios:
     def test_regime_detection_with_insufficient_data(self):
         """Test regime detection with insufficient data."""
         # Only 5 bars (need more for proper ADX calculation)
-        from fluxhero.backend.computation.indicators import calculate_atr
+        from backend.computation.indicators import calculate_atr
 
         closes = np.array([100.0, 101.0, 102.0, 103.0, 104.0])
         highs = np.array([101.0, 102.0, 103.0, 104.0, 105.0])

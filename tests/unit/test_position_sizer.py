@@ -8,7 +8,7 @@ Date: 2026-01-20
 """
 
 import pytest
-from fluxhero.backend.execution.position_sizer import (
+from backend.execution.position_sizer import (
     AccountState,
     PositionSize,
     PositionSizeResult,

@@ -23,10 +23,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any
 
-from fluxhero.backend.core.config import get_settings
-from fluxhero.backend.data.fetcher import AsyncAPIClient, WebSocketFeed, DataPipeline
-from fluxhero.backend.storage.candle_buffer import CandleBuffer
-from fluxhero.backend.storage.parquet_store import ParquetStore
+from backend.core.config import get_settings
+from backend.data.fetcher import AsyncAPIClient, WebSocketFeed, DataPipeline
+from backend.storage.candle_buffer import CandleBuffer
+from backend.storage.parquet_store import ParquetStore
 
 
 # ============================================================================
@@ -297,7 +297,7 @@ class DailyRebootOrchestrator:
         self.logger.info(f"  Fetched {len(candles)} candles from API")
 
         # Save to cache
-        from fluxhero.backend.storage.parquet_store import CandleData
+        from backend.storage.parquet_store import CandleData
         import numpy as np
 
         cache_data = CandleData(

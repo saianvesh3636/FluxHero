@@ -9,12 +9,12 @@ Feature 10: Order Execution Engine (R10.2.1 - R10.2.3)
 import pytest
 import asyncio
 
-from fluxhero.backend.execution.order_manager import (
+from backend.execution.order_manager import (
     OrderManager,
     ManagedOrder,
     ChaseConfig,
 )
-from fluxhero.backend.execution.broker_interface import (
+from backend.execution.broker_interface import (
     PaperBroker,
     Order,
     OrderStatus,

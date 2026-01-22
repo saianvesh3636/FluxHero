@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from fluxhero.backend.storage.parquet_store import CandleData, ParquetStore
+from backend.storage.parquet_store import CandleData, ParquetStore
 
 
 @pytest.fixture

@@ -21,7 +21,7 @@ from fastapi.testclient import TestClient
 # Add parent directory to path for imports
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "fluxhero"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / ""))
 
 from backend.api.rate_limit import RateLimiter, RateLimitMiddleware
 

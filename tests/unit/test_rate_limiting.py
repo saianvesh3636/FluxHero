@@ -22,7 +22,7 @@ from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from fluxhero.backend.api.rate_limit import RateLimiter, RateLimitMiddleware
+from backend.api.rate_limit import RateLimiter, RateLimitMiddleware
 
 
 # ============================================================================

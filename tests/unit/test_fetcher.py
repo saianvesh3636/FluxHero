@@ -21,7 +21,7 @@ import httpx
 import pytest
 import websockets
 
-from fluxhero.backend.data.fetcher import (
+from backend.data.fetcher import (
     AsyncAPIClient,
     Candle,
     DataPipeline,

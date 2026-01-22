@@ -17,7 +17,7 @@ import time
 import numpy as np
 import pytest
 
-from fluxhero.backend.storage.candle_buffer import Candle, CandleBuffer
+from backend.storage.candle_buffer import Candle, CandleBuffer
 
 
 class TestCandleBufferInitialization:

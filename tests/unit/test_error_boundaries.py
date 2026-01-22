@@ -14,31 +14,31 @@ import os
 
 def test_error_boundary_file_exists():
     """Test that ErrorBoundary.tsx exists"""
-    path = "fluxhero/frontend/components/ErrorBoundary.tsx"
+    path = "frontend/components/ErrorBoundary.tsx"
     assert os.path.exists(path), f"ErrorBoundary component not found at {path}"
 
 
 def test_error_fallback_file_exists():
     """Test that ErrorFallback.tsx exists"""
-    path = "fluxhero/frontend/components/ErrorFallback.tsx"
+    path = "frontend/components/ErrorFallback.tsx"
     assert os.path.exists(path), f"ErrorFallback component not found at {path}"
 
 
 def test_page_error_boundary_file_exists():
     """Test that PageErrorBoundary.tsx exists"""
-    path = "fluxhero/frontend/components/PageErrorBoundary.tsx"
+    path = "frontend/components/PageErrorBoundary.tsx"
     assert os.path.exists(path), f"PageErrorBoundary component not found at {path}"
 
 
 def test_async_error_boundary_file_exists():
     """Test that AsyncErrorBoundary.tsx exists"""
-    path = "fluxhero/frontend/components/AsyncErrorBoundary.tsx"
+    path = "frontend/components/AsyncErrorBoundary.tsx"
     assert os.path.exists(path), f"AsyncErrorBoundary component not found at {path}"
 
 
 def test_error_boundary_has_class_component():
     """Test that ErrorBoundary uses React class component"""
-    path = "fluxhero/frontend/components/ErrorBoundary.tsx"
+    path = "frontend/components/ErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -49,7 +49,7 @@ def test_error_boundary_has_class_component():
 
 def test_error_boundary_has_componentdidcatch():
     """Test that ErrorBoundary implements componentDidCatch"""
-    path = "fluxhero/frontend/components/ErrorBoundary.tsx"
+    path = "frontend/components/ErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -58,7 +58,7 @@ def test_error_boundary_has_componentdidcatch():
 
 def test_error_boundary_has_getderivedstatefromerror():
     """Test that ErrorBoundary implements getDerivedStateFromError"""
-    path = "fluxhero/frontend/components/ErrorBoundary.tsx"
+    path = "frontend/components/ErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -69,7 +69,7 @@ def test_error_boundary_has_getderivedstatefromerror():
 
 def test_error_boundary_has_state_interface():
     """Test that ErrorBoundary has proper state interface"""
-    path = "fluxhero/frontend/components/ErrorBoundary.tsx"
+    path = "frontend/components/ErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -80,7 +80,7 @@ def test_error_boundary_has_state_interface():
 
 def test_error_boundary_exports_default():
     """Test that ErrorBoundary exports default"""
-    path = "fluxhero/frontend/components/ErrorBoundary.tsx"
+    path = "frontend/components/ErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -89,7 +89,7 @@ def test_error_boundary_exports_default():
 
 def test_error_boundary_has_reset_functionality():
     """Test that ErrorBoundary has reset functionality"""
-    path = "fluxhero/frontend/components/ErrorBoundary.tsx"
+    path = "frontend/components/ErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -99,7 +99,7 @@ def test_error_boundary_has_reset_functionality():
 
 def test_error_fallback_has_default_export():
     """Test that ErrorFallback has default export"""
-    path = "fluxhero/frontend/components/ErrorFallback.tsx"
+    path = "frontend/components/ErrorFallback.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -110,7 +110,7 @@ def test_error_fallback_has_default_export():
 
 def test_error_fallback_has_props_interface():
     """Test that ErrorFallback has proper props interface"""
-    path = "fluxhero/frontend/components/ErrorFallback.tsx"
+    path = "frontend/components/ErrorFallback.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -122,7 +122,7 @@ def test_error_fallback_has_props_interface():
 
 def test_error_fallback_has_specialized_components():
     """Test that ErrorFallback exports specialized components"""
-    path = "fluxhero/frontend/components/ErrorFallback.tsx"
+    path = "frontend/components/ErrorFallback.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -140,7 +140,7 @@ def test_error_fallback_has_specialized_components():
 
 def test_error_fallback_has_styling():
     """Test that ErrorFallback includes styling"""
-    path = "fluxhero/frontend/components/ErrorFallback.tsx"
+    path = "frontend/components/ErrorFallback.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -151,7 +151,7 @@ def test_error_fallback_has_styling():
 
 def test_page_error_boundary_exports_default():
     """Test that PageErrorBoundary exports default"""
-    path = "fluxhero/frontend/components/PageErrorBoundary.tsx"
+    path = "frontend/components/PageErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -162,7 +162,7 @@ def test_page_error_boundary_exports_default():
 
 def test_page_error_boundary_wraps_error_boundary():
     """Test that PageErrorBoundary wraps ErrorBoundary"""
-    path = "fluxhero/frontend/components/PageErrorBoundary.tsx"
+    path = "frontend/components/PageErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -175,7 +175,7 @@ def test_page_error_boundary_wraps_error_boundary():
 
 def test_page_error_boundary_has_page_name_prop():
     """Test that PageErrorBoundary accepts pageName prop"""
-    path = "fluxhero/frontend/components/PageErrorBoundary.tsx"
+    path = "frontend/components/PageErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -184,7 +184,7 @@ def test_page_error_boundary_has_page_name_prop():
 
 def test_async_error_boundary_exports_default():
     """Test that AsyncErrorBoundary exports default"""
-    path = "fluxhero/frontend/components/AsyncErrorBoundary.tsx"
+    path = "frontend/components/AsyncErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -195,7 +195,7 @@ def test_async_error_boundary_exports_default():
 
 def test_async_error_boundary_handles_loading_state():
     """Test that AsyncErrorBoundary handles loading state"""
-    path = "fluxhero/frontend/components/AsyncErrorBoundary.tsx"
+    path = "frontend/components/AsyncErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -204,7 +204,7 @@ def test_async_error_boundary_handles_loading_state():
 
 def test_async_error_boundary_handles_error_state():
     """Test that AsyncErrorBoundary handles error state"""
-    path = "fluxhero/frontend/components/AsyncErrorBoundary.tsx"
+    path = "frontend/components/AsyncErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -213,7 +213,7 @@ def test_async_error_boundary_handles_error_state():
 
 def test_async_error_boundary_has_retry_functionality():
     """Test that AsyncErrorBoundary has retry functionality"""
-    path = "fluxhero/frontend/components/AsyncErrorBoundary.tsx"
+    path = "frontend/components/AsyncErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -222,7 +222,7 @@ def test_async_error_boundary_has_retry_functionality():
 
 def test_async_error_boundary_exports_hook():
     """Test that AsyncErrorBoundary exports useAsyncError hook"""
-    path = "fluxhero/frontend/components/AsyncErrorBoundary.tsx"
+    path = "frontend/components/AsyncErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -233,7 +233,7 @@ def test_async_error_boundary_exports_hook():
 
 def test_layout_integrates_error_boundary():
     """Test that root layout integrates ErrorBoundary"""
-    path = "fluxhero/frontend/app/layout.tsx"
+    path = "frontend/app/layout.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -247,10 +247,10 @@ def test_layout_integrates_error_boundary():
 def test_all_components_have_client_directive():
     """Test that all error boundary components have 'use client' directive"""
     components = [
-        "fluxhero/frontend/components/ErrorBoundary.tsx",
-        "fluxhero/frontend/components/ErrorFallback.tsx",
-        "fluxhero/frontend/components/PageErrorBoundary.tsx",
-        "fluxhero/frontend/components/AsyncErrorBoundary.tsx",
+        "frontend/components/ErrorBoundary.tsx",
+        "frontend/components/ErrorFallback.tsx",
+        "frontend/components/PageErrorBoundary.tsx",
+        "frontend/components/AsyncErrorBoundary.tsx",
     ]
 
     for component_path in components:
@@ -265,7 +265,7 @@ def test_all_components_have_client_directive():
 
 def test_error_boundary_has_reset_keys_support():
     """Test that ErrorBoundary supports resetKeys prop"""
-    path = "fluxhero/frontend/components/ErrorBoundary.tsx"
+    path = "frontend/components/ErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -275,7 +275,7 @@ def test_error_boundary_has_reset_keys_support():
 
 def test_error_boundary_has_custom_error_handler():
     """Test that ErrorBoundary supports custom onError handler"""
-    path = "fluxhero/frontend/components/ErrorBoundary.tsx"
+    path = "frontend/components/ErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -285,7 +285,7 @@ def test_error_boundary_has_custom_error_handler():
 
 def test_error_fallback_has_reset_button():
     """Test that ErrorFallback includes a reset button"""
-    path = "fluxhero/frontend/components/ErrorFallback.tsx"
+    path = "frontend/components/ErrorFallback.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -296,7 +296,7 @@ def test_error_fallback_has_reset_button():
 
 def test_error_fallback_has_error_details():
     """Test that ErrorFallback shows error details"""
-    path = "fluxhero/frontend/components/ErrorFallback.tsx"
+    path = "frontend/components/ErrorFallback.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -306,7 +306,7 @@ def test_error_fallback_has_error_details():
 
 def test_async_error_boundary_uses_state():
     """Test that AsyncErrorBoundary uses React state"""
-    path = "fluxhero/frontend/components/AsyncErrorBoundary.tsx"
+    path = "frontend/components/AsyncErrorBoundary.tsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -317,10 +317,10 @@ def test_async_error_boundary_uses_state():
 def test_typescript_interfaces_defined():
     """Test that all components have TypeScript interfaces"""
     components = {
-        "fluxhero/frontend/components/ErrorBoundary.tsx": "ErrorBoundaryProps",
-        "fluxhero/frontend/components/ErrorFallback.tsx": "ErrorFallbackProps",
-        "fluxhero/frontend/components/PageErrorBoundary.tsx": "PageErrorBoundaryProps",
-        "fluxhero/frontend/components/AsyncErrorBoundary.tsx": "AsyncErrorBoundaryProps",
+        "frontend/components/ErrorBoundary.tsx": "ErrorBoundaryProps",
+        "frontend/components/ErrorFallback.tsx": "ErrorFallbackProps",
+        "frontend/components/PageErrorBoundary.tsx": "PageErrorBoundaryProps",
+        "frontend/components/AsyncErrorBoundary.tsx": "AsyncErrorBoundaryProps",
     }
 
     for component_path, interface_name in components.items():
@@ -335,10 +335,10 @@ def test_typescript_interfaces_defined():
 def test_components_have_documentation():
     """Test that all components have JSDoc documentation"""
     components = [
-        "fluxhero/frontend/components/ErrorBoundary.tsx",
-        "fluxhero/frontend/components/ErrorFallback.tsx",
-        "fluxhero/frontend/components/PageErrorBoundary.tsx",
-        "fluxhero/frontend/components/AsyncErrorBoundary.tsx",
+        "frontend/components/ErrorBoundary.tsx",
+        "frontend/components/ErrorFallback.tsx",
+        "frontend/components/PageErrorBoundary.tsx",
+        "frontend/components/AsyncErrorBoundary.tsx",
     ]
 
     for component_path in components:
@@ -355,17 +355,17 @@ def test_error_boundary_integration_complete():
     """Test that error boundary integration is complete"""
     # Verify all files exist
     required_files = [
-        "fluxhero/frontend/components/ErrorBoundary.tsx",
-        "fluxhero/frontend/components/ErrorFallback.tsx",
-        "fluxhero/frontend/components/PageErrorBoundary.tsx",
-        "fluxhero/frontend/components/AsyncErrorBoundary.tsx",
+        "frontend/components/ErrorBoundary.tsx",
+        "frontend/components/ErrorFallback.tsx",
+        "frontend/components/PageErrorBoundary.tsx",
+        "frontend/components/AsyncErrorBoundary.tsx",
     ]
 
     for file_path in required_files:
         assert os.path.exists(file_path), f"Required file {file_path} not found"
 
     # Verify layout integration
-    layout_path = "fluxhero/frontend/app/layout.tsx"
+    layout_path = "frontend/app/layout.tsx"
     with open(layout_path, "r") as f:
         layout_content = f.read()
 

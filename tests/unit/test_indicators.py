@@ -10,7 +10,7 @@ Tests cover:
 import time
 import numpy as np
 import pytest
-from fluxhero.backend.computation.indicators import (
+from backend.computation.indicators import (
     calculate_ema,
     calculate_rsi,
     calculate_true_range,

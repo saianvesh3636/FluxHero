@@ -14,7 +14,7 @@ Date: 2026-01-20
 
 import pytest
 import numpy as np
-from fluxhero.backend.risk.position_limits import (
+from backend.risk.position_limits import (
     calculate_position_size_from_risk,
     validate_position_level_risk,
     calculate_atr_stop_loss,
@@ -30,7 +30,7 @@ from fluxhero.backend.risk.position_limits import (
     RiskCheckResult,
     PositionLimitsConfig,
 )
-from fluxhero.backend.core.config import Settings
+from backend.core.config import Settings
 
 
 # ============================================================================

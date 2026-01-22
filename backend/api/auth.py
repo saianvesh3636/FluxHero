@@ -5,7 +5,7 @@ This module provides token-based authentication for WebSocket and API endpoints.
 It validates bearer tokens against a configurable secret key.
 
 Usage:
-    from fluxhero.backend.api.auth import validate_token, get_auth_secret
+    from backend.api.auth import validate_token, get_auth_secret
 
     # Validate a token from request headers
     is_valid = validate_token(token)
@@ -28,7 +28,7 @@ Date: 2026-01-22
 import os
 import secrets
 from typing import Optional
-from fluxhero.backend.core.logging_config import get_logger
+from backend.core.logging_config import get_logger
 
 logger = get_logger(__name__)
 

@@ -12,8 +12,8 @@ The test uses multiple market scenarios to ensure robustness.
 import sys
 from pathlib import Path
 
-# Add fluxhero directory to path
-project_root = Path(__file__).parent.parent / "fluxhero"
+# Add project root to path
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 import numpy as np  # noqa: E402

@@ -17,7 +17,7 @@ Reference: FLUXHERO_REQUIREMENTS.md Feature 6
 
 import numpy as np
 import pytest
-from fluxhero.backend.strategy.dual_mode import (
+from backend.strategy.dual_mode import (
     # Signal functions
     generate_trend_following_signals,
     generate_mean_reversion_signals,

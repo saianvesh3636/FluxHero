@@ -18,20 +18,20 @@ from pathlib import Path
 
 def test_history_page_exists():
     """Test that history.tsx file exists"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     assert history_file.exists(), "history.tsx should exist"
 
 
 def test_history_page_is_client_component():
     """Test that history page is a client component"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
     assert "'use client'" in content, "history.tsx should be a client component"
 
 
 def test_history_page_imports_api():
     """Test that history page imports API utilities"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
     assert "from '../utils/api'" in content, "Should import from utils/api"
     assert "Trade" in content, "Should import Trade type"
@@ -39,7 +39,7 @@ def test_history_page_imports_api():
 
 def test_history_page_has_main_component():
     """Test that history page exports main component"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
     assert "TradeHistoryPage" in content, "Should have TradeHistoryPage component"
     assert "export default TradeHistoryPage" in content, "Should export component as default"
@@ -47,7 +47,7 @@ def test_history_page_has_main_component():
 
 def test_history_page_has_state_management():
     """Test that history page has proper state management"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     # Check for useState hooks
@@ -59,7 +59,7 @@ def test_history_page_has_state_management():
 
 def test_history_page_has_use_effect():
     """Test that history page has useEffect for data fetching"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
     assert "useEffect" in content, "Should use useEffect hook"
     assert "api.getTrades" in content, "Should call api.getTrades"
@@ -67,7 +67,7 @@ def test_history_page_has_use_effect():
 
 def test_pagination_configuration():
     """Test that pagination is configured for 20 trades per page"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
     assert "tradesPerPage = 20" in content or "tradesPerPage: 20" in content, \
         "Should have 20 trades per page"
@@ -75,7 +75,7 @@ def test_pagination_configuration():
 
 def test_pagination_controls():
     """Test that pagination controls are present"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     # Check for pagination UI elements
@@ -88,7 +88,7 @@ def test_pagination_controls():
 
 def test_csv_export_function():
     """Test that CSV export functionality is present"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "convertToCSV" in content or "CSV" in content, "Should have CSV export"
@@ -100,7 +100,7 @@ def test_csv_export_function():
 
 def test_csv_export_includes_headers():
     """Test that CSV export includes proper headers"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     # Check for key CSV headers
@@ -115,7 +115,7 @@ def test_csv_export_includes_headers():
 
 def test_tooltip_component():
     """Test that tooltip component exists"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "Tooltip" in content, "Should have Tooltip component"
@@ -124,7 +124,7 @@ def test_tooltip_component():
 
 def test_tooltip_shows_trade_details():
     """Test that tooltip shows comprehensive trade details"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     # Check for key tooltip fields
@@ -139,7 +139,7 @@ def test_tooltip_shows_trade_details():
 
 def test_table_structure():
     """Test that trade table has proper structure"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     # Check for table elements
@@ -152,7 +152,7 @@ def test_table_structure():
 
 def test_table_columns():
     """Test that table has required columns"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     # Check for key columns
@@ -163,7 +163,7 @@ def test_table_columns():
 
 def test_loading_state():
     """Test that loading state is displayed"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "loading" in content.lower(), "Should have loading state"
@@ -173,7 +173,7 @@ def test_loading_state():
 
 def test_error_handling():
     """Test that error handling is present"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "error" in content.lower(), "Should handle errors"
@@ -183,7 +183,7 @@ def test_error_handling():
 
 def test_color_coded_pnl():
     """Test that P&L is color-coded"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     # Check for color coding logic
@@ -196,7 +196,7 @@ def test_color_coded_pnl():
 
 def test_format_currency_helper():
     """Test that currency formatting helper exists"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "formatCurrency" in content or "currency" in content.lower(), \
@@ -206,7 +206,7 @@ def test_format_currency_helper():
 
 def test_format_date_helper():
     """Test that date formatting helper exists"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "formatDate" in content or "Date" in content, "Should have date formatting"
@@ -215,7 +215,7 @@ def test_format_date_helper():
 
 def test_format_percent_helper():
     """Test that percentage formatting helper exists"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "formatPercent" in content or "%" in content, \
@@ -226,7 +226,7 @@ def test_format_percent_helper():
 
 def test_empty_trades_handling():
     """Test that empty trades list is handled"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "length === 0" in content or "No trades" in content, \
@@ -235,7 +235,7 @@ def test_empty_trades_handling():
 
 def test_responsive_design():
     """Test that responsive design is included"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     # Check for responsive CSS
@@ -245,7 +245,7 @@ def test_responsive_design():
 
 def test_page_header():
     """Test that page has a header with title and export button"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "Trade History" in content, "Should have page title"
@@ -256,7 +256,7 @@ def test_page_header():
 
 def test_typescript_typing():
     """Test that TypeScript types are properly used"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     # Check for TypeScript type annotations
@@ -268,7 +268,7 @@ def test_typescript_typing():
 
 def test_async_data_fetching():
     """Test that data fetching is async"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "async" in content, "Should use async functions"
@@ -277,7 +277,7 @@ def test_async_data_fetching():
 
 def test_pagination_page_change_handler():
     """Test that page change handler exists"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "handlePageChange" in content or "setCurrentPage" in content, \
@@ -286,7 +286,7 @@ def test_pagination_page_change_handler():
 
 def test_export_button_handler():
     """Test that export button has handler"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "handleExport" in content or "onClick" in content, \
@@ -295,7 +295,7 @@ def test_export_button_handler():
 
 def test_trade_id_key():
     """Test that trades are keyed by ID"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "key=" in content, "Should use keys for list items"
@@ -304,7 +304,7 @@ def test_trade_id_key():
 
 def test_styled_jsx():
     """Test that component includes styling"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     # Check for styling (either styled-jsx or CSS modules)
@@ -314,7 +314,7 @@ def test_styled_jsx():
 
 def test_pagination_disabled_states():
     """Test that pagination buttons have disabled states"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "disabled" in content, "Pagination should have disabled states"
@@ -322,7 +322,7 @@ def test_pagination_disabled_states():
 
 def test_csv_filename_with_timestamp():
     """Test that CSV export includes timestamp in filename"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     # Check for timestamp or date in filename
@@ -333,7 +333,7 @@ def test_csv_filename_with_timestamp():
 
 def test_return_percentage_calculation():
     """Test that return percentage is calculated"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "realized_pnl" in content, "Should use realized P&L"
@@ -345,7 +345,7 @@ def test_return_percentage_calculation():
 
 def test_side_styling():
     """Test that trade side (LONG/SHORT) has styling"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     assert "side" in content.lower(), "Should display trade side"
@@ -356,7 +356,7 @@ def test_side_styling():
 
 def test_all_required_features():
     """Test that all required features from Phase 14, Tab C are present"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     required_features = [
@@ -374,7 +374,7 @@ def test_all_required_features():
 
 def test_component_structure():
     """Test overall component structure and organization"""
-    history_file = Path("fluxhero/frontend/pages/history.tsx")
+    history_file = Path("frontend/pages/history.tsx")
     content = history_file.read_text()
 
     # Check for proper component structure

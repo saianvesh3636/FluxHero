@@ -22,15 +22,15 @@ import sys
 import numpy as np
 import pytest
 
-# Add fluxhero to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "fluxhero"))
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / ""))
 
-from fluxhero.backend.maintenance.daily_reboot import (
+from backend.maintenance.daily_reboot import (
     RebootConfig,
     DailyRebootOrchestrator,
 )
-from fluxhero.backend.storage.parquet_store import CandleData
-from fluxhero.backend.data.fetcher import Candle
+from backend.storage.parquet_store import CandleData
+from backend.data.fetcher import Candle
 
 
 # ============================================================================
@@ -336,7 +336,7 @@ async def test_initialize_websocket_success():
         orchestrator.rest_client = mock_rest_client
 
         with patch(
-            "fluxhero.backend.maintenance.daily_reboot.WebSocketFeed", return_value=mock_ws
+            "backend.maintenance.daily_reboot.WebSocketFeed", return_value=mock_ws
         ):
             await orchestrator._initialize_websocket("SPY")
 
@@ -534,11 +534,11 @@ async def test_run_full_reboot_success():
         mock_ws.disconnect = AsyncMock()
 
         with patch(
-            "fluxhero.backend.maintenance.daily_reboot.AsyncAPIClient",
+            "backend.maintenance.daily_reboot.AsyncAPIClient",
             return_value=mock_rest_client,
         ):
             with patch(
-                "fluxhero.backend.maintenance.daily_reboot.WebSocketFeed",
+                "backend.maintenance.daily_reboot.WebSocketFeed",
                 return_value=mock_ws,
             ):
                 results = await orchestrator.run()
@@ -569,7 +569,7 @@ async def test_run_reboot_failure():
         mock_rest_client.close = AsyncMock()
 
         with patch(
-            "fluxhero.backend.maintenance.daily_reboot.AsyncAPIClient",
+            "backend.maintenance.daily_reboot.AsyncAPIClient",
             return_value=mock_rest_client,
         ):
             with pytest.raises(Exception, match="API connection failed"):
@@ -617,11 +617,11 @@ async def test_reboot_performance_single_symbol():
         mock_ws.disconnect = AsyncMock()
 
         with patch(
-            "fluxhero.backend.maintenance.daily_reboot.AsyncAPIClient",
+            "backend.maintenance.daily_reboot.AsyncAPIClient",
             return_value=mock_rest_client,
         ):
             with patch(
-                "fluxhero.backend.maintenance.daily_reboot.WebSocketFeed",
+                "backend.maintenance.daily_reboot.WebSocketFeed",
                 return_value=mock_ws,
             ):
                 start = datetime.now()

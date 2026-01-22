@@ -22,7 +22,7 @@ class TestResponsiveDesign:
         # Get the project root directory
         current_file = Path(__file__).resolve()
         project_root = current_file.parent.parent.parent
-        css_path = project_root / "fluxhero" / "frontend" / "app" / "globals.css"
+        css_path = project_root / "" / "frontend" / "app" / "globals.css"
 
         if not css_path.exists():
             raise FileNotFoundError(f"globals.css not found at {css_path}")
@@ -218,7 +218,7 @@ class TestResponsiveDesign:
         """Test that live trading page uses responsive classes"""
         current_file = Path(__file__).resolve()
         project_root = current_file.parent.parent.parent
-        live_page_path = project_root / "fluxhero" / "frontend" / "app" / "live" / "page.tsx"
+        live_page_path = project_root / "" / "frontend" / "app" / "live" / "page.tsx"
 
         if not live_page_path.exists():
             # Skip test if file doesn't exist
@@ -236,7 +236,7 @@ class TestResponsiveDesign:
         """Test that analytics page uses responsive classes"""
         current_file = Path(__file__).resolve()
         project_root = current_file.parent.parent.parent
-        analytics_page_path = project_root / "fluxhero" / "frontend" / "app" / "analytics" / "page.tsx"
+        analytics_page_path = project_root / "" / "frontend" / "app" / "analytics" / "page.tsx"
 
         if not analytics_page_path.exists():
             # Skip test if file doesn't exist
@@ -253,7 +253,7 @@ class TestResponsiveDesign:
         """Test that backtest page uses responsive classes"""
         current_file = Path(__file__).resolve()
         project_root = current_file.parent.parent.parent
-        backtest_page_path = project_root / "fluxhero" / "frontend" / "app" / "backtest" / "page.tsx"
+        backtest_page_path = project_root / "" / "frontend" / "app" / "backtest" / "page.tsx"
 
         if not backtest_page_path.exists():
             # Skip test if file doesn't exist
@@ -270,7 +270,7 @@ class TestResponsiveDesign:
         """Test that history page uses responsive classes"""
         current_file = Path(__file__).resolve()
         project_root = current_file.parent.parent.parent
-        history_page_path = project_root / "fluxhero" / "frontend" / "pages" / "history.tsx"
+        history_page_path = project_root / "" / "frontend" / "pages" / "history.tsx"
 
         if not history_page_path.exists():
             # Skip test if file doesn't exist
@@ -318,10 +318,10 @@ class TestResponsiveDesign:
         project_root = current_file.parent.parent.parent
 
         pages_to_check = [
-            project_root / "fluxhero" / "frontend" / "app" / "live" / "page.tsx",
-            project_root / "fluxhero" / "frontend" / "app" / "analytics" / "page.tsx",
-            project_root / "fluxhero" / "frontend" / "app" / "backtest" / "page.tsx",
-            project_root / "fluxhero" / "frontend" / "pages" / "history.tsx",
+            project_root / "" / "frontend" / "app" / "live" / "page.tsx",
+            project_root / "" / "frontend" / "app" / "analytics" / "page.tsx",
+            project_root / "" / "frontend" / "app" / "backtest" / "page.tsx",
+            project_root / "" / "frontend" / "pages" / "history.tsx",
         ]
 
         for page_path in pages_to_check:

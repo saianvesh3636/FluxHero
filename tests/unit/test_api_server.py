@@ -23,8 +23,8 @@ import logging
 import sys
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from fluxhero.backend.api.server import app, app_state
-from fluxhero.backend.storage.sqlite_store import (
+from backend.api.server import app, app_state
+from backend.storage.sqlite_store import (
     SQLiteStore,
     Trade,
     Position,
@@ -499,8 +499,8 @@ def test_cors_headers(client):
 
 def test_server_uses_config_settings():
     """Test that server.py uses centralized config for CORS and API settings"""
-    from fluxhero.backend.api.server import app, settings
-    from fluxhero.backend.core.config import get_settings
+    from backend.api.server import app, settings
+    from backend.core.config import get_settings
 
     # Verify that settings are imported and used
     config = get_settings()
@@ -555,14 +555,14 @@ def test_api_documentation(client):
 def test_server_startup_logging(test_db, caplog):
     """Test that server startup logs are generated correctly"""
     from contextlib import asynccontextmanager
-    from fluxhero.backend.api.server import app_state
+    from backend.api.server import app_state
 
     with caplog.at_level(logging.INFO):
         # Create a custom lifespan context to test startup logging
         @asynccontextmanager
         async def test_startup_lifespan(app):
             # Import server module to trigger logging
-            from fluxhero.backend.api import server
+            from backend.api import server
 
             # Manually call the startup logic
             app_state.sqlite_store = test_db
@@ -638,14 +638,14 @@ def test_websocket_error_logging(client, caplog):
     with caplog.at_level(logging.ERROR):
         # WebSocket errors would be logged at ERROR level with exc_info=True
         # We verify the logger is configured correctly
-        from fluxhero.backend.api import server
+        from backend.api import server
         assert hasattr(server, 'logger')
         assert isinstance(server.logger, logging.Logger)
 
 
 def test_no_print_statements_in_server():
     """Test that server.py does not contain any print() statements"""
-    server_path = Path(__file__).parent.parent.parent / "fluxhero" / "backend" / "api" / "server.py"
+    server_path = Path(__file__).parent.parent.parent / "" / "backend" / "api" / "server.py"
     with open(server_path, 'r') as f:
         content = f.read()
 
@@ -665,7 +665,7 @@ def test_no_print_statements_in_server():
 
 def test_logger_exists():
     """Test that the logger is properly configured in server.py"""
-    from fluxhero.backend.api import server
+    from backend.api import server
 
     # Verify logger exists
     assert hasattr(server, 'logger')

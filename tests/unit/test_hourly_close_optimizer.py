@@ -10,7 +10,7 @@ Date: 2026-01-21
 
 import pytest
 from datetime import datetime
-from fluxhero.backend.execution.hourly_close_optimizer import (
+from backend.execution.hourly_close_optimizer import (
     HourlyCloseOptimizer,
     ScheduledOrder,
     OrderSide,

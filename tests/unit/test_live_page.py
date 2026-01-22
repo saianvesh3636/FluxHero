@@ -12,20 +12,20 @@ from pathlib import Path
 
 def test_live_page_exists():
     """Test that the live trading page file exists."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     assert live_page_path.exists(), "Live trading page should exist"
 
 
 def test_live_page_is_client_component():
     """Test that the page is a client component (uses 'use client')."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
     assert "'use client'" in content, "Page should be a client component"
 
 
 def test_live_page_imports_required_modules():
     """Test that all required imports are present."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     required_imports = [
@@ -43,7 +43,7 @@ def test_live_page_imports_required_modules():
 
 def test_live_page_has_positions_state():
     """Test that component manages positions state."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "useState<Position[]>" in content, "Should have positions state"
@@ -52,7 +52,7 @@ def test_live_page_has_positions_state():
 
 def test_live_page_has_account_info_state():
     """Test that component manages account info state."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "useState<AccountInfo" in content, "Should have account info state"
@@ -61,7 +61,7 @@ def test_live_page_has_account_info_state():
 
 def test_live_page_has_system_status_state():
     """Test that component manages system status state."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "useState<SystemStatus" in content, "Should have system status state"
@@ -70,7 +70,7 @@ def test_live_page_has_system_status_state():
 
 def test_live_page_has_loading_state():
     """Test that component manages loading state."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "useState" in content and "loading" in content, "Should have loading state"
@@ -79,7 +79,7 @@ def test_live_page_has_loading_state():
 
 def test_live_page_has_error_state():
     """Test that component manages error state."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "useState" in content and "error" in content, "Should have error state"
@@ -88,7 +88,7 @@ def test_live_page_has_error_state():
 
 def test_live_page_fetches_positions():
     """Test that component fetches positions from API."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "apiClient.getPositions()" in content, "Should fetch positions"
@@ -96,7 +96,7 @@ def test_live_page_fetches_positions():
 
 def test_live_page_fetches_account_info():
     """Test that component fetches account info from API."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "apiClient.getAccountInfo()" in content, "Should fetch account info"
@@ -104,7 +104,7 @@ def test_live_page_fetches_account_info():
 
 def test_live_page_fetches_system_status():
     """Test that component fetches system status from API."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "apiClient.getSystemStatus()" in content, "Should fetch system status"
@@ -112,7 +112,7 @@ def test_live_page_fetches_system_status():
 
 def test_live_page_has_auto_refresh():
     """Test that component implements 5-second auto-refresh."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "setInterval" in content, "Should use setInterval for auto-refresh"
@@ -122,7 +122,7 @@ def test_live_page_has_auto_refresh():
 
 def test_live_page_uses_effect_hook():
     """Test that component uses useEffect for data fetching."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "useEffect" in content, "Should use useEffect hook"
@@ -130,7 +130,7 @@ def test_live_page_uses_effect_hook():
 
 def test_live_page_has_format_currency_function():
     """Test that component has currency formatting function."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "formatCurrency" in content, "Should have formatCurrency function"
@@ -139,7 +139,7 @@ def test_live_page_has_format_currency_function():
 
 def test_live_page_has_format_percent_function():
     """Test that component has percentage formatting function."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "formatPercent" in content, "Should have formatPercent function"
@@ -147,7 +147,7 @@ def test_live_page_has_format_percent_function():
 
 def test_live_page_has_pnl_color_coding():
     """Test that component implements P&L color coding (green profit, red loss)."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "getPnlColor" in content, "Should have getPnlColor function"
@@ -157,7 +157,7 @@ def test_live_page_has_pnl_color_coding():
 
 def test_live_page_has_system_heartbeat_indicator():
     """Test that component implements system heartbeat indicator."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     # Check for status indicators
@@ -171,7 +171,7 @@ def test_live_page_has_system_heartbeat_indicator():
 
 def test_live_page_has_quick_stats_display():
     """Test that component displays quick stats (daily P&L, drawdown, exposure)."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     # Check for quick stats
@@ -182,7 +182,7 @@ def test_live_page_has_quick_stats_display():
 
 def test_live_page_has_positions_table():
     """Test that component has open positions table."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "<table" in content, "Should have table element"
@@ -192,7 +192,7 @@ def test_live_page_has_positions_table():
 
 def test_live_page_table_has_required_columns():
     """Test that positions table has all required columns."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     required_columns = [
@@ -209,7 +209,7 @@ def test_live_page_table_has_required_columns():
 
 def test_live_page_handles_empty_positions():
     """Test that component handles empty positions gracefully."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "positions.length === 0" in content or "No open positions" in content, \
@@ -218,7 +218,7 @@ def test_live_page_handles_empty_positions():
 
 def test_live_page_handles_loading_state():
     """Test that component displays loading state."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "loading" in content.lower(), "Should handle loading state"
@@ -227,7 +227,7 @@ def test_live_page_handles_loading_state():
 
 def test_live_page_handles_error_state():
     """Test that component displays error state."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "error" in content.lower(), "Should handle error state"
@@ -235,7 +235,7 @@ def test_live_page_handles_error_state():
 
 def test_live_page_displays_account_summary():
     """Test that component displays account summary."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     # Check for account summary fields
@@ -247,7 +247,7 @@ def test_live_page_displays_account_summary():
 
 def test_live_page_calculates_total_exposure():
     """Test that component calculates total exposure."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "totalExposure" in content or "total_exposure" in content, \
@@ -257,7 +257,7 @@ def test_live_page_calculates_total_exposure():
 
 def test_live_page_displays_last_update_time():
     """Test that component displays last update time."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "Last updated" in content or "lastUpdate" in content, \
@@ -266,7 +266,7 @@ def test_live_page_displays_last_update_time():
 
 def test_live_page_uses_responsive_design():
     """Test that component uses responsive design classes."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     # Check for responsive grid classes (Tailwind)
@@ -278,7 +278,7 @@ def test_live_page_uses_responsive_design():
 
 def test_live_page_has_proper_styling():
     """Test that component has proper styling classes."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     # Check for common Tailwind classes
@@ -290,7 +290,7 @@ def test_live_page_has_proper_styling():
 
 def test_live_page_exports_default_component():
     """Test that component has default export."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "export default" in content, "Should have default export"
@@ -298,7 +298,7 @@ def test_live_page_exports_default_component():
 
 def test_live_page_component_structure():
     """Test that component has proper structure (returns JSX)."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "return (" in content or "return <" in content, "Should return JSX"
@@ -307,7 +307,7 @@ def test_live_page_component_structure():
 
 def test_live_page_uses_promise_all():
     """Test that component uses Promise.all for parallel API calls."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "Promise.all" in content, "Should use Promise.all for parallel fetching"
@@ -315,7 +315,7 @@ def test_live_page_uses_promise_all():
 
 def test_live_page_handles_async_errors():
     """Test that component handles async errors with try-catch."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     content = live_page_path.read_text()
 
     assert "try" in content and "catch" in content, "Should handle errors with try-catch"
@@ -324,7 +324,7 @@ def test_live_page_handles_async_errors():
 
 def test_live_page_file_size_reasonable():
     """Test that the live page file size is reasonable (<20KB)."""
-    live_page_path = Path("fluxhero/frontend/app/live/page.tsx")
+    live_page_path = Path("frontend/app/live/page.tsx")
     file_size = live_page_path.stat().st_size
 
     assert file_size < 20000, f"File size should be reasonable, got {file_size} bytes"

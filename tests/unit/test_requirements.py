@@ -6,21 +6,21 @@ from pathlib import Path
 
 
 def test_requirements_file_exists():
-    """Test that requirements.txt exists in the fluxhero directory."""
-    requirements_path = Path("fluxhero/requirements.txt")
-    assert requirements_path.exists(), "requirements.txt should exist in fluxhero directory"
+    """Test that requirements.txt exists in project root."""
+    requirements_path = Path("requirements.txt")
+    assert requirements_path.exists(), "requirements.txt should exist in project root"
 
 
 def test_venv_directory_exists():
     """Test that virtual environment directory exists."""
-    venv_path = Path("fluxhero/venv")
-    assert venv_path.exists(), "venv directory should exist in fluxhero directory"
+    venv_path = Path(".venv")
+    assert venv_path.exists(), "venv directory should exist in project root"
     assert venv_path.is_dir(), "venv should be a directory"
 
 
 def test_requirements_contains_core_dependencies():
     """Test that requirements.txt contains all required core dependencies."""
-    requirements_path = Path("fluxhero/requirements.txt")
+    requirements_path = Path("requirements.txt")
 
     with open(requirements_path, "r") as f:
         content = f.read()
@@ -42,7 +42,7 @@ def test_requirements_contains_core_dependencies():
 
 def test_requirements_contains_testing_dependencies():
     """Test that requirements.txt contains testing dependencies."""
-    requirements_path = Path("fluxhero/requirements.txt")
+    requirements_path = Path("requirements.txt")
 
     with open(requirements_path, "r") as f:
         content = f.read()
@@ -58,7 +58,7 @@ def test_requirements_contains_testing_dependencies():
 
 def test_requirements_valid_format():
     """Test that requirements.txt has valid format (no empty package names)."""
-    requirements_path = Path("fluxhero/requirements.txt")
+    requirements_path = Path("requirements.txt")
 
     with open(requirements_path, "r") as f:
         lines = f.readlines()
@@ -79,7 +79,7 @@ def test_requirements_valid_format():
 
 def test_requirements_contains_version_specs():
     """Test that core dependencies have version specifications."""
-    requirements_path = Path("fluxhero/requirements.txt")
+    requirements_path = Path("requirements.txt")
 
     with open(requirements_path, "r") as f:
         content = f.read()
@@ -109,7 +109,7 @@ def test_requirements_contains_version_specs():
 
 def test_sqlite3_note_present():
     """Test that requirements.txt mentions sqlite3 is in standard library."""
-    requirements_path = Path("fluxhero/requirements.txt")
+    requirements_path = Path("requirements.txt")
 
     with open(requirements_path, "r") as f:
         content = f.read()

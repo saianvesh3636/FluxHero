@@ -24,7 +24,7 @@ sys.path.insert(0, str(project_root))
 import pytest  # noqa: E402
 import numpy as np  # noqa: E402
 from datetime import datetime  # noqa: E402
-from fluxhero.backend.risk.kill_switch import (  # noqa: E402
+from backend.risk.kill_switch import (  # noqa: E402
     DrawdownLevel,
     TradingStatus,
     Position,

@@ -6,7 +6,7 @@ library logging. It supports both console and file output with structured
 formatting for better observability.
 
 Usage:
-    from fluxhero.backend.core.logging_config import setup_logging, get_logger
+    from backend.core.logging_config import setup_logging, get_logger
 
     # Setup logging once at application startup
     setup_logging(log_level="INFO", log_file="app.log")

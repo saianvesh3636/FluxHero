@@ -13,7 +13,7 @@ a timing advantage over retail traders who wait for candle close confirmation.
 
 **Usage Example**:
     ```python
-    from fluxhero.backend.execution.hourly_close_optimizer import HourlyCloseOptimizer
+    from backend.execution.hourly_close_optimizer import HourlyCloseOptimizer
 
     optimizer = HourlyCloseOptimizer()
 

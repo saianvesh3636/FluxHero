@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import List
 import pytest
 
-from fluxhero.backend.core.logging_config import (
+from backend.core.logging_config import (
     setup_logging,
     get_logger,
     log_with_context,

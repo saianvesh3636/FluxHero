@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from numba import njit
 
-from fluxhero.backend.core.config import Settings, get_settings
+from backend.core.config import Settings, get_settings
 
 
 class StrategyType(IntEnum):

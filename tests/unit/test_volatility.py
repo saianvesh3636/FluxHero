@@ -18,7 +18,7 @@ import pytest
 # Import volatility functions
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../fluxhero'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 
 from backend.computation.volatility import (
     calculate_atr_ma,

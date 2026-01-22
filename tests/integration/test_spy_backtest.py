@@ -19,8 +19,8 @@ from scripts.run_spy_backtest import (  # noqa: E402
     generate_synthetic_spy_data,
     DualModeStrategy,
 )
-from fluxhero.backend.backtesting.engine import BacktestEngine, BacktestConfig  # noqa: E402
-from fluxhero.backend.backtesting.metrics import PerformanceMetrics  # noqa: E402
+from backend.backtesting.engine import BacktestEngine, BacktestConfig  # noqa: E402
+from backend.backtesting.metrics import PerformanceMetrics  # noqa: E402
 
 
 def test_spy_backtest_completes_successfully():
@@ -124,7 +124,7 @@ def test_strategy_generates_signals():
     assert strategy.trend_regime is not None
 
     # Count signals
-    from fluxhero.backend.strategy.dual_mode import SIGNAL_NONE
+    from backend.strategy.dual_mode import SIGNAL_NONE
     trend_signal_count = np.sum(strategy.trend_signals != SIGNAL_NONE)
     mr_signal_count = np.sum(strategy.mr_signals != SIGNAL_NONE)
 

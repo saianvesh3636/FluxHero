@@ -13,7 +13,7 @@ Tests verify:
 import time
 import numpy as np
 
-from fluxhero.backend.strategy.signal_generator import (
+from backend.strategy.signal_generator import (
     SignalGenerator,
     SignalExplanation,
     SignalType,

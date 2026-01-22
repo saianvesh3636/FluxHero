@@ -11,15 +11,15 @@ Reference: FLUXHERO_REQUIREMENTS.md Feature 9
 
 import pytest
 import numpy as np
-from fluxhero.backend.backtesting.engine import (
+from backend.backtesting.engine import (
     BacktestEngine, BacktestConfig, Order, OrderSide, OrderType
 )
-from fluxhero.backend.backtesting.fills import (
+from backend.backtesting.fills import (
     get_next_bar_fill_price, simulate_intrabar_stop_execution,
     simulate_intrabar_target_execution, check_stop_and_target,
     validate_no_lookahead
 )
-from fluxhero.backend.backtesting.metrics import (
+from backend.backtesting.metrics import (
     calculate_returns, calculate_sharpe_ratio, calculate_max_drawdown,
     calculate_win_rate, calculate_avg_win_loss_ratio, calculate_total_return,
     calculate_annualized_return, PerformanceMetrics

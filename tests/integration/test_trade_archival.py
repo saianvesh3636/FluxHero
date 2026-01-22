@@ -11,7 +11,7 @@ import pytest
 from datetime import datetime, timedelta
 import pandas as pd
 
-from fluxhero.backend.storage.sqlite_store import (
+from backend.storage.sqlite_store import (
     SQLiteStore, Trade, TradeStatus, PositionSide
 )
 

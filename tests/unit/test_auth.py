@@ -17,7 +17,7 @@ Date: 2026-01-22
 import os
 from unittest.mock import patch
 
-from fluxhero.backend.api.auth import (
+from backend.api.auth import (
     get_auth_secret,
     validate_token,
     extract_token_from_header,
@@ -36,7 +36,7 @@ class TestAuthSecretConfiguration:
         # Get the project root (going up from tests/unit/)
         test_dir = pathlib.Path(__file__).parent
         project_root = test_dir.parent.parent
-        env_example_path = project_root / "fluxhero" / "backend" / ".env.example"
+        env_example_path = project_root / "" / "backend" / ".env.example"
 
         assert env_example_path.exists(), f".env.example file not found at {env_example_path}"
 
@@ -47,7 +47,7 @@ class TestAuthSecretConfiguration:
         # Get the project root
         test_dir = pathlib.Path(__file__).parent
         project_root = test_dir.parent.parent
-        env_example_path = project_root / "fluxhero" / "backend" / ".env.example"
+        env_example_path = project_root / "" / "backend" / ".env.example"
 
         with open(env_example_path, 'r') as f:
             content = f.read()

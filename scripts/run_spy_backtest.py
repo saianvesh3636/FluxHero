@@ -26,7 +26,7 @@ sys.path.insert(0, str(project_root))
 import numpy as np  # noqa: E402
 from datetime import datetime, timedelta  # noqa: E402
 from typing import List, Optional  # noqa: E402
-from fluxhero.backend.backtesting.engine import (  # noqa: E402
+from backend.backtesting.engine import (  # noqa: E402
     BacktestEngine,
     BacktestConfig,
     Order,
@@ -35,19 +35,19 @@ from fluxhero.backend.backtesting.engine import (  # noqa: E402
     Position,
     PositionSide,
 )
-from fluxhero.backend.backtesting.metrics import PerformanceMetrics  # noqa: E402
-from fluxhero.backend.computation.indicators import (  # noqa: E402
+from backend.backtesting.metrics import PerformanceMetrics  # noqa: E402
+from backend.computation.indicators import (  # noqa: E402
     calculate_rsi,
     calculate_atr,
     calculate_bollinger_bands,
 )
-from fluxhero.backend.computation.adaptive_ema import calculate_kama_with_regime_adjustment  # noqa: E402
-from fluxhero.backend.strategy.regime_detector import (  # noqa: E402
+from backend.computation.adaptive_ema import calculate_kama_with_regime_adjustment  # noqa: E402
+from backend.strategy.regime_detector import (  # noqa: E402
     detect_regime,
     REGIME_STRONG_TREND,
     REGIME_MEAN_REVERSION,
 )
-from fluxhero.backend.strategy.dual_mode import (  # noqa: E402
+from backend.strategy.dual_mode import (  # noqa: E402
     generate_trend_following_signals,
     generate_mean_reversion_signals,
     calculate_position_size,
@@ -166,7 +166,7 @@ class DualModeStrategy:
 
         # Detect market regimes
         print("  Detecting regimes...")
-        from fluxhero.backend.computation.volatility import calculate_atr_ma
+        from backend.computation.volatility import calculate_atr_ma
         atr_ma = calculate_atr_ma(self.atr)
 
         regime_data = detect_regime(

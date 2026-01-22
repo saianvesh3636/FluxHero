@@ -24,7 +24,7 @@ import time
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from fluxhero.backend.strategy.noise_filter import (
+from backend.strategy.noise_filter import (
     calculate_spread_to_volatility_ratio,
     validate_spread_ratio,
     calculate_average_volume,

@@ -24,7 +24,7 @@ import pytest
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from fluxhero.backend.computation.adaptive_ema import (  # noqa: E402
+from backend.computation.adaptive_ema import (  # noqa: E402
     calculate_efficiency_ratio,
     calculate_adaptive_smoothing_constant,
     calculate_kama,

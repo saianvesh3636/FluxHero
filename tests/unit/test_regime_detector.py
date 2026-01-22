@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from fluxhero.backend.strategy.regime_detector import (  # noqa: E402
+from backend.strategy.regime_detector import (  # noqa: E402
     calculate_directional_movement,
     calculate_directional_indicators,
     calculate_adx,
@@ -41,8 +41,8 @@ from fluxhero.backend.strategy.regime_detector import (  # noqa: E402
     VOL_HIGH,
 )
 
-from fluxhero.backend.computation.indicators import calculate_atr  # noqa: E402
-from fluxhero.backend.computation.volatility import calculate_atr_ma  # noqa: E402
+from backend.computation.indicators import calculate_atr  # noqa: E402
+from backend.computation.volatility import calculate_atr_ma  # noqa: E402
 
 
 # ============================================================================

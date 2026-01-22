@@ -14,13 +14,13 @@ from pathlib import Path
 
 def test_analytics_page_exists():
     """Verify analytics page file exists."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     assert analytics_page.exists(), "Analytics page should exist at app/analytics/page.tsx"
 
 
 def test_analytics_page_has_required_imports():
     """Verify analytics page imports required dependencies."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for React imports
@@ -37,7 +37,7 @@ def test_analytics_page_has_required_imports():
 
 def test_analytics_page_has_chart_initialization():
     """Verify chart initialization logic is present."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for chart creation
@@ -53,7 +53,7 @@ def test_analytics_page_has_chart_initialization():
 
 def test_analytics_page_has_candlestick_series():
     """Verify candlestick series is configured."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for candlestick series
@@ -66,7 +66,7 @@ def test_analytics_page_has_candlestick_series():
 
 def test_analytics_page_has_kama_overlay():
     """Verify KAMA line overlay is implemented."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for KAMA series
@@ -79,7 +79,7 @@ def test_analytics_page_has_kama_overlay():
 
 def test_analytics_page_has_atr_bands():
     """Verify ATR bands overlay is implemented."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for ATR band series
@@ -94,7 +94,7 @@ def test_analytics_page_has_atr_bands():
 
 def test_analytics_page_has_signal_markers():
     """Verify buy/sell signal annotations are implemented."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for signal markers
@@ -112,7 +112,7 @@ def test_analytics_page_has_signal_markers():
 
 def test_analytics_page_has_indicator_panel():
     """Verify indicator panel showing ATR, RSI, ADX, regime state."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for all required indicators
@@ -124,7 +124,7 @@ def test_analytics_page_has_indicator_panel():
 
 def test_analytics_page_has_performance_metrics():
     """Verify performance metrics display (total return %, Sharpe, win rate, max drawdown)."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for all required metrics
@@ -147,7 +147,7 @@ def test_analytics_page_has_performance_metrics():
 
 def test_analytics_page_has_symbol_selector():
     """Verify symbol selection controls."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for symbol selector
@@ -157,7 +157,7 @@ def test_analytics_page_has_symbol_selector():
 
 def test_analytics_page_has_timeframe_selector():
     """Verify timeframe selection controls."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for timeframe selector
@@ -166,7 +166,7 @@ def test_analytics_page_has_timeframe_selector():
 
 def test_analytics_page_has_responsive_design():
     """Verify responsive design classes are used."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for responsive design patterns
@@ -177,7 +177,7 @@ def test_analytics_page_has_responsive_design():
 
 def test_analytics_page_has_loading_state():
     """Verify loading state is implemented."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for loading state
@@ -187,7 +187,7 @@ def test_analytics_page_has_loading_state():
 
 def test_analytics_page_has_color_coding():
     """Verify color coding for profit/loss and indicators."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for color coding
@@ -201,7 +201,7 @@ def test_analytics_page_has_color_coding():
 
 def test_analytics_page_has_chart_resize_handler():
     """Verify chart resize handling is implemented."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for resize handling
@@ -211,7 +211,7 @@ def test_analytics_page_has_chart_resize_handler():
 
 def test_analytics_page_has_cleanup():
     """Verify proper cleanup in useEffect."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for cleanup
@@ -221,7 +221,7 @@ def test_analytics_page_has_cleanup():
 
 def test_lightweight_charts_dependency():
     """Verify lightweight-charts is in package.json dependencies."""
-    package_json = Path("fluxhero/frontend/package.json")
+    package_json = Path("frontend/package.json")
     assert package_json.exists(), "package.json should exist"
 
     content = json.loads(package_json.read_text())
@@ -234,7 +234,7 @@ def test_lightweight_charts_dependency():
 
 def test_analytics_page_typescript_types():
     """Verify TypeScript type definitions are used."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for TypeScript types
@@ -244,7 +244,7 @@ def test_analytics_page_typescript_types():
 
 def test_analytics_page_has_proper_structure():
     """Verify analytics page has proper component structure."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for main component export
@@ -258,7 +258,7 @@ def test_analytics_page_has_proper_structure():
 
 def test_analytics_page_has_dark_theme():
     """Verify dark theme styling is implemented."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for dark theme colors
@@ -271,7 +271,7 @@ def test_analytics_page_has_dark_theme():
 
 def test_analytics_page_has_grid_layout():
     """Verify grid layout is used for metrics display."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for grid layout
@@ -282,7 +282,7 @@ def test_analytics_page_has_grid_layout():
 
 def test_analytics_page_client_component():
     """Verify page is marked as client component for Next.js."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for 'use client' directive
@@ -291,7 +291,7 @@ def test_analytics_page_client_component():
 
 def test_analytics_page_auto_refresh():
     """Verify auto-refresh functionality is implemented."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for auto-refresh with interval
@@ -301,7 +301,7 @@ def test_analytics_page_auto_refresh():
 
 def test_analytics_page_has_header():
     """Verify page has proper header with title and description."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for header elements
@@ -311,7 +311,7 @@ def test_analytics_page_has_header():
 
 def test_analytics_page_conditional_rendering():
     """Verify conditional rendering based on state."""
-    analytics_page = Path("fluxhero/frontend/app/analytics/page.tsx")
+    analytics_page = Path("frontend/app/analytics/page.tsx")
     content = analytics_page.read_text()
 
     # Check for conditional rendering

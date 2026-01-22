@@ -6,7 +6,7 @@ All configuration values should be defined here and loaded from environment vari
 or .env files.
 
 Usage:
-    from fluxhero.backend.core.config import get_settings
+    from backend.core.config import get_settings
 
     settings = get_settings()
     print(settings.auth_secret)

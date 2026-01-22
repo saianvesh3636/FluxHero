@@ -13,10 +13,10 @@ Requirements Coverage:
 import time
 import numpy as np
 import pytest
-from fluxhero.backend.computation.indicators import calculate_ema, calculate_rsi, calculate_atr
-from fluxhero.backend.computation.adaptive_ema import calculate_kama
-from fluxhero.backend.computation.volatility import classify_volatility_state
-from fluxhero.backend.strategy.regime_detector import detect_regime, calculate_adx
+from backend.computation.indicators import calculate_ema, calculate_rsi, calculate_atr
+from backend.computation.adaptive_ema import calculate_kama
+from backend.computation.volatility import classify_volatility_state
+from backend.strategy.regime_detector import detect_regime, calculate_adx
 
 
 class TestPerformanceBenchmark:
@@ -55,7 +55,7 @@ class TestPerformanceBenchmark:
         calculate_atr(warmup_high, warmup_low, warmup_close, 14)
         calculate_kama(warmup_close, 10, 2, 30)
 
-        from fluxhero.backend.computation.volatility import calculate_atr_ma
+        from backend.computation.volatility import calculate_atr_ma
         warmup_atr = calculate_atr(warmup_high, warmup_low, warmup_close, 14)
         warmup_atr_ma = calculate_atr_ma(warmup_atr, 50)
         calculate_adx(warmup_high, warmup_low, warmup_close, warmup_atr, 14)
@@ -178,7 +178,7 @@ class TestPerformanceBenchmark:
 
         # Pre-calculate ATR and ATR_MA as required by classify_volatility_state
         atr = calculate_atr(high_prices, low_prices, close_prices, 14)
-        from fluxhero.backend.computation.volatility import calculate_atr_ma
+        from backend.computation.volatility import calculate_atr_ma
         atr_ma = calculate_atr_ma(atr, 50)
 
         result, exec_time, passed = self.benchmark_function(
@@ -202,7 +202,7 @@ class TestPerformanceBenchmark:
 
         # Pre-calculate ATR and ATR_MA as required by detect_regime
         atr = calculate_atr(high_prices, low_prices, close_prices, 14)
-        from fluxhero.backend.computation.volatility import calculate_atr_ma
+        from backend.computation.volatility import calculate_atr_ma
         atr_ma = calculate_atr_ma(atr, 50)
 
         result, exec_time, passed = self.benchmark_function(
@@ -229,7 +229,7 @@ class TestPerformanceBenchmark:
 
         def composite_calculation():
             """Calculate all core indicators."""
-            from fluxhero.backend.computation.volatility import calculate_atr_ma
+            from backend.computation.volatility import calculate_atr_ma
 
             ema = calculate_ema(close_prices, 20)
             rsi = calculate_rsi(close_prices, 14)

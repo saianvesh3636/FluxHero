@@ -14,7 +14,7 @@ Tests cover:
 """
 
 import pytest
-from fluxhero.backend.execution.broker_interface import (
+from backend.execution.broker_interface import (
     BrokerInterface,
     PaperBroker,
     Order,

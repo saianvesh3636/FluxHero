@@ -19,8 +19,8 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from fluxhero.backend.api.server import app
-from fluxhero.backend.api.auth import DEFAULT_SECRET
+from backend.api.server import app
+from backend.api.auth import DEFAULT_SECRET
 
 
 class TestWebSocketAuthentication:

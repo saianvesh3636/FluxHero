@@ -10,21 +10,21 @@ from pathlib import Path
 
 def test_system_operations_docs_exists():
     """Test that SYSTEM_OPERATIONS.md file exists."""
-    docs_path = Path(__file__).parent.parent.parent / "fluxhero" / "SYSTEM_OPERATIONS.md"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "SYSTEM_OPERATIONS.md"
     assert docs_path.exists(), "SYSTEM_OPERATIONS.md not found"
     assert docs_path.is_file(), "SYSTEM_OPERATIONS.md is not a file"
 
 
 def test_system_operations_docs_not_empty():
     """Test that documentation file has content."""
-    docs_path = Path(__file__).parent.parent.parent / "fluxhero" / "SYSTEM_OPERATIONS.md"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "SYSTEM_OPERATIONS.md"
     content = docs_path.read_text()
     assert len(content) > 1000, "Documentation is too short"
 
 
 def test_system_operations_has_required_sections():
     """Test that documentation contains all required sections."""
-    docs_path = Path(__file__).parent.parent.parent / "fluxhero" / "SYSTEM_OPERATIONS.md"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "SYSTEM_OPERATIONS.md"
     content = docs_path.read_text()
 
     required_sections = [
@@ -45,7 +45,7 @@ def test_system_operations_has_required_sections():
 
 def test_daily_reboot_documentation():
     """Test that daily reboot procedure is documented."""
-    docs_path = Path(__file__).parent.parent.parent / "fluxhero" / "SYSTEM_OPERATIONS.md"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "SYSTEM_OPERATIONS.md"
     content = docs_path.read_text()
 
     # Should document 9:00 AM EST daily reboot
@@ -59,7 +59,7 @@ def test_daily_reboot_documentation():
 
 def test_maintenance_tasks_documented():
     """Test that maintenance tasks are documented."""
-    docs_path = Path(__file__).parent.parent.parent / "fluxhero" / "SYSTEM_OPERATIONS.md"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "SYSTEM_OPERATIONS.md"
     content = docs_path.read_text()
 
     maintenance_keywords = [
@@ -77,7 +77,7 @@ def test_maintenance_tasks_documented():
 
 def test_troubleshooting_section_documented():
     """Test that troubleshooting section exists with common issues."""
-    docs_path = Path(__file__).parent.parent.parent / "fluxhero" / "SYSTEM_OPERATIONS.md"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "SYSTEM_OPERATIONS.md"
     content = docs_path.read_text()
 
     troubleshooting_topics = [
@@ -97,7 +97,7 @@ def test_troubleshooting_section_documented():
 
 def test_emergency_procedures_documented():
     """Test that emergency procedures are documented."""
-    docs_path = Path(__file__).parent.parent.parent / "fluxhero" / "SYSTEM_OPERATIONS.md"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "SYSTEM_OPERATIONS.md"
     content = docs_path.read_text()
 
     # Should document kill switch
@@ -109,7 +109,7 @@ def test_emergency_procedures_documented():
 
 def test_backup_procedures_documented():
     """Test that backup and recovery procedures are documented."""
-    docs_path = Path(__file__).parent.parent.parent / "fluxhero" / "SYSTEM_OPERATIONS.md"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "SYSTEM_OPERATIONS.md"
     content = docs_path.read_text()
 
     backup_keywords = [
@@ -125,7 +125,7 @@ def test_backup_procedures_documented():
 
 def test_monitoring_section_documented():
     """Test that monitoring section includes key metrics."""
-    docs_path = Path(__file__).parent.parent.parent / "fluxhero" / "SYSTEM_OPERATIONS.md"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "SYSTEM_OPERATIONS.md"
     content = docs_path.read_text()
 
     monitoring_topics = [
@@ -142,7 +142,7 @@ def test_monitoring_section_documented():
 
 def test_documentation_has_commands():
     """Test that documentation includes executable commands."""
-    docs_path = Path(__file__).parent.parent.parent / "fluxhero" / "SYSTEM_OPERATIONS.md"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "SYSTEM_OPERATIONS.md"
     content = docs_path.read_text()
 
     # Should have code blocks with bash commands
@@ -156,7 +156,7 @@ def test_documentation_has_commands():
 
 def test_documentation_structure():
     """Test that documentation has proper structure."""
-    docs_path = Path(__file__).parent.parent.parent / "fluxhero" / "SYSTEM_OPERATIONS.md"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "SYSTEM_OPERATIONS.md"
     content = docs_path.read_text()
 
     # Should have title
@@ -171,7 +171,7 @@ def test_documentation_structure():
 
 def test_documentation_references_system_components():
     """Test that documentation references key system components."""
-    docs_path = Path(__file__).parent.parent.parent / "fluxhero" / "SYSTEM_OPERATIONS.md"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "SYSTEM_OPERATIONS.md"
     content = docs_path.read_text()
 
     components = [

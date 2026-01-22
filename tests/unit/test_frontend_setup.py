@@ -19,7 +19,7 @@ class TestFrontendSetup:
     @staticmethod
     def get_frontend_path():
         """Get the path to the frontend directory"""
-        return Path(__file__).parent.parent.parent / "fluxhero" / "frontend"
+        return Path(__file__).parent.parent.parent / "frontend"
 
     def test_frontend_directory_exists(self):
         """Verify frontend directory exists"""

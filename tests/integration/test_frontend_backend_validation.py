@@ -37,8 +37,8 @@ import time
 import sys
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from fluxhero.backend.api.server import app, app_state
-from fluxhero.backend.storage.sqlite_store import (
+from backend.api.server import app, app_state
+from backend.storage.sqlite_store import (
     SQLiteStore,
     Trade,
     Position,

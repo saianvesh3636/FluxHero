@@ -20,13 +20,13 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 def test_loading_spinner_component_exists():
     """Test that LoadingSpinner component file exists"""
-    component_path = PROJECT_ROOT / 'fluxhero/frontend/components/LoadingSpinner.tsx'
+    component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
     assert component_path.exists(), f"LoadingSpinner component not found at {component_path}"
 
 
 def test_loading_spinner_exports():
     """Test that LoadingSpinner component exports all required components"""
-    component_path = PROJECT_ROOT / 'fluxhero/frontend/components/LoadingSpinner.tsx'
+    component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
     with open(component_path, 'r') as f:
         content = f.read()
@@ -43,7 +43,7 @@ def test_loading_spinner_exports():
 
 def test_loading_spinner_variants():
     """Test that LoadingSpinner supports multiple variants"""
-    component_path = PROJECT_ROOT / 'fluxhero/frontend/components/LoadingSpinner.tsx'
+    component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
     with open(component_path, 'r') as f:
         content = f.read()
@@ -60,7 +60,7 @@ def test_loading_spinner_variants():
 
 def test_loading_spinner_sizes():
     """Test that LoadingSpinner supports multiple sizes"""
-    component_path = PROJECT_ROOT / 'fluxhero/frontend/components/LoadingSpinner.tsx'
+    component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
     with open(component_path, 'r') as f:
         content = f.read()
@@ -77,7 +77,7 @@ def test_loading_spinner_sizes():
 
 def test_loading_overlay_component():
     """Test that LoadingOverlay component is properly implemented"""
-    component_path = PROJECT_ROOT / 'fluxhero/frontend/components/LoadingSpinner.tsx'
+    component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
     with open(component_path, 'r') as f:
         content = f.read()
@@ -93,7 +93,7 @@ def test_loading_overlay_component():
 
 def test_skeleton_components():
     """Test that skeleton loader components are implemented"""
-    component_path = PROJECT_ROOT / 'fluxhero/frontend/components/LoadingSpinner.tsx'
+    component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
     with open(component_path, 'r') as f:
         content = f.read()
@@ -110,7 +110,7 @@ def test_skeleton_components():
 
 def test_loading_button_component():
     """Test that LoadingButton component is properly implemented"""
-    component_path = PROJECT_ROOT / 'fluxhero/frontend/components/LoadingSpinner.tsx'
+    component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
     with open(component_path, 'r') as f:
         content = f.read()
@@ -126,7 +126,7 @@ def test_loading_button_component():
 
 def test_live_page_uses_loading_spinner():
     """Test that Live Trading page imports and uses loading components"""
-    page_path = PROJECT_ROOT / 'fluxhero/frontend/app/live/page.tsx'
+    page_path = PROJECT_ROOT / 'frontend/app/live/page.tsx'
 
     with open(page_path, 'r') as f:
         content = f.read()
@@ -141,7 +141,7 @@ def test_live_page_uses_loading_spinner():
 
 def test_analytics_page_uses_loading_components():
     """Test that Analytics page imports and uses loading components"""
-    page_path = PROJECT_ROOT / 'fluxhero/frontend/app/analytics/page.tsx'
+    page_path = PROJECT_ROOT / 'frontend/app/analytics/page.tsx'
 
     with open(page_path, 'r') as f:
         content = f.read()
@@ -161,7 +161,7 @@ def test_analytics_page_uses_loading_components():
 
 def test_history_page_uses_loading_components():
     """Test that Trade History page imports and uses loading components"""
-    page_path = PROJECT_ROOT / 'fluxhero/frontend/pages/history.tsx'
+    page_path = PROJECT_ROOT / 'frontend/pages/history.tsx'
 
     with open(page_path, 'r') as f:
         content = f.read()
@@ -180,7 +180,7 @@ def test_history_page_uses_loading_components():
 
 def test_backtest_page_uses_loading_button():
     """Test that Backtest page imports and uses LoadingButton"""
-    page_path = PROJECT_ROOT / 'fluxhero/frontend/app/backtest/page.tsx'
+    page_path = PROJECT_ROOT / 'frontend/app/backtest/page.tsx'
 
     with open(page_path, 'r') as f:
         content = f.read()
@@ -200,9 +200,9 @@ def test_backtest_page_uses_loading_button():
 def test_all_pages_have_initial_load_states():
     """Test that all pages properly handle initial load states"""
     pages = [
-        PROJECT_ROOT / 'fluxhero/frontend/app/live/page.tsx',
-        PROJECT_ROOT / 'fluxhero/frontend/app/analytics/page.tsx',
-        PROJECT_ROOT / 'fluxhero/frontend/pages/history.tsx',
+        PROJECT_ROOT / 'frontend/app/live/page.tsx',
+        PROJECT_ROOT / 'frontend/app/analytics/page.tsx',
+        PROJECT_ROOT / 'frontend/pages/history.tsx',
     ]
 
     for page_path in pages:
@@ -218,7 +218,7 @@ def test_all_pages_have_initial_load_states():
 
 def test_loading_components_accessibility():
     """Test that loading components have proper accessibility attributes"""
-    component_path = PROJECT_ROOT / 'fluxhero/frontend/components/LoadingSpinner.tsx'
+    component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
     with open(component_path, 'r') as f:
         content = f.read()
@@ -231,10 +231,10 @@ def test_loading_components_accessibility():
 def test_loading_states_properly_cleared():
     """Test that loading states are properly cleared in finally blocks"""
     pages = [
-        PROJECT_ROOT / 'fluxhero/frontend/app/live/page.tsx',
-        PROJECT_ROOT / 'fluxhero/frontend/app/analytics/page.tsx',
-        PROJECT_ROOT / 'fluxhero/frontend/pages/history.tsx',
-        PROJECT_ROOT / 'fluxhero/frontend/app/backtest/page.tsx',
+        PROJECT_ROOT / 'frontend/app/live/page.tsx',
+        PROJECT_ROOT / 'frontend/app/analytics/page.tsx',
+        PROJECT_ROOT / 'frontend/pages/history.tsx',
+        PROJECT_ROOT / 'frontend/app/backtest/page.tsx',
     ]
 
     for page_path in pages:
@@ -248,7 +248,7 @@ def test_loading_states_properly_cleared():
 
 def test_loading_messages_are_descriptive():
     """Test that loading messages are descriptive and user-friendly"""
-    component_path = PROJECT_ROOT / 'fluxhero/frontend/components/LoadingSpinner.tsx'
+    component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
     with open(component_path, 'r') as f:
         content = f.read()
@@ -260,7 +260,7 @@ def test_loading_messages_are_descriptive():
 
 def test_skeleton_loaders_have_proper_structure():
     """Test that skeleton loaders have proper HTML structure"""
-    component_path = PROJECT_ROOT / 'fluxhero/frontend/components/LoadingSpinner.tsx'
+    component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
     with open(component_path, 'r') as f:
         content = f.read()
@@ -276,7 +276,7 @@ def test_skeleton_loaders_have_proper_structure():
 
 def test_loading_spinner_has_proper_animations():
     """Test that loading components use proper CSS animations"""
-    component_path = PROJECT_ROOT / 'fluxhero/frontend/components/LoadingSpinner.tsx'
+    component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
     with open(component_path, 'r') as f:
         content = f.read()
@@ -289,7 +289,7 @@ def test_loading_spinner_has_proper_animations():
 
 def test_loading_overlay_has_proper_z_index():
     """Test that LoadingOverlay has proper z-index for overlay effect"""
-    component_path = PROJECT_ROOT / 'fluxhero/frontend/components/LoadingSpinner.tsx'
+    component_path = PROJECT_ROOT / 'frontend/components/LoadingSpinner.tsx'
 
     with open(component_path, 'r') as f:
         content = f.read()
@@ -302,10 +302,10 @@ def test_loading_overlay_has_proper_z_index():
 def test_all_async_operations_have_loading_states():
     """Test that all async operations in pages have corresponding loading states"""
     pages = {
-        PROJECT_ROOT / 'fluxhero/frontend/app/live/page.tsx': ['getPositions', 'getAccountInfo', 'getSystemStatus'],
-        PROJECT_ROOT / 'fluxhero/frontend/app/analytics/page.tsx': ['fetchChartData'],
-        PROJECT_ROOT / 'fluxhero/frontend/pages/history.tsx': ['getTrades'],
-        PROJECT_ROOT / 'fluxhero/frontend/app/backtest/page.tsx': ['runBacktest'],
+        PROJECT_ROOT / 'frontend/app/live/page.tsx': ['getPositions', 'getAccountInfo', 'getSystemStatus'],
+        PROJECT_ROOT / 'frontend/app/analytics/page.tsx': ['fetchChartData'],
+        PROJECT_ROOT / 'frontend/pages/history.tsx': ['getTrades'],
+        PROJECT_ROOT / 'frontend/app/backtest/page.tsx': ['runBacktest'],
     }
 
     for page_path, async_operations in pages.items():
