@@ -12,6 +12,7 @@ Tests cover:
 """
 
 import json
+import os
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -124,6 +125,56 @@ def test_reboot_config_from_args():
     assert config.timeframe == "1d"
     assert config.initial_candles == 1000
     assert config.api_key == "args_key"
+
+
+def test_reboot_config_uses_centralized_config():
+    """Test RebootConfig loads defaults from centralized config when not specified."""
+    # Clear environment variables to ensure clean test
+    env_vars_to_clear = [
+        "FLUXHERO_ALPACA_API_URL",
+        "FLUXHERO_ALPACA_WS_URL",
+        "FLUXHERO_DEFAULT_TIMEFRAME",
+        "FLUXHERO_INITIAL_CANDLES",
+    ]
+    original_env = {}
+    for var in env_vars_to_clear:
+        original_env[var] = os.environ.pop(var, None)
+
+    try:
+        # Create config with only required parameters
+        config = RebootConfig(symbols=["SPY"])
+
+        # Verify defaults come from centralized config
+        assert config.symbols == ["SPY"]
+        assert config.api_url == "https://paper-api.alpaca.markets"  # from centralized config
+        assert config.ws_url == "wss://stream.data.alpaca.markets"  # from centralized config
+        assert config.timeframe == "1h"  # from centralized config
+        assert config.initial_candles == 500  # from centralized config
+        assert config.cache_dir == "data/cache"  # from centralized config
+        assert config.log_file == "logs/daily_reboot.log"  # from centralized config
+    finally:
+        # Restore environment
+        for var, value in original_env.items():
+            if value is not None:
+                os.environ[var] = value
+
+
+def test_reboot_config_overrides_centralized_config():
+    """Test RebootConfig allows overriding centralized config values."""
+    config = RebootConfig(
+        symbols=["QQQ"],
+        api_url="https://custom-api.example.com",
+        ws_url="wss://custom-ws.example.com",
+        timeframe="5m",
+        initial_candles=1000,
+    )
+
+    # Verify overrides work
+    assert config.symbols == ["QQQ"]
+    assert config.api_url == "https://custom-api.example.com"
+    assert config.ws_url == "wss://custom-ws.example.com"
+    assert config.timeframe == "5m"
+    assert config.initial_candles == 1000
 
 
 # ============================================================================

@@ -84,3 +84,38 @@ Files Modified:
 - AUDIT_TASKS.md (marked Phase 4 - Task 2 as complete, marked .env.example task as complete)
 
 Next Task: Phase 4 - Task 3: Move API URLs from backend/daily_reboot.py to config
+
+## 2026-01-22 - Phase 4 Task 3: Move API URLs to Centralized Config
+
+### Task
+Move API URLs from `backend/daily_reboot.py:44` to centralized config
+
+### Changes Made
+1. **Updated daily_reboot.py**:
+   - Added import for `get_settings` from `backend.core.config`
+   - Modified `RebootConfig.__init__()` to accept optional parameters (None defaults)
+   - Updated parameter defaults to use centralized config via `get_settings()`
+   - Changed command-line argument defaults from hardcoded values to None
+   - Updated docstrings to reflect centralized config usage
+
+2. **Verified .env.example**:
+   - Confirmed API URL configuration fields already exist:
+     - FLUXHERO_ALPACA_API_URL
+     - FLUXHERO_ALPACA_WS_URL
+   - No additional changes needed
+
+3. **Added tests**:
+   - `test_reboot_config_uses_centralized_config()`: Verifies defaults come from centralized config
+   - `test_reboot_config_overrides_centralized_config()`: Verifies explicit values override defaults
+
+### Results
+- All 21 tests pass (including 2 new tests for centralized config integration)
+- Linting passes with no issues
+- API URLs now sourced from centralized config instead of hardcoded defaults
+- Backward compatible: CLI args can still override config values
+
+### Impact
+- Centralized configuration now controls API URLs for daily_reboot script
+- Easier to manage different environments (paper trading vs live)
+- Follows same pattern as CORS configuration (Phase 4 Task 2)
+

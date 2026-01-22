@@ -52,7 +52,7 @@ Fix critical issues, improve observability, and address architecture gaps identi
 
 - [x] Create `backend/core/config.py` using pydantic-settings with `.env` file support
 - [x] Move CORS origins from `backend/api/server.py:239-247` to config
-- [ ] Move API URLs from `backend/daily_reboot.py:44` to config
+- [x] Move API URLs from `backend/daily_reboot.py:44` to config
 - [ ] Move risk parameters from `backend/risk/position_limits.py:71-84` to config
 - [x] Create `.env.example` with all configurable values documented
 - [ ] Update all modules to import from centralized config

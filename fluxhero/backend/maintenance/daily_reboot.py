@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any
 
+from fluxhero.backend.core.config import get_settings
 from fluxhero.backend.data.fetcher import AsyncAPIClient, WebSocketFeed, DataPipeline
 from fluxhero.backend.storage.candle_buffer import CandleBuffer
 from fluxhero.backend.storage.parquet_store import ParquetStore
@@ -39,38 +40,40 @@ class RebootConfig:
     def __init__(
         self,
         symbols: List[str],
-        timeframe: str = "1h",
-        initial_candles: int = 500,
-        api_url: str = "https://paper-api.alpaca.markets",
-        ws_url: str = "wss://stream.data.alpaca.markets",
-        api_key: str = "",
-        api_secret: str = "",
-        cache_dir: str = "data/cache",
-        log_file: str = "logs/daily_reboot.log",
+        timeframe: str | None = None,
+        initial_candles: int | None = None,
+        api_url: str | None = None,
+        ws_url: str | None = None,
+        api_key: str | None = None,
+        api_secret: str | None = None,
+        cache_dir: str | None = None,
+        log_file: str | None = None,
     ):
         """
         Initialize reboot configuration.
 
         Args:
             symbols: List of symbols to fetch (e.g., ["SPY", "QQQ"])
-            timeframe: Candle timeframe (e.g., "1h", "1d")
-            initial_candles: Number of candles to fetch on startup
-            api_url: REST API base URL
-            ws_url: WebSocket feed URL
-            api_key: API key for authentication
-            api_secret: API secret for authentication
-            cache_dir: Directory for Parquet cache files
-            log_file: Path to log file
+            timeframe: Candle timeframe (e.g., "1h", "1d"), defaults to centralized config
+            initial_candles: Number of candles to fetch on startup, defaults to centralized config
+            api_url: REST API base URL, defaults to centralized config
+            ws_url: WebSocket feed URL, defaults to centralized config
+            api_key: API key for authentication, defaults to centralized config
+            api_secret: API secret for authentication, defaults to centralized config
+            cache_dir: Directory for Parquet cache files, defaults to centralized config
+            log_file: Path to log file, defaults to centralized config
         """
+        settings = get_settings()
+
         self.symbols = symbols
-        self.timeframe = timeframe
-        self.initial_candles = initial_candles
-        self.api_url = api_url
-        self.ws_url = ws_url
-        self.api_key = api_key
-        self.api_secret = api_secret
-        self.cache_dir = cache_dir
-        self.log_file = log_file
+        self.timeframe = timeframe if timeframe is not None else settings.default_timeframe
+        self.initial_candles = initial_candles if initial_candles is not None else settings.initial_candles
+        self.api_url = api_url if api_url is not None else settings.alpaca_api_url
+        self.ws_url = ws_url if ws_url is not None else settings.alpaca_ws_url
+        self.api_key = api_key if api_key is not None else settings.alpaca_api_key
+        self.api_secret = api_secret if api_secret is not None else settings.alpaca_api_secret
+        self.cache_dir = cache_dir if cache_dir is not None else settings.cache_dir
+        self.log_file = log_file if log_file is not None else settings.log_file
 
     @classmethod
     def from_file(cls, config_path: str) -> "RebootConfig":
@@ -450,57 +453,57 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--timeframe",
         type=str,
-        default="1h",
-        help="Candle timeframe (default: 1h)",
+        default=None,
+        help="Candle timeframe (default: from config)",
     )
 
     parser.add_argument(
         "--initial-candles",
         type=int,
-        default=500,
-        help="Number of candles to fetch (default: 500)",
+        default=None,
+        help="Number of candles to fetch (default: from config)",
     )
 
     parser.add_argument(
         "--api-url",
         type=str,
-        default="https://paper-api.alpaca.markets",
-        help="REST API base URL",
+        default=None,
+        help="REST API base URL (default: from config)",
     )
 
     parser.add_argument(
         "--ws-url",
         type=str,
-        default="wss://stream.data.alpaca.markets",
-        help="WebSocket feed URL",
+        default=None,
+        help="WebSocket feed URL (default: from config)",
     )
 
     parser.add_argument(
         "--api-key",
         type=str,
-        default="",
-        help="API key for authentication",
+        default=None,
+        help="API key for authentication (default: from config)",
     )
 
     parser.add_argument(
         "--api-secret",
         type=str,
-        default="",
-        help="API secret for authentication",
+        default=None,
+        help="API secret for authentication (default: from config)",
     )
 
     parser.add_argument(
         "--cache-dir",
         type=str,
-        default="data/cache",
-        help="Cache directory for Parquet files",
+        default=None,
+        help="Cache directory for Parquet files (default: from config)",
     )
 
     parser.add_argument(
         "--log-file",
         type=str,
-        default="logs/daily_reboot.log",
-        help="Path to log file",
+        default=None,
+        help="Path to log file (default: from config)",
     )
 
     return parser.parse_args()
