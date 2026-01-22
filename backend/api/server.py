@@ -808,23 +808,60 @@ async def websocket_prices(websocket: WebSocket):
             }
         )
 
-        # Simulate price updates (in production, connect to real data feed)
-        # For demonstration, send synthetic price updates every 5 seconds
-        while True:
-            # Generate synthetic price update
-            price_update = PriceUpdate(
-                symbol="SPY",
-                price=round(np.random.uniform(400.0, 450.0), 2),
-                timestamp=datetime.now().isoformat(),
-                volume=np.random.randint(100000, 1000000),
+        # Replay CSV data if available, otherwise send synthetic data
+        if app_state.test_spy_data and len(app_state.test_spy_data) > 0:
+            # Replay mode: iterate through CSV data and loop when done
+            data_index = 0
+            logger.info(
+                "WebSocket: Starting CSV replay mode",
+                extra={"rows": len(app_state.test_spy_data)},
             )
 
-            # Send update to client
-            await websocket.send_json(price_update.model_dump())
-            app_state.update_timestamp()
+            while True:
+                # Get current candle from CSV data
+                candle = app_state.test_spy_data[data_index]
 
-            # Wait 5 seconds before next update
-            await asyncio.sleep(5.0)
+                # Send OHLCV update to client
+                await websocket.send_json(
+                    {
+                        "type": "price_update",
+                        "symbol": "SPY",
+                        "timestamp": candle["timestamp"],
+                        "open": candle["open"],
+                        "high": candle["high"],
+                        "low": candle["low"],
+                        "close": candle["close"],
+                        "volume": candle["volume"],
+                        "replay_index": data_index,
+                        "total_rows": len(app_state.test_spy_data),
+                    }
+                )
+                app_state.update_timestamp()
+
+                # Move to next row, loop back to start when done
+                data_index = (data_index + 1) % len(app_state.test_spy_data)
+
+                # Send updates every 2 seconds (simulating live feed)
+                await asyncio.sleep(2.0)
+
+        else:
+            # Fallback: synthetic price updates if CSV data not available
+            logger.warning("WebSocket: CSV data not available, using synthetic prices")
+            while True:
+                # Generate synthetic price update
+                price_update = PriceUpdate(
+                    symbol="SPY",
+                    price=round(np.random.uniform(400.0, 450.0), 2),
+                    timestamp=datetime.now().isoformat(),
+                    volume=np.random.randint(100000, 1000000),
+                )
+
+                # Send update to client
+                await websocket.send_json(price_update.model_dump())
+                app_state.update_timestamp()
+
+                # Wait 5 seconds before next update
+                await asyncio.sleep(5.0)
 
     except WebSocketDisconnect:
         logger.info("WebSocket client disconnected")

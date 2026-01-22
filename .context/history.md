@@ -330,3 +330,36 @@
 - No functional changes, only code style improvements
 
 **Result:** All 147 linting errors fixed. Code now follows 100-character line length limit. All tests passing.
+
+## 2026-01-22 - Phase 6: Simulated Live Price Updates (WebSocket CSV Replay)
+
+**Task:** Implement WebSocket CSV data replay for simulated live price updates
+**Files Changed:**
+- backend/api/server.py
+- tests/integration/test_websocket_csv_replay.py (created)
+- TASKS.md
+- .context/history.md
+
+**Summary:**
+- Enhanced WebSocket endpoint `/ws/prices` to replay CSV data instead of random prices:
+  - Loads SPY daily CSV data from `app_state.test_spy_data` (already cached on startup)
+  - Iterates through CSV rows sequentially, sending full OHLCV data every 2 seconds
+  - Loops back to start when reaching end of data (modulo operation)
+  - Includes metadata: `replay_index` and `total_rows` for tracking position
+  - Falls back to synthetic random data if CSV not available
+- Message structure for replay mode includes:
+  - `type`: "price_update"
+  - `symbol`: "SPY"
+  - `timestamp`, `open`, `high`, `low`, `close`, `volume` from CSV
+  - `replay_index`: current row position (0-based)
+  - `total_rows`: total number of rows in dataset
+- Created comprehensive test suite (12 tests, all passing):
+  - CSV file existence and structure validation
+  - CSV parsing logic replication from server.py
+  - OHLC data integrity checks (high >= low, etc.)
+  - WebSocket code structure validation (replay logic, looping, fallback)
+  - Documentation validation
+- All linting checks pass (ruff)
+- Replay timing: 2 seconds between updates (vs. 5 seconds for fallback mode)
+
+**Result:** WebSocket now provides realistic simulated live data by replaying historical CSV data in a loop. Frontend can receive continuous price updates for testing and development without connecting to live market data feeds. All tests passing.
