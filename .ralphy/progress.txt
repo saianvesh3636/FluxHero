@@ -1,66 +1,3 @@
-  * ATR: 0.08ms
-  * KAMA: 0.14ms
-  * ADX: 0.20ms
-  * Volatility State: 0.08ms
-  * Regime Detection: 4.99ms
-  * Composite (all indicators): 6.17ms
-- All 11 performance tests passing
-- Linting passed with ruff
-
-=== 2026-01-21 ===
-Task: Create user guide for running the system (setup, configuration, monitoring)
-Phase: 18 - Documentation & Deployment
-
-Completed:
-1. Created comprehensive USER_GUIDE.md in docs/ directory
-   - 10 major sections covering all aspects of system usage
-   - Detailed installation instructions for backend and frontend
-   - Complete configuration guide with .env template
-   - Step-by-step instructions for running the system
-   - Dashboard usage guide for all 4 tabs (Live Trading, Analytics, Trade History, Backtesting)
-   - Comprehensive monitoring section with log analysis
-   - Common operations (daily startup, running backtests, exporting data, archiving)
-   - Extensive troubleshooting guide with 6 common issues and solutions
-   - Best practices for risk management, strategy optimization, system maintenance
-   - Quick reference section with common commands and environment variables
-
-2. Created test suite for documentation validation
-   - 28 comprehensive tests in tests/documentation/test_user_guide.py
-   - Tests cover existence, structure, completeness, and quality
-   - Validates that referenced files exist
-   - Checks for security warnings and configuration guidance
-   - Ensures troubleshooting and best practices sections are comprehensive
-   - All tests passing (28/28)
-
-3. Fixed linting issues
-   - Removed unused import (os module)
-   - Code passes ruff linting
-
-4. Updated FLUXHERO_TASKS.md
-   - Marked "Write API documentation" as complete (was already done)
-   - Marked "Create user guide" as complete
-
-Files Created:
-- docs/USER_GUIDE.md (35,000+ characters, comprehensive guide)
-- tests/documentation/test_user_guide.py (300+ lines, 28 tests)
-- tests/documentation/__init__.py
-
-Status: Task complete. User guide provides comprehensive documentation for setup, configuration, running, monitoring, and troubleshooting the FluxHero system.
-
-Next Task: Document risk management rules and circuit breaker behavior (Phase 18, Task 3)
-
-[2026-01-21 20:48] Phase 18, Task 3: Document risk management rules and circuit breaker behavior
-- Created comprehensive RISK_MANAGEMENT.md documentation (872 lines)
-- Documented all position-level risk controls (R11.1.1-11.1.4):
-  * Maximum risk per trade (1% trend, 0.75% mean-rev)
-  * Maximum position size (20% of account)
-  * Mandatory stop loss requirement
-  * ATR-based stop loss calculation formulas
-- Documented all portfolio-level risk controls (R11.2.1-11.2.3):
-  * Maximum total exposure (50% of account)
-  * Maximum open positions (5 simultaneous)
-  * Correlation monitoring and position size reduction
-- Documented drawdown circuit breakers (R11.3.1-11.3.3):
   * Drawdown tracking from equity peak
   * 15% drawdown warning level (50% size reduction, tightened stops)
   * 20% drawdown critical level (kill switch activation)
@@ -110,4 +47,78 @@ Files Modified:
 - FLUXHERO_TASKS.md (marked task as complete)
 
 Next Task: Phase 18 - Task 5: Create deployment guide for VPS/cloud hosting options
+
+=== Phase 18 - Task 5: Create Deployment Guide ===
+Date: 2026-01-21
+Status: COMPLETED
+
+Task: Create deployment guide for VPS/cloud hosting options
+
+Implementation Details:
+Created comprehensive deployment guide (docs/DEPLOYMENT_GUIDE.md) covering:
+
+1. Hosting Provider Comparison:
+   - AWS EC2 (enterprise-grade, ~$30-40/month)
+   - DigitalOcean Droplet (developer-friendly, $24/month)
+   - Linode/Akamai (cost-effective, $24/month)
+   - Hetzner Cloud (budget option, ~$10-12/month, EU only)
+
+2. Detailed Step-by-Step Deployment:
+   - Provider-specific instance creation (CLI + Console)
+   - Security group/firewall configuration
+   - Common setup steps for all providers
+   - SSH hardening and fail2ban setup
+
+3. Production Configuration:
+   - systemd service files for backend and frontend
+   - Nginx reverse proxy setup
+   - SSL/TLS with Let's Encrypt (Certbot)
+   - UFW firewall configuration
+
+4. Monitoring & Operations:
+   - Log rotation setup
+   - Automated health check scripts
+   - Email alerting configuration
+   - Performance monitoring with cron jobs
+
+5. Backup & Disaster Recovery:
+   - Automated daily backups (SQLite + Parquet)
+   - 30-day retention policy
+   - Optional S3 offsite backup
+   - Complete restoration procedure
+
+6. Security Hardening:
+   - SSH configuration (disable root, key-only auth)
+   - fail2ban for intrusion prevention
+   - Automatic security updates
+   - Minimal attack surface
+
+7. Cost Optimization:
+   - Reserved instance savings (AWS)
+   - Storage optimization strategies
+   - Data transfer monitoring
+   - Log compression
+
+8. Troubleshooting Section:
+   - Common deployment issues and fixes
+   - Service restart procedures
+   - Database recovery steps
+   - SSL certificate renewal
+
+Key Features:
+- Comparison matrix for selecting hosting provider
+- Complete commands for 4 major cloud providers
+- Security-first approach with hardening steps
+- Production-ready systemd configurations
+- Automated backup and monitoring scripts
+- Cost optimization strategies
+- Comprehensive troubleshooting guide
+
+Files Created:
+- docs/DEPLOYMENT_GUIDE.md (1,144 lines)
+
+Files Modified:
+- FLUXHERO_TASKS.md (marked task as complete)
+
+Next Task: Phase 18 - Task 6: Write maintenance guide (dependency updates, data backup, monitoring)
 
