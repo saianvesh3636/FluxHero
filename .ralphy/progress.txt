@@ -1,63 +1,3 @@
-2. Features:
-   - Both JSON and human-readable output formats
-   - Rotating file handlers to prevent unbounded growth (10MB default, 5 backups)
-   - Timezone-aware timestamps using datetime.timezone.utc
-   - Support for extra context fields in log messages
-   - Configurable log levels and output destinations
-   - ANSI color support for console output
-
-3. Created comprehensive tests at `tests/unit/test_logging_config.py`:
-   - 21 test cases covering all functionality
-   - Tests for both formatters (JSON and human-readable)
-   - Tests for configuration options and log rotation
-   - Integration tests for end-to-end workflows
-   - All tests passing ✅
-
-4. Code quality:
-   - All linting checks passing ✅
-   - No deprecation warnings
-   - Type hints throughout
-   - Comprehensive docstrings
-
-### Files created:
-- fluxhero/backend/core/__init__.py
-- fluxhero/backend/core/logging_config.py
-- tests/unit/test_logging_config.py
-
-### Next steps:
-The logging configuration module is ready for use. Next tasks in Phase 2:
-- Add structured logging to parquet_store.py
-- Add structured logging to sqlite_store.py
-- Replace print() statements in api/server.py
-- Verify consistency with order_manager.py logging pattern
-
-[2026-01-22 - Phase 2: Structured Logging - Task 2]
-Task: Add structured logging to backend/storage/parquet_store.py
-
-Changes:
-- Added structured logging to all read/write operations in parquet_store.py
-  - save_candles(): debug log on start, info log on success, error log on failure
-  - load_candles(): debug log on start and for non-existent files, info log on success, error log on failure
-  - is_cache_fresh(): debug logs for cache state checks
-  - delete_cache(): info log on successful deletion, debug for non-existent files, error on failure
-  - clear_all_cache(): info logs for start and completion with counts
-- All logging includes structured context (symbol, timeframe, num_candles, cache_path, etc.)
-- Added 11 new tests for logging functionality in test_parquet_store.py
-- All tests pass (42/42)
-- Linting passes with auto-fix applied for f-string issues
-
-Status: COMPLETE
-Next task: Add structured logging to backend/storage/sqlite_store.py
-[2026-01-22 - Phase 2: Structured Logging - Task 3]
-Task: Add structured logging to backend/storage/sqlite_store.py
-
-Changes:
-- Added structured logging to all database operations in sqlite_store.py
-  - initialize(): info log with db_path on start
-  - _insert_trade_sync(): debug log on insert, info log on success with trade_id
-  - _update_trade_sync(): debug log on update, info log on success with fields_updated
-  - get_trade(): debug logs for fetch attempt and result (found/not found)
-  - get_open_trades(): debug logs with count
   - get_recent_trades(): debug logs with limit and count
   - get_trades_by_date_range(): debug logs with date range and count
   - _upsert_position_sync(): debug log on upsert, info log on success
@@ -108,3 +48,28 @@ Next task: Replace all print() statements in backend/api/server.py with proper l
 - All tests passing (32/32)
 - Linting passing with ruff
 - Task completed successfully
+[2026-01-22] Phase 3: WebSocket Authentication - Task 2 & 4
+- Updated WebSocket endpoint in fluxhero/backend/api/server.py to validate authentication
+- Added validate_websocket_auth() call before websocket.accept() at line 595
+- Connections without valid auth are rejected with code 4001 and reason message
+- Added logging for rejected connections with client info
+- Updated docstring to document authentication requirement
+- Created comprehensive integration tests in tests/integration/test_websocket_auth.py:
+  * test_websocket_connection_with_valid_token: Validates successful auth
+  * test_websocket_connection_with_invalid_token: Validates rejection with wrong token
+  * test_websocket_connection_without_token: Validates rejection with missing token
+  * test_websocket_connection_with_empty_token: Validates rejection with empty token
+  * test_websocket_connection_with_bearer_only: Validates rejection with "Bearer " only
+  * test_websocket_connection_with_default_secret: Tests default dev secret
+  * test_websocket_case_insensitive_authorization_header: Tests header case insensitivity
+  * test_websocket_token_without_bearer_prefix: Tests raw token (no Bearer prefix)
+  * test_websocket_receives_price_updates_after_auth: Tests data flow after auth
+- All integration tests passing (9/9)
+- All unit tests still passing (32/32)
+- Linting passing with ruff
+- Updated AUDIT_TASKS.md to mark tasks as complete
+- Tasks 2 and 4 of Phase 3 completed successfully
+
+Status: COMPLETE
+Next task: Add configuration for auth secret key (Phase 3 - Task 3) or proceed to Phase 4
+

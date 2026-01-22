@@ -42,6 +42,7 @@ from backend.storage.sqlite_store import (
 )
 from backend.backtesting.engine import BacktestEngine, BacktestConfig
 from backend.backtesting.metrics import PerformanceMetrics
+from backend.api.auth import validate_websocket_auth
 
 
 # ============================================================================
@@ -599,7 +600,20 @@ async def websocket_prices(websocket: WebSocket):
 
     Clients connect to this endpoint to receive real-time price updates.
     Messages are sent in JSON format with symbol, price, timestamp.
+
+    Authentication:
+        Requires valid bearer token in Authorization header.
+        Connections without valid auth are rejected with code 4001.
     """
+    # Validate authentication before accepting connection
+    if not validate_websocket_auth(websocket.headers):
+        logger.warning(
+            "WebSocket connection rejected: invalid authentication",
+            extra={"client": websocket.client}
+        )
+        await websocket.close(code=4001, reason="Authentication failed")
+        return
+
     await websocket.accept()
     app_state.websocket_clients.append(websocket)
     app_state.data_feed_active = True
