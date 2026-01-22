@@ -1,77 +1,3 @@
-  * Drawdown tracking from equity peak
-  * 15% drawdown warning level (50% size reduction, tightened stops)
-  * 20% drawdown critical level (kill switch activation)
-- Documented risk monitoring and reporting (R11.4.1-11.4.2):
-  * Real-time risk metrics display
-  * Daily risk report generation and formatting
-- Included configuration details for PositionLimitsConfig and DrawdownCircuitBreakerConfig
-- Provided comprehensive examples for all risk scenarios
-- Added best practices and testing validation guidance
-- All tests passing (82/82 tests in test_position_limits.py and test_kill_switch.py)
-- Linting passed with ruff
-- Task marked complete in FLUXHERO_TASKS.md
-
-=== Phase 18 - Task 4: Add README with installation instructions ===
-Date: 2026-01-21
-Status: COMPLETED
-
-Summary:
-Created comprehensive README.md with detailed installation instructions for both backend (Python) and frontend (React + Next.js).
-
-Changes Made:
-1. Replaced existing README.md with comprehensive documentation
-2. Added detailed sections:
-   - Overview with key features and target audience
-   - System requirements (hardware, software, API access)
-   - Installation instructions for backend and frontend
-   - Configuration examples (.env, trading_config.yaml)
-   - Running the system (development and production modes)
-   - Testing instructions (backend, frontend, integration, linting)
-   - Project structure visualization
-   - Usage guide for dashboard tabs and API endpoints
-   - Common operations (daily session, monitoring, emergency stop)
-   - Troubleshooting section with common issues and solutions
-   - Documentation references
-
-Key Features of README:
-- Step-by-step installation for Python virtual environment and dependencies
-- Node.js/npm setup for frontend
-- Configuration templates for environment variables and trading parameters
-- Commands for running development and production servers
-- Testing and linting instructions
-- Comprehensive troubleshooting guide
-- Links to additional documentation (API_DOCUMENTATION.md, USER_GUIDE.md, RISK_MANAGEMENT.md)
-
-Files Modified:
-- README.md (complete rewrite - 696 lines)
-- FLUXHERO_TASKS.md (marked task as complete)
-
-Next Task: Phase 18 - Task 5: Create deployment guide for VPS/cloud hosting options
-
-=== Phase 18 - Task 5: Create Deployment Guide ===
-Date: 2026-01-21
-Status: COMPLETED
-
-Task: Create deployment guide for VPS/cloud hosting options
-
-Implementation Details:
-Created comprehensive deployment guide (docs/DEPLOYMENT_GUIDE.md) covering:
-
-1. Hosting Provider Comparison:
-   - AWS EC2 (enterprise-grade, ~$30-40/month)
-   - DigitalOcean Droplet (developer-friendly, $24/month)
-   - Linode/Akamai (cost-effective, $24/month)
-   - Hetzner Cloud (budget option, ~$10-12/month, EU only)
-
-2. Detailed Step-by-Step Deployment:
-   - Provider-specific instance creation (CLI + Console)
-   - Security group/firewall configuration
-   - Common setup steps for all providers
-   - SSH hardening and fail2ban setup
-
-3. Production Configuration:
-   - systemd service files for backend and frontend
-   - Nginx reverse proxy setup
    - SSL/TLS with Let's Encrypt (Certbot)
    - UFW firewall configuration
 
@@ -121,4 +47,40 @@ Files Modified:
 - FLUXHERO_TASKS.md (marked task as complete)
 
 Next Task: Phase 18 - Task 6: Write maintenance guide (dependency updates, data backup, monitoring)
+
+
+## 2026-01-21 - Phase 18, Task 6: Write Maintenance Guide
+
+**Task**: Write maintenance guide (dependency updates, data backup, monitoring)
+
+**Implementation**:
+- Created comprehensive maintenance guide at docs/MAINTENANCE_GUIDE.md
+- Covered all critical maintenance areas:
+  * Dependency management (Python and Node.js) with update procedures
+  * Data backup and recovery with automated scripts
+  * System monitoring with health checks and alerts
+  * Database maintenance (VACUUM, archival)
+  * Log management and rotation
+  * Performance optimization
+  * Security updates
+  * Disaster recovery procedures
+  * Troubleshooting common issues
+  * Maintenance schedules (daily, weekly, monthly, quarterly)
+
+**Files Created**:
+- docs/MAINTENANCE_GUIDE.md (comprehensive maintenance documentation)
+
+**Files Modified**:
+- FLUXHERO_TASKS.md (marked task as complete)
+
+**Key Features**:
+- Automated backup scripts with 3-2-1 backup strategy
+- Health check monitoring every 5 minutes
+- Database optimization scripts (weekly VACUUM)
+- Monthly dependency update procedures with rollback plans
+- Log rotation and analysis
+- Emergency procedures and disaster recovery
+- Comprehensive maintenance schedules and checklists
+
+**Status**: ✅ COMPLETE - All 118 tasks in FluxHero implementation are now complete!
 

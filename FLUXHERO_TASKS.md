@@ -305,7 +305,7 @@ This task list provides **what** to build. The following documents explain **how
 - [x] Document risk management rules and circuit breaker behavior
 - [x] Add README with installation instructions for backend and frontend
 - [x] Create deployment guide for VPS/cloud hosting options
-- [ ] Write maintenance guide (dependency updates, data backup, monitoring)
+- [x] Write maintenance guide (dependency updates, data backup, monitoring)
 
 ---
 
