@@ -294,7 +294,7 @@ This task list provides **what** to build. The following documents explain **how
 - [x] Test regime detection accuracy on historical trending/ranging periods
 - [x] Validate frontend displays correct real-time data from backend API
 - [x] Test all error scenarios (API failures, WebSocket disconnects, invalid data)
-- [ ] Performance benchmark: ensure 10k candle indicator calculation completes in <500ms
+- [x] Performance benchmark: ensure 10k candle indicator calculation completes in <500ms
 
 ---
 
