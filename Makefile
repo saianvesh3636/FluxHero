@@ -69,6 +69,7 @@ help:
 	@echo "$(GREEN)Maintenance:$(NC)"
 	@echo "  make daily-reboot     Run daily maintenance script"
 	@echo "  make archive-trades   Archive old trades to Parquet"
+	@echo "  make seed-data        Seed database with test positions"
 
 # ============================================================================
 # Development Servers
@@ -229,6 +230,10 @@ archive-trades:
 			print(f'Archived {count} trades'); \
 			await store.close(); \
 		asyncio.run(archive())"
+
+seed-data:
+	@echo "$(CYAN)Seeding test data...$(NC)"
+	$(PYTHON) scripts/seed_test_data.py
 
 # ============================================================================
 # Cleanup

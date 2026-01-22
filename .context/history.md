@@ -248,3 +248,47 @@
 - Handles connection drops gracefully with auto-reconnect
 
 **Result**: Task 5.1 complete. WebSocket connection verification implemented with status display, real-time updates, and auto-reconnect functionality.
+
+## 2026-01-22 - Phase 5.2: Test Data Seeding Script
+
+**Task:** Implement test data seeding script
+**Files Changed:**
+- scripts/seed_test_data.py (created)
+- tests/unit/test_seed_data.py (created)
+- Makefile (added seed-data command)
+- TASKS.md (marked Task 5.2 complete)
+
+**Summary:**
+- Created `scripts/seed_test_data.py` with comprehensive position seeding functionality:
+  - Generates 5-10 sample positions with realistic data
+  - Supports 10 different symbols (SPY, QQQ, AAPL, TSLA, NVDA, MSFT, AMZN, META, GOOGL, AMD)
+  - Realistic P&L values (60% win rate, -3% to +5% P&L range)
+  - Proper position sizing (max 20% per position, $100k account)
+  - Realistic stop loss placement (2.5-3% from entry)
+  - Entry times within last 30 days
+  - Strategy and regime consistency (TREND/MEAN_REVERSION)
+  - Detailed signal reasons for each position
+- Created comprehensive test suite with 16 tests covering:
+  - Position data generation structure and types
+  - Realistic ranges and distributions
+  - P&L calculations and stop loss placement
+  - Database seeding functionality
+  - Error handling and edge cases
+  - Position diversity and realism
+- Added `make seed-data` command to Makefile
+- Script features:
+  - Command-line arguments (--count, --clear)
+  - Colored console output with emoji indicators
+  - Detailed position summary table
+  - Account summary display
+  - Uses PaperBroker for realistic order execution
+
+**Implementation Details:**
+- Integrates with backend.execution.broker_interface.PaperBroker
+- Uses backend.storage.sqlite_store.SQLiteStore for persistence
+- Proper market price setting before order placement
+- Realistic slippage and position sizing
+- All tests passing (16/16)
+- All linting checks passing (ruff)
+
+**Result:** Task 5.2 complete. Test data seeding script fully functional with realistic positions, comprehensive tests, and Makefile integration.

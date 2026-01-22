@@ -114,10 +114,10 @@
 - [x] Auto-reconnect works after connection drop
 
 ### Task 5.2: Test Data Seeding Script
-- [ ] Create `scripts/seed_test_data.py`
-- [ ] Script creates 5-10 sample positions with realistic data
-- [ ] Positions have realistic P&L values
-- [ ] Add `make seed-data` command to Makefile
+- [x] Create `scripts/seed_test_data.py`
+- [x] Script creates 5-10 sample positions with realistic data
+- [x] Positions have realistic P&L values
+- [x] Add `make seed-data` command to Makefile
 
 ---
 
