@@ -1,74 +1,3 @@
-- Added security notes and command to generate secure random secrets
-- Added tests to verify .env.example file exists and contains required configuration
-- All 34 auth unit tests pass
-- Linting passes for all modified files
-
-Files Modified:
-- fluxhero/backend/.env.example (created)
-- tests/unit/test_auth.py (added 2 new tests)
-- AUDIT_TASKS.md (marked task as complete)
-
-Next Task: Phase 4 - Task 1: Create backend/core/config.py using pydantic-settings with .env file support
-
----
-Date: 2026-01-22
-Task: Phase 4 - Task 1: Create backend/core/config.py using pydantic-settings
-Status: Complete
-
-Summary:
-- Created centralized configuration module at fluxhero/backend/core/config.py
-- Implemented Settings class using pydantic-settings with BaseSettings
-- Added environment variable support with FLUXHERO_ prefix and .env file loading
-- Configured all major application settings:
-  * Authentication settings (auth_secret)
-  * API settings (title, description, version)
-  * CORS settings (origins, credentials, methods, headers)
-  * Alpaca API settings (api_url, ws_url, api_key, api_secret)
-  * Risk management settings (position limits, portfolio limits, stop losses)
-  * Data storage settings (cache_dir, log_file)
-  * Market data settings (timeframe, initial_candles)
-- Added field validation with pydantic constraints (ge, le for numeric ranges)
-- Implemented get_settings() function with lru_cache for singleton pattern
-- Created comprehensive test suite with 37 tests covering:
-  * Default configuration values
-  * Environment variable loading
-  * Settings validation and constraints
-  * Caching behavior
-  * Integration scenarios
-  * Edge cases and boundary conditions
-- All 37 tests passing
-- Linting passes with ruff
-- Installed pydantic-settings dependency in venv
-
-Files Created:
-- fluxhero/backend/core/config.py (242 lines)
-- tests/unit/test_config.py (382 lines, 37 tests)
-
-Files Modified:
-- AUDIT_TASKS.md (marked Phase 4 - Task 1 as complete)
-
-Next Task: Phase 4 - Task 2: Move CORS origins from backend/api/server.py to config
-
----
-Date: 2026-01-22
-Task: Phase 4 - Task 2: Move CORS origins from backend/api/server.py to config
-Status: Complete
-
-Summary:
-- Updated fluxhero/backend/api/server.py to import and use centralized config settings
-- Modified FastAPI app initialization to use config values:
-  * app.title from settings.api_title
-  * app.description from settings.api_description
-  * app.version from settings.api_version
-- Updated CORS middleware configuration to use config values:
-  * allow_origins from settings.cors_origins
-  * allow_credentials from settings.cors_allow_credentials
-  * allow_methods from settings.cors_allow_methods
-  * allow_headers from settings.cors_allow_headers
-- Removed hardcoded CORS origins list (localhost:3000, localhost:3001, 127.0.0.1:3000)
-- Updated fluxhero/backend/.env.example with comprehensive configuration documentation:
-  * Added API configuration section (title, description, version)
-  * Added CORS configuration section with examples
   * Added Alpaca API configuration section
   * Added Risk Management configuration section
   * Added Data Storage configuration section
@@ -118,4 +47,39 @@ Move API URLs from `backend/daily_reboot.py:44` to centralized config
 - Centralized configuration now controls API URLs for daily_reboot script
 - Easier to manage different environments (paper trading vs live)
 - Follows same pattern as CORS configuration (Phase 4 Task 2)
+
+## 2026-01-22 - Phase 4 Task 4: Move Risk Parameters to Centralized Config
+
+### Changes Made
+1. **Updated position_limits.py**:
+   - Changed all function signatures to accept `Settings` instead of `PositionLimitsConfig`
+   - Added import for `Settings` and `get_settings` from `backend.core.config`
+   - All functions now default to `get_settings()` when config is None
+   - Deprecated `PositionLimitsConfig` class with note to use centralized config
+
+2. **Updated .env.example**:
+   - Added detailed comments for all risk parameters
+   - Documented requirement references (R11.1, R11.2, R11.1.4)
+   - Risk parameters already present, enhanced with descriptions
+
+3. **Updated test_position_limits.py**:
+   - Added `test_centralized_config_integration()` to verify Settings work with all risk functions
+   - Added `test_centralized_config_default_values()` to verify default config behavior
+   - Both tests validate position sizing, validation, ATR stops, portfolio limits, and correlation
+
+4. **Updated AUDIT_TASKS.md**:
+   - Marked "Move risk parameters to config" as complete
+   - Marked "Update all modules to import from centralized config" as complete
+
+### Test Results
+- All 41 tests pass (including 2 new tests for centralized config)
+- Linting passes with no issues
+- Config parameters already existed in config.py (added in previous task)
+- position_limits.py now fully integrated with centralized configuration
+
+### Impact
+- Risk parameters now managed through centralized Settings class
+- All risk limits configurable via environment variables or .env file
+- Backward compatible: existing tests using PositionLimitsConfig still work
+- Phase 4 (Centralized Configuration) is now complete
 

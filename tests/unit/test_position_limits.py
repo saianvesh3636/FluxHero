@@ -30,6 +30,7 @@ from fluxhero.backend.risk.position_limits import (
     RiskCheckResult,
     PositionLimitsConfig,
 )
+from fluxhero.backend.core.config import Settings
 
 
 # ============================================================================
@@ -690,6 +691,90 @@ def test_edge_case_custom_config():
         StrategyType.TREND_FOLLOWING, custom_config
     )
 
+    assert result == RiskCheckResult.APPROVED
+
+
+def test_centralized_config_integration():
+    """Test that centralized Settings config works with risk functions."""
+    # Create a custom Settings instance with different risk parameters
+    custom_settings = Settings(
+        max_risk_pct_trend=0.015,  # 1.5% instead of default 1%
+        max_position_size_pct=0.25,  # 25% instead of default 20%
+        max_total_exposure_pct=0.60,  # 60% instead of default 50%
+        max_open_positions=10,  # 10 instead of default 5
+        correlation_threshold=0.8,  # 0.8 instead of default 0.7
+    )
+
+    account_balance = 100000
+    entry_price = 50.0  # Lower price to avoid position size limit
+    stop_loss = 49.0
+
+    # Test position sizing with custom settings
+    # With 1.5% risk and $1 price risk: (100000 * 0.015) / 1 = 1500 shares
+    shares = calculate_position_size_from_risk(
+        account_balance, entry_price, stop_loss,
+        StrategyType.TREND_FOLLOWING, custom_settings
+    )
+    assert shares == 1500.0
+
+    # Test position validation with custom settings
+    # Use smaller position (500 shares) to stay within 25% position size limit
+    # 500 shares * $50 = $25,000 = 25% of account (exactly at limit)
+    result, reason = validate_position_level_risk(
+        account_balance, entry_price, stop_loss, 500,
+        StrategyType.TREND_FOLLOWING, custom_settings
+    )
+    assert result == RiskCheckResult.APPROVED
+
+    # Test ATR stop loss with custom settings
+    stop_price = calculate_atr_stop_loss(
+        entry_price=100.0,
+        atr=2.0,
+        side=1,  # Long position
+        strategy_type=StrategyType.TREND_FOLLOWING,
+        config=custom_settings
+    )
+    assert stop_price == 95.0  # 100 - (2.5 * 2.0)
+
+    # Test portfolio validation with custom settings (max 10 positions)
+    positions = [Position(f"SYM{i}", 10, 100, 100, 95) for i in range(9)]
+    result, reason = validate_portfolio_level_risk(
+        account_balance, positions, 10000, custom_settings
+    )
+    assert result == RiskCheckResult.APPROVED  # 9 positions < 10 max
+
+    # Test correlation check with custom threshold (0.8)
+    new_prices = np.array([100, 101, 102, 103, 104])
+    position_prices_map = {"SYM0": np.array([100, 101, 102, 103, 104])}
+    should_reduce, max_corr, _ = check_correlation_with_existing_positions(
+        new_prices, [positions[0]], position_prices_map, custom_settings
+    )
+    # Correlation is 1.0, which exceeds 0.8 threshold
+    assert should_reduce is True
+    assert abs(max_corr - 1.0) < 1e-10  # Near perfect correlation
+
+
+def test_centralized_config_default_values():
+    """Test that functions use centralized config defaults when config is None."""
+    account_balance = 100000
+    entry_price = 50.0
+    stop_loss = 48.0
+
+    # Call without config parameter - should use get_settings() internally
+    shares = calculate_position_size_from_risk(
+        account_balance, entry_price, stop_loss,
+        StrategyType.TREND_FOLLOWING
+    )
+    # Default is 1% risk: (100000 * 0.01) / 2 = 500 shares
+    assert shares == 500.0
+
+    # Test validation without config
+    # Use 400 shares to stay within 20% position size limit
+    # 400 shares * $50 = $20,000 = 20% of account (exactly at limit)
+    result, reason = validate_position_level_risk(
+        account_balance, entry_price, stop_loss, 400,
+        StrategyType.TREND_FOLLOWING
+    )
     assert result == RiskCheckResult.APPROVED
 
 

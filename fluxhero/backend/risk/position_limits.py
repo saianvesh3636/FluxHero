@@ -26,6 +26,8 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from numba import njit
 
+from fluxhero.backend.core.config import Settings, get_settings
+
 
 class StrategyType(IntEnum):
     """Strategy type for risk parameter selection."""
@@ -67,7 +69,13 @@ class Position:
 
 @dataclass
 class PositionLimitsConfig:
-    """Configuration for position limit checks."""
+    """
+    DEPRECATED: Use Settings from backend.core.config instead.
+
+    This class is kept for backwards compatibility but should not be used
+    for new code. All risk parameters are now managed through centralized
+    configuration in backend.core.config.
+    """
     # Position-level (R11.1)
     max_risk_pct_trend: float = 0.01  # 1% for trend-following
     max_risk_pct_mean_rev: float = 0.0075  # 0.75% for mean reversion
@@ -93,7 +101,7 @@ def calculate_position_size_from_risk(
     entry_price: float,
     stop_loss: float,
     strategy_type: StrategyType,
-    config: Optional[PositionLimitsConfig] = None
+    config: Optional[Settings] = None
 ) -> float:
     """
     Calculate position size based on risk percentage.
@@ -109,7 +117,7 @@ def calculate_position_size_from_risk(
         entry_price: Intended entry price
         stop_loss: Stop loss price
         strategy_type: TREND_FOLLOWING or MEAN_REVERSION
-        config: Position limits configuration
+        config: Settings instance (uses centralized config if None)
 
     Returns:
         Number of shares (rounded down to whole shares)
@@ -119,7 +127,7 @@ def calculate_position_size_from_risk(
         500.0  # Risk $1000 (1%), price risk $2, so 500 shares
     """
     if config is None:
-        config = PositionLimitsConfig()
+        config = get_settings()
 
     # Select risk percentage based on strategy
     if strategy_type == StrategyType.TREND_FOLLOWING:
@@ -150,7 +158,7 @@ def validate_position_level_risk(
     stop_loss: Optional[float],
     shares: float,
     strategy_type: StrategyType,
-    config: Optional[PositionLimitsConfig] = None
+    config: Optional[Settings] = None
 ) -> Tuple[RiskCheckResult, str]:
     """
     Validate position-level risk constraints.
@@ -166,7 +174,7 @@ def validate_position_level_risk(
         stop_loss: Stop loss price (None = no stop)
         shares: Number of shares to trade
         strategy_type: Strategy type for risk limits
-        config: Position limits configuration
+        config: Settings instance (uses centralized config if None)
 
     Returns:
         Tuple of (RiskCheckResult, reason_message)
@@ -176,7 +184,7 @@ def validate_position_level_risk(
         (RiskCheckResult.APPROVED, "Position risk checks passed")
     """
     if config is None:
-        config = PositionLimitsConfig()
+        config = get_settings()
 
     # R11.1.3: Stop loss mandatory
     if stop_loss is None:
@@ -215,7 +223,7 @@ def calculate_atr_stop_loss(
     atr: float,
     side: int,  # 1 for long, -1 for short
     strategy_type: StrategyType,
-    config: Optional[PositionLimitsConfig] = None
+    config: Optional[Settings] = None
 ) -> float:
     """
     Calculate ATR-based stop loss price.
@@ -228,7 +236,7 @@ def calculate_atr_stop_loss(
         atr: Average True Range value
         side: 1 for long, -1 for short
         strategy_type: Strategy type
-        config: Position limits configuration
+        config: Settings instance (uses centralized config if None)
 
     Returns:
         Stop loss price
@@ -238,7 +246,7 @@ def calculate_atr_stop_loss(
         95.0  # Long: 100 - 2.5×2.0
     """
     if config is None:
-        config = PositionLimitsConfig()
+        config = get_settings()
 
     if strategy_type == StrategyType.TREND_FOLLOWING:
         # ATR-based stop
@@ -261,7 +269,7 @@ def validate_portfolio_level_risk(
     account_balance: float,
     open_positions: List[Position],
     new_position_value: float,
-    config: Optional[PositionLimitsConfig] = None
+    config: Optional[Settings] = None
 ) -> Tuple[RiskCheckResult, str]:
     """
     Validate portfolio-level risk constraints.
@@ -274,7 +282,7 @@ def validate_portfolio_level_risk(
         account_balance: Total account equity
         open_positions: List of current positions
         new_position_value: Value of new position to add
-        config: Position limits configuration
+        config: Settings instance (uses centralized config if None)
 
     Returns:
         Tuple of (RiskCheckResult, reason_message)
@@ -285,7 +293,7 @@ def validate_portfolio_level_risk(
         (RiskCheckResult.APPROVED, "Portfolio risk checks passed")
     """
     if config is None:
-        config = PositionLimitsConfig()
+        config = get_settings()
 
     # R11.2.2: Check max positions
     if len(open_positions) >= config.max_open_positions:
@@ -365,7 +373,7 @@ def check_correlation_with_existing_positions(
     new_symbol_prices: np.ndarray,
     open_positions: List[Position],
     position_prices_map: dict,  # {symbol: np.ndarray of recent prices}
-    config: Optional[PositionLimitsConfig] = None
+    config: Optional[Settings] = None
 ) -> Tuple[bool, float, Optional[str]]:
     """
     Check if new position is highly correlated with existing positions.
@@ -377,7 +385,7 @@ def check_correlation_with_existing_positions(
         new_symbol_prices: Recent price series for new symbol
         open_positions: List of current positions
         position_prices_map: Dictionary mapping symbols to price arrays
-        config: Position limits configuration
+        config: Settings instance (uses centralized config if None)
 
     Returns:
         Tuple of (should_reduce_size, max_correlation, correlated_symbol)
@@ -390,7 +398,7 @@ def check_correlation_with_existing_positions(
         (False, 0.95, None)  # High correlation but function checks threshold
     """
     if config is None:
-        config = PositionLimitsConfig()
+        config = get_settings()
 
     if len(open_positions) == 0:
         return (False, 0.0, None)
@@ -439,7 +447,7 @@ def validate_new_position(
     open_positions: List[Position],
     new_symbol_prices: Optional[np.ndarray] = None,
     position_prices_map: Optional[dict] = None,
-    config: Optional[PositionLimitsConfig] = None
+    config: Optional[Settings] = None
 ) -> Tuple[RiskCheckResult, str, float]:
     """
     Comprehensive risk validation for new position.
@@ -458,7 +466,7 @@ def validate_new_position(
         open_positions: List of current positions
         new_symbol_prices: Recent prices for correlation check
         position_prices_map: Price series for existing positions
-        config: Position limits configuration
+        config: Settings instance (uses centralized config if None)
 
     Returns:
         Tuple of (RiskCheckResult, reason, adjusted_shares)
@@ -471,7 +479,7 @@ def validate_new_position(
         True
     """
     if config is None:
-        config = PositionLimitsConfig()
+        config = get_settings()
 
     adjusted_shares = shares
 
