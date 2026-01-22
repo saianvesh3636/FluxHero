@@ -85,12 +85,12 @@
 ### Task 4.3: Frontend Error States
 **Goal**: UI handles API errors gracefully
 
-- [ ] Loading spinner shown while fetching data
-- [ ] Error message displayed when API call fails
-- [ ] "Backend offline" indicator when `/api/status` fails
-- [ ] Retry button available on error states
-- [ ] Verify `LoadingSpinner.tsx` is being used correctly
-- [ ] Verify `try/catch` blocks set error state properly
+- [x] Loading spinner shown while fetching data
+- [x] Error message displayed when API call fails
+- [x] "Backend offline" indicator when `/api/status` fails
+- [x] Retry button available on error states
+- [x] Verify `LoadingSpinner.tsx` is being used correctly
+- [x] Verify `try/catch` blocks set error state properly
 
 ### Task 4.4: Playwright E2E Tests
 **Goal**: Automated tests verifying frontend-backend integration

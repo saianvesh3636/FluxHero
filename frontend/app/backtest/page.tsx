@@ -333,8 +333,19 @@ export default function BacktestPage() {
           {/* Error Display */}
           {error && (
             <div className="mt-4 bg-red-900 border border-red-700 rounded-lg p-4 text-red-200">
-              <div className="font-semibold mb-1">Error</div>
-              <div>{error}</div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold mb-1">Error</div>
+                  <div>{error}</div>
+                </div>
+                <button
+                  onClick={runBacktest}
+                  disabled={isRunning}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
+                >
+                  Retry
+                </button>
+              </div>
             </div>
           )}
         </div>

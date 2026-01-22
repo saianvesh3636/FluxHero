@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiClient, Position, AccountInfo, SystemStatus } from '../../utils/api';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 export default function LiveTradingPage() {
   const [positions, setPositions] = useState<Position[]>([]);
@@ -9,12 +10,14 @@ export default function LiveTradingPage() {
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isBackendOffline, setIsBackendOffline] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   // Fetch data function
   const fetchData = async () => {
     try {
       setError(null);
+      setIsBackendOffline(false);
       const [positionsData, accountData, statusData] = await Promise.all([
         apiClient.getPositions(),
         apiClient.getAccountInfo(),
@@ -27,9 +30,18 @@ export default function LiveTradingPage() {
       setLastUpdate(new Date());
       setLoading(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch data';
+      setError(errorMessage);
+      setIsBackendOffline(true);
       setLoading(false);
     }
+  };
+
+  // Retry function
+  const handleRetry = () => {
+    setLoading(true);
+    setError(null);
+    fetchData();
   };
 
   // Initial fetch and 5-second auto-refresh
@@ -91,10 +103,7 @@ export default function LiveTradingPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading live data...</p>
-        </div>
+        <LoadingSpinner size="lg" message="Loading live data..." />
       </div>
     );
   }
@@ -110,10 +119,39 @@ export default function LiveTradingPage() {
           </p>
         </div>
 
-        {/* Error Banner */}
-        {error && (
+        {/* Backend Offline Indicator */}
+        {isBackendOffline && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800">⚠️ {error}</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="text-2xl mr-3">🔴</span>
+                <div>
+                  <p className="text-red-800 font-semibold">Backend Offline</p>
+                  <p className="text-red-600 text-sm">{error}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleRetry}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Retry Connection
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error Banner (for non-offline errors) */}
+        {error && !isBackendOffline && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <p className="text-yellow-800">⚠️ {error}</p>
+              <button
+                onClick={handleRetry}
+                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-medium"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         )}
 

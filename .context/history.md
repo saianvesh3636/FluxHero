@@ -137,3 +137,44 @@
 - Data format matches requirements: timestamp, OHLCV, volume
 - Full test coverage with edge cases
 
+
+## 2026-01-22 17:45 - Frontend Error States (Task 4.3)
+
+**Task**: Frontend Error States - UI handles API errors gracefully
+**Files Changed**:
+- frontend/app/page.tsx
+- frontend/app/live/page.tsx
+- frontend/app/backtest/page.tsx
+- frontend/app/__tests__/page.test.tsx (created)
+- frontend/app/live/__tests__/page.test.tsx (created)
+- frontend/app/backtest/__tests__/page.test.tsx (created)
+- TASKS.md
+- .context/history.md
+
+**What Was Done:**
+1. Enhanced home page with backend status checking and offline indicator
+   - Added useEffect to check backend status on mount
+   - Display green/yellow/red status indicators based on API response
+   - Backend offline warning with retry button
+   - Loading state while checking backend
+
+2. Improved live trading page error handling
+   - Replaced inline loading spinner with LoadingSpinner component
+   - Added isBackendOffline state for better error classification
+   - Backend offline banner with red indicator and retry button
+   - Error banner for non-offline errors with retry button
+   - Both error states include retry functionality
+
+3. Enhanced backtest page error states
+   - Added retry button to error display
+   - Retry button triggers runBacktest again
+   - Button is disabled while backtest is running
+   - Error message preserved until successful retry
+
+4. Created comprehensive test suites
+   - Home page tests: backend status, offline indicator, retry functionality
+   - Live page tests: loading states, error handling, retry, auto-refresh
+   - Backtest page tests: error display, retry, loading states
+   - All tests pass successfully
+
+**Result**: All Task 4.3 acceptance criteria met. Frontend now handles API errors gracefully with proper loading states, error messages, backend offline indicators, and retry buttons.

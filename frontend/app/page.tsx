@@ -1,4 +1,42 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { apiClient, SystemStatus } from '../utils/api';
+
 export default function Home() {
+  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
+  const [isBackendOffline, setIsBackendOffline] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const status = await apiClient.getSystemStatus();
+        setSystemStatus(status);
+        setIsBackendOffline(false);
+      } catch (err) {
+        setIsBackendOffline(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkBackend();
+  }, []);
+
+  const handleRetryConnection = async () => {
+    setLoading(true);
+    try {
+      const status = await apiClient.getSystemStatus();
+      setSystemStatus(status);
+      setIsBackendOffline(false);
+    } catch (err) {
+      setIsBackendOffline(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <main style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
       <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
@@ -89,9 +127,64 @@ export default function Home() {
         <h3 style={{ fontSize: '1.3rem', marginBottom: '1rem' }}>
           System Status
         </h3>
-        <p style={{ color: '#666' }}>
-          Backend API integration configured. Ready for implementation.
-        </p>
+        {loading ? (
+          <p style={{ color: '#666' }}>Checking backend status...</p>
+        ) : isBackendOffline ? (
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '1rem',
+              }}
+            >
+              <span style={{ fontSize: '1.5rem' }}>🔴</span>
+              <span style={{ color: '#dc2626', fontWeight: '600' }}>
+                Backend Offline
+              </span>
+            </div>
+            <p style={{ color: '#666', marginBottom: '1rem' }}>
+              Unable to connect to the backend server. Please ensure the backend is running on port 8000.
+            </p>
+            <button
+              onClick={handleRetryConnection}
+              style={{
+                padding: '0.5rem 1rem',
+                background: '#dc2626',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '500',
+              }}
+            >
+              Retry Connection
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '0.5rem',
+              }}
+            >
+              <span style={{ fontSize: '1.5rem' }}>
+                {systemStatus?.status === 'active' ? '🟢' :
+                 systemStatus?.status === 'delayed' ? '🟡' : '🔴'}
+              </span>
+              <span style={{ color: '#059669', fontWeight: '600', textTransform: 'capitalize' }}>
+                {systemStatus?.status || 'Unknown'}
+              </span>
+            </div>
+            <p style={{ color: '#666' }}>
+              Backend API is connected and ready.
+            </p>
+          </div>
+        )}
       </div>
     </main>
   );
