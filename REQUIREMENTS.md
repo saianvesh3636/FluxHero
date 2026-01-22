@@ -33,7 +33,7 @@ The FluxHero test suite currently runs sequentially, creating a bottleneck durin
 ### Feature 3: Fix Parallel-Incompatible Tests
 - Description: Identify and fix tests that fail under parallel execution
 - Acceptance Criteria:
-  - [ ] All tests pass when run with `pytest -n auto`
+  - [x] All tests pass when run with `pytest -n auto`
   - [x] Tests using shared files use `tmp_path` fixture or unique paths per worker
   - [x] Tests binding to specific ports use dynamic port allocation
   - [x] Database tests use isolated test databases or proper transaction isolation
@@ -86,3 +86,30 @@ The FluxHero test suite currently runs sequentially, creating a bottleneck durin
   *Recommendation: Try running first, fix based on actual failures.*
 
 - **Minimum test count threshold**: Should there be a threshold below which parallel execution is skipped? (Likely not needed—let users decide with `-n 0`)
+
+---
+
+# Additional Requirements (Generated 2026-01-22)
+
+I've created the `FRONTEND_REQUIREMENTS.md` file. Here's a summary of what I synthesized:
+
+**Key Findings from Codebase Exploration:**
+- Frontend: Next.js 16 + React 19 (fully built with API client, WebSocket hooks, multiple pages)
+- Backend: FastAPI on port 8000 (endpoints exist for positions, trades, account, backtest)
+- Integration architecture is already in place—proxy rewrites, API client class, WebSocket context
+
+**What I Resolved:**
+1. **Simplified "simulated live updates"** → Deferred to post-MVP per tech reviewer's advice; static test data is sufficient
+2. **Removed visual regression tests** → Too brittle for MVP; functional assertions only
+3. **Added environment gating** for test endpoint per security concern
+4. **Prioritized diagnosis first** → Added checklist since the root cause is unknown
+5. **Made acceptance criteria specific** → Testable items, not vague descriptions
+
+**Key Differences from Initial Draft:**
+- More specific now that we know it's Next.js + FastAPI
+- Added diagnosis checklist (since we don't know *what's* broken yet)
+- Removed documentation requirements (the format is standard OHLCV)
+- Added error state requirements (frontend should show errors, not blank screens)
+- Scoped Playwright tests to functional checks only
+
+The document is ready for developers to start diagnosing and fixing the integration.

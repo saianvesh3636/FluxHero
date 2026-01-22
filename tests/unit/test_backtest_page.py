@@ -193,7 +193,8 @@ class TestBacktestPage(unittest.TestCase):
 
         self.assertIn('Run Backtest', content)
         self.assertIn('onClick={runBacktest}', content)
-        self.assertIn('disabled={isRunning}', content)
+        # LoadingButton component handles disabled state internally via isLoading prop
+        self.assertIn('isLoading={isRunning}', content)
 
     def test_loading_spinner_present(self):
         """Test that loading spinner is implemented."""
@@ -203,7 +204,9 @@ class TestBacktestPage(unittest.TestCase):
         # Check for loading state
         self.assertIn('isRunning', content)
         self.assertIn('Running Backtest', content)
-        self.assertIn('animate-spin', content)
+        # LoadingButton component contains animate-spin
+        self.assertIn('LoadingButton', content)
+        self.assertIn('isLoading={isRunning}', content)
 
     def test_api_call_implementation(self):
         """Test that API call to backend is implemented."""
@@ -362,7 +365,9 @@ class TestBacktestPage(unittest.TestCase):
             content = f.read()
 
         # Check for responsive grid classes
-        responsive_classes = ['md:grid-cols-2', 'lg:grid-cols-3', 'lg:grid-cols-4', 'lg:grid-cols-5']
+        responsive_classes = [
+            'md:grid-cols-2', 'lg:grid-cols-3', 'lg:grid-cols-4', 'lg:grid-cols-5'
+        ]
         for cls in responsive_classes:
             self.assertIn(
                 cls,

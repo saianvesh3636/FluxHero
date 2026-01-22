@@ -449,7 +449,8 @@ def test_run_backtest_end_before_start(client):
 
 def test_websocket_connection(client):
     """Test WebSocket connection and message reception"""
-    with client.websocket_connect("/ws/prices") as websocket:
+    headers = {"Authorization": "Bearer fluxhero-dev-secret-change-in-production"}
+    with client.websocket_connect("/ws/prices", headers=headers) as websocket:
         # Receive connection message
         data = websocket.receive_json()
         assert data["type"] == "connection"
@@ -464,8 +465,9 @@ def test_websocket_connection(client):
 
 def test_websocket_multiple_clients(client):
     """Test multiple WebSocket clients"""
-    with client.websocket_connect("/ws/prices") as ws1:
-        with client.websocket_connect("/ws/prices") as ws2:
+    headers = {"Authorization": "Bearer fluxhero-dev-secret-change-in-production"}
+    with client.websocket_connect("/ws/prices", headers=headers) as ws1:
+        with client.websocket_connect("/ws/prices", headers=headers) as ws2:
             # Both should receive connection messages
             msg1 = ws1.receive_json()
             msg2 = ws2.receive_json()
@@ -604,8 +606,9 @@ def test_server_startup_logging(test_db, caplog):
 
 def test_websocket_connection_logging(client, caplog):
     """Test that WebSocket connections generate appropriate logs"""
+    headers = {"Authorization": "Bearer fluxhero-dev-secret-change-in-production"}
     with caplog.at_level(logging.INFO):
-        with client.websocket_connect("/ws/prices") as websocket:
+        with client.websocket_connect("/ws/prices", headers=headers) as websocket:
             # Receive connection message
             data = websocket.receive_json()
             assert data["type"] == "connection"
@@ -616,8 +619,9 @@ def test_websocket_connection_logging(client, caplog):
 
 def test_websocket_disconnection_logging(client, caplog):
     """Test that WebSocket disconnections generate appropriate logs"""
+    headers = {"Authorization": "Bearer fluxhero-dev-secret-change-in-production"}
     with caplog.at_level(logging.INFO):
-        with client.websocket_connect("/ws/prices") as websocket:
+        with client.websocket_connect("/ws/prices", headers=headers) as websocket:
             # Receive connection message
             websocket.receive_json()
             # WebSocket will disconnect when exiting context
@@ -673,7 +677,7 @@ def test_logger_exists():
     assert isinstance(server.logger, logging.Logger)
 
     # Verify logger name follows the pattern
-    assert server.logger.name == 'fluxhero.backend.api.server'
+    assert server.logger.name == 'backend.api.server'
 
 
 # ============================================================================

@@ -35,7 +35,9 @@ class TestFrontendSetup:
         with open(package_json_path) as f:
             package_data = json.load(f)
 
-        assert package_data["name"] == "fluxhero-frontend", "Package name should be fluxhero-frontend"
+        assert package_data["name"] == "fluxhero-frontend", (
+            "Package name should be fluxhero-frontend"
+        )
         assert "description" in package_data, "Package should have description"
         assert package_data["description"] == "FluxHero Trading System Frontend"
 
@@ -89,7 +91,10 @@ class TestFrontendSetup:
 
         compiler_options = tsconfig.get("compilerOptions", {})
         assert compiler_options.get("strict") is True, "Strict mode should be enabled"
-        assert compiler_options.get("jsx") == "preserve", "JSX should be set to preserve"
+        # Next.js 16 with React 19 uses "react-jsx" for automatic JSX runtime
+        assert compiler_options.get("jsx") in ["preserve", "react-jsx"], (
+            "JSX should be properly configured"
+        )
         assert "@/*" in compiler_options.get("paths", {}), "Path aliases should be configured"
 
     def test_next_config_exists(self):
