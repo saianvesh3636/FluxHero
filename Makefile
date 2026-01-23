@@ -9,7 +9,7 @@
 #   make test          - Run all tests
 #   make lint          - Run linting and type checking
 
-.PHONY: help dev dev-backend dev-frontend stop stop-backend stop-frontend \
+.PHONY: help dev dev-backend dev-frontend dev-debug stop stop-backend stop-frontend \
         test test-unit test-integration test-parallel lint format typecheck \
         install install-backend install-frontend clean logs
 
@@ -43,6 +43,7 @@ help:
 	@echo "$(GREEN)Development:$(NC)"
 	@echo "  make dev              Start both backend and frontend"
 	@echo "  make dev-backend      Start backend only (port $(BACKEND_PORT))"
+	@echo "  make dev-debug        Start backend with verbose logging (DEBUG + request bodies)"
 	@echo "  make dev-frontend     Start frontend only (port $(FRONTEND_PORT))"
 	@echo "  make stop             Stop all running services"
 	@echo "  make logs             Show backend logs"
@@ -97,6 +98,22 @@ dev-backend: $(PID_DIR)
 		echo $$! > $(PID_DIR)/backend.pid; \
 		echo "$(GREEN)Backend started (PID: $$!)$(NC)"; \
 	fi
+
+dev-debug: $(PID_DIR)
+	@echo "$(CYAN)Starting services with DEBUG logging...$(NC)"
+	@if [ -f $(PID_DIR)/backend.pid ] && kill -0 $$(cat $(PID_DIR)/backend.pid) 2>/dev/null; then \
+		echo "$(YELLOW)Stopping existing backend first...$(NC)"; \
+		$(MAKE) stop-backend; \
+	fi
+	@LOG_LEVEL=DEBUG LOG_REQUEST_BODIES=true $(UVICORN) backend.api.server:app --reload --host 0.0.0.0 --port $(BACKEND_PORT) & \
+	echo $$! > $(PID_DIR)/backend.pid; \
+	echo "$(GREEN)Backend started in DEBUG mode (PID: $$!)$(NC)"; \
+	echo "$(YELLOW)  - Strategy decisions: ON$(NC)"; \
+	echo "$(YELLOW)  - Request/response bodies: ON$(NC)"
+	@$(MAKE) dev-frontend
+	@echo "$(GREEN)All services started in DEBUG mode!$(NC)"
+	@echo "  Backend:  http://localhost:$(BACKEND_PORT)"
+	@echo "  Frontend: http://localhost:$(FRONTEND_PORT)"
 
 dev-frontend: $(PID_DIR)
 	@echo "$(CYAN)Starting frontend server on port $(FRONTEND_PORT)...$(NC)"

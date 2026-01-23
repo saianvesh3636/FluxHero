@@ -256,7 +256,23 @@ make test-coverage
 # Run specific test file
 source .venv/bin/activate
 pytest tests/unit/test_indicators.py -v
+
+# Run validation tests (hand-calculated expected values)
+pytest tests/validation/ -v
+
+# Run regression tests (golden results + benchmarks)
+pytest tests/regression/ -v
 ```
+
+#### Test Suites
+
+| Suite | Location | Description |
+|-------|----------|-------------|
+| Unit | `tests/unit/` | Component-level tests |
+| Integration | `tests/integration/` | Cross-component tests |
+| Validation | `tests/validation/` | Tests with hand-calculated expected values for metrics, indicators, signals |
+| Regression | `tests/regression/` | Golden result tests (SPY baseline) and benchmark comparisons |
+| Performance | `tests/performance/` | Performance benchmarks |
 
 ### Frontend Tests (Jest)
 
@@ -317,6 +333,7 @@ project/
 │   │   └── candle_buffer.py     # In-memory buffer
 │   ├── backtesting/             # Backtesting engine
 │   │   ├── engine.py            # Backtest orchestrator
+│   │   ├── walk_forward.py      # Walk-forward testing
 │   │   ├── fills.py             # Fill simulation
 │   │   └── metrics.py           # Performance analytics
 │   ├── execution/               # Order execution
@@ -344,6 +361,9 @@ project/
 │   │   ├── live/                # Live trading page
 │   │   ├── analytics/           # Analytics page
 │   │   ├── backtest/            # Backtesting page
+│   │   ├── walk-forward/        # Walk-forward testing page
+│   │   ├── history/             # Trade history page
+│   │   ├── signals/             # Signal analysis page
 │   │   └── layout.tsx           # Root layout
 │   ├── components/              # React components
 │   ├── contexts/                # React contexts
@@ -355,6 +375,8 @@ project/
 ├── tests/                       # Backend tests
 │   ├── unit/                    # Unit tests
 │   ├── integration/             # Integration tests
+│   ├── validation/              # Hand-calculated validation tests
+│   ├── regression/              # Golden results + benchmark tests
 │   ├── e2e/                     # End-to-end tests
 │   └── performance/             # Performance tests
 │
@@ -414,6 +436,13 @@ Access the dashboard at http://localhost:3000 after starting the system.
 - Run simulations
 - View quantstats tearsheet
 
+#### Walk-Forward Testing Tab
+- Configure train/test window sizes (default: 63/21 bars)
+- Set pass rate threshold (default: 60%)
+- View per-window results with PASS/FAIL status
+- Combined equity curve visualization
+- Export results to CSV
+
 ### API Endpoints
 
 | Endpoint | Method | Description |
@@ -423,6 +452,7 @@ Access the dashboard at http://localhost:3000 after starting the system.
 | `/api/trades` | GET | Trade history |
 | `/api/account` | GET | Account info |
 | `/api/backtest` | POST | Run backtest |
+| `/api/backtest/walk-forward` | POST | Run walk-forward test |
 | `/ws/prices` | WS | Live price updates |
 | `/health` | GET | Health check |
 | `/metrics` | GET | Prometheus metrics |
@@ -478,7 +508,9 @@ lsof -ti:3000 | xargs kill -9
 - [User Guide](docs/USER_GUIDE.md)
 - [Risk Management](docs/RISK_MANAGEMENT.md)
 - [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)
+- [System Assumptions](docs/ASSUMPTIONS.md) - Commission, slippage, fill model documentation
 - [Feature Requirements](FLUXHERO_REQUIREMENTS.md)
+- [Implementation Tasks](FLUXHERO_TASKS.md)
 
 ---
 
@@ -494,4 +526,4 @@ MIT License - See [LICENSE](LICENSE) file for details.
 
 ---
 
-*Last Updated: 2026-01-22*
+*Last Updated: 2026-01-23*

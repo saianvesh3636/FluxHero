@@ -1,18 +1,20 @@
 # FluxHero Context Index
 
 ## Current Status
-**Phase:** 11 - Order Execution Engine
-**Task:** Implement order_manager.py
-**Progress:** 87/118 tasks (~74%)
+**Phase:** 24 - Quality Control & Validation (Complete)
+**Recent:** Walk-forward testing, validation suites, logging enhancements
+**Progress:** ~95% complete (see CHANGELOG.md for details)
 
 ## Quick Navigation
 
 ### Load On Demand (use @ prefix)
 | Resource | Path | When to Load |
 |----------|------|--------------|
-| Current task spec | `@FLUXHERO_REQUIREMENTS.md` | For Feature 10 specs |
+| Current task spec | `@FLUXHERO_REQUIREMENTS.md` | For feature specs |
 | Task list | `@FLUXHERO_TASKS.md` | To see all tasks |
+| Change log | `@CHANGELOG.md` | For recent changes |
 | Architecture | `@.context/discovery/architecture.md` | When exploring codebase |
+| Assumptions | `@docs/ASSUMPTIONS.md` | For trading system assumptions |
 
 ### Available Modules
 
@@ -21,11 +23,12 @@
 | Computation | Done | `backend/computation/` | calculate_ema, calculate_rsi, calculate_kama |
 | Strategy | Done | `backend/strategy/` | detect_regime, generate_signals, apply_noise_filter |
 | Storage | Done | `backend/storage/` | SQLiteStore, ParquetStore, CandleBuffer |
-| Data | Done | `backend/data/` | AsyncAPIClient, WebSocketFeed |
-| Backtesting | Done | `backend/backtesting/` | BacktestEngine, calculate_metrics |
-| Execution | **In Progress** | `backend/execution/` | BrokerBase (done), OrderManager (next) |
-| Risk | Not Started | `backend/risk/` | - |
-| API | Not Started | `backend/api/` | - |
+| Data | Done | `backend/data/` | AsyncAPIClient, WebSocketFeed, validate_ohlcv_data |
+| Backtesting | Done | `backend/backtesting/` | BacktestEngine, walk_forward, calculate_metrics |
+| Execution | Done | `backend/execution/` | BrokerBase, OrderManager, PositionSizer |
+| Risk | Done | `backend/risk/` | PositionLimits, KillSwitch |
+| API | Done | `backend/api/` | FastAPI server, backtest endpoints, walk-forward |
+| Frontend | Done | `frontend/` | 7 pages: Home, Live, Analytics, Backtest, Walk-Forward, History, Signals |
 
 ## Rules (Always Apply)
 - Use Numba @njit for performance-critical code
@@ -44,6 +47,16 @@
 - Current state: `.context/state/current.yaml`
 - Checksums: `.context/state/checksums.yaml`
 
+## Test Suites
+
+| Suite | Location | Description |
+|-------|----------|-------------|
+| Unit | `tests/unit/` | Component-level tests |
+| Integration | `tests/integration/` | Cross-component tests |
+| Validation | `tests/validation/` | Hand-calculated expected values |
+| Regression | `tests/regression/` | Golden results + benchmarks |
+| E2E | `frontend/e2e/` | Playwright browser tests |
+
 ## Authority Hierarchy (if conflicts)
 1. FLUXHERO_REQUIREMENTS.md (highest - what to build)
 2. FLUXHERO_TASKS.md (how to build it)
@@ -51,4 +64,4 @@
 4. discovery/architecture.md (summary - may be stale)
 
 ---
-*Last updated: 2026-01-21*
+*Last updated: 2026-01-23*

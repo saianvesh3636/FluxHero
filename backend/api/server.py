@@ -60,7 +60,15 @@ from backend.storage.sqlite_store import (
 # Logger Configuration
 # ============================================================================
 
+# Configure logging level from environment variable
+_log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, _log_level, logging.INFO),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    force=True,  # Override any existing configuration
+)
 logger = logging.getLogger(__name__)
+logger.setLevel(getattr(logging, _log_level, logging.INFO))
 
 
 # ============================================================================
@@ -589,7 +597,12 @@ async def log_requests(request: Request, call_next):
 
     # Log incoming request
     start_time = time.time()
-    logger.info("Incoming request", extra=log_extra)
+    log_msg = f"{request.method} {request.url.path}"
+    if request.query_params:
+        log_msg += f"?{request.query_params}"
+    if "request_body" in log_extra:
+        log_msg += f"\n  Body: {log_extra['request_body']}"
+    logger.info(f">>> Request: {log_msg}")
 
     # Process request
     try:
@@ -597,15 +610,9 @@ async def log_requests(request: Request, call_next):
         process_time = time.time() - start_time
 
         # Log response
+        process_time_ms = round(process_time * 1000, 2)
         logger.info(
-            "Request completed",
-            extra={
-                "request_id": request_id,
-                "method": request.method,
-                "path": request.url.path,
-                "status_code": response.status_code,
-                "process_time_ms": round(process_time * 1000, 2),
-            },
+            f"<<< Response: {request.method} {request.url.path} -> {response.status_code} ({process_time_ms}ms)"
         )
 
         # Record metrics
