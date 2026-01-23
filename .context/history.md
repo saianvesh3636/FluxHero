@@ -1740,3 +1740,55 @@ Added comprehensive logging to the BacktestEngine.run() method:
 - Storage uses SQLite settings table with JSON serialization
 
 **Result:** Phase A Task 5 complete. Broker API endpoints enable managing broker configurations through REST API with encrypted credential storage.
+
+---
+
+## 2026-01-23: Add Broker Selection Frontend (Phase A Task 6)
+
+**Task:** Add broker selection to frontend (frontend/app/settings/page.tsx)
+
+**Files Changed:**
+- `frontend/app/settings/page.tsx` (new) - Settings page with broker configuration form
+- `frontend/app/settings/__tests__/page.test.tsx` (new) - 13 unit tests for settings page
+- `frontend/utils/api.ts` - Added broker management API interfaces and methods
+- `frontend/components/layout/Navigation.tsx` - Added Settings link to navigation
+- `comparison_tasks.md` - Marked task complete
+
+**Implementation Summary:**
+1. Created settings page with broker management UI:
+   - Broker list display with connection status indicators
+   - Add broker form with broker type dropdown, display name, API key/secret fields
+   - Environment toggle (Paper/Live trading) with visual feedback
+   - Connection test button showing health status (latency, connected, authenticated)
+   - Delete broker with confirmation dialog
+   - Form validation for required fields
+
+2. Added API client methods:
+   - `getBrokers()` - List all configured brokers
+   - `addBroker(config)` - Add new broker configuration
+   - `deleteBroker(brokerId)` - Remove broker configuration
+   - `getBrokerHealth(brokerId)` - Test broker connection health
+
+3. Added TypeScript interfaces:
+   - `BrokerConfigRequest`, `BrokerConfigResponse`
+   - `BrokerListResponse`, `BrokerHealthResponse`
+
+4. Test coverage (13 tests):
+   - Loading state, empty state, broker list rendering
+   - Add broker form display and submission
+   - Form validation, connection test functionality
+   - Delete broker with confirmation, cancel actions
+   - Environment toggle between paper/live trading
+   - Connection error display from health check
+
+5. All 13 tests pass
+6. TypeScript type checking passes
+
+**Technical Details:**
+- Uses password type inputs for API credentials (never displayed after entry)
+- Connection status indicator (StatusDot) shows connected/disconnected/connecting
+- Health check displays latency, connection status, authentication status, errors
+- Paper trading (green) vs Live trading (red) visual distinction
+- Settings page accessible from navigation bar
+
+**Result:** Phase A Task 6 complete. Frontend settings page enables managing broker configurations with secure credential input, connection testing, and status display.

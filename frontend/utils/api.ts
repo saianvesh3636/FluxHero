@@ -595,6 +595,43 @@ class ApiClient {
       `${API_BASE_URL}/symbol/search?q=${encodeURIComponent(query)}&limit=${limit}`
     );
   }
+
+  // ============================================================================
+  // Broker Management Methods
+  // ============================================================================
+
+  /**
+   * Get all configured brokers
+   */
+  async getBrokers(): Promise<BrokerListResponse> {
+    return this.fetchJson<BrokerListResponse>(`${API_BASE_URL}/brokers`);
+  }
+
+  /**
+   * Add a new broker configuration
+   */
+  async addBroker(config: BrokerConfigRequest): Promise<BrokerConfigResponse> {
+    return this.fetchJson<BrokerConfigResponse>(`${API_BASE_URL}/brokers`, {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+  }
+
+  /**
+   * Delete a broker configuration
+   */
+  async deleteBroker(brokerId: string): Promise<void> {
+    await this.fetchJson<void>(`${API_BASE_URL}/brokers/${brokerId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Check broker connection health
+   */
+  async getBrokerHealth(brokerId: string): Promise<BrokerHealthResponse> {
+    return this.fetchJson<BrokerHealthResponse>(`${API_BASE_URL}/brokers/${brokerId}/health`);
+  }
 }
 
 export const apiClient = new ApiClient();
@@ -624,4 +661,55 @@ export interface BacktestResult {
   win_rate: number;
   trades: Trade[];
   tearsheet_url?: string;
+}
+
+// ============================================================================
+// Broker Management Interfaces
+// ============================================================================
+
+/**
+ * Request model for adding a broker configuration
+ */
+export interface BrokerConfigRequest {
+  broker_type: string;
+  name: string;
+  api_key: string;
+  api_secret: string;
+  base_url?: string;
+}
+
+/**
+ * Response model for broker configuration (without secrets)
+ */
+export interface BrokerConfigResponse {
+  id: string;
+  broker_type: string;
+  name: string;
+  api_key_masked: string;
+  base_url: string;
+  is_connected: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Response model for listing brokers
+ */
+export interface BrokerListResponse {
+  brokers: BrokerConfigResponse[];
+  total: number;
+}
+
+/**
+ * Response model for broker health check
+ */
+export interface BrokerHealthResponse {
+  id: string;
+  name: string;
+  broker_type: string;
+  is_connected: boolean;
+  is_authenticated: boolean;
+  latency_ms: number | null;
+  last_heartbeat: string | null;
+  error_message: string | null;
 }
