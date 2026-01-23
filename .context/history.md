@@ -1595,3 +1595,54 @@ Added comprehensive logging to the BacktestEngine.run() method:
 - Logs all order placements and connection events
 
 **Result:** Phase A Task 2 complete. Alpaca broker adapter enables trading via Alpaca API through the unified BrokerInterface abstraction.
+
+---
+
+## 2026-01-23 - Phase A Task 3: Broker Factory
+
+**Task:** Create broker factory (backend/execution/broker_factory.py)
+
+**Files Changed:**
+- backend/execution/broker_factory.py (NEW)
+- tests/unit/test_broker_factory.py (NEW)
+- comparison_tasks.md (marked task complete)
+
+**What was done:**
+1. Created BrokerFactory with factory pattern:
+   - `create_broker(broker_type: str, config: dict) -> BrokerInterface`
+   - Singleton pattern for factory instance
+   - Connection cache for broker instance reuse
+
+2. Pydantic config validation per broker type:
+   - AlpacaBrokerConfig model with validation for api_key, api_secret, base_url, timeout
+   - BROKER_CONFIG_MODELS registry mapping type strings to config models
+   - BrokerFactoryError for invalid types or configs
+
+3. Factory features:
+   - `validate_config()` - validate config before creation
+   - `get_cached_broker()` - check cache without creating
+   - `clear_cache()` - clear all cached brokers
+   - `remove_from_cache()` - remove specific broker
+   - `supported_broker_types` property
+   - `cache_size` property
+   - `use_cache` parameter to bypass caching
+
+4. Module-level convenience function:
+   - `create_broker()` - uses singleton factory internally
+
+5. Comprehensive test suite (35 tests):
+   - TestAlpacaBrokerConfig (6 tests): Valid config, custom values, missing fields, validation
+   - TestBrokerConfigModels (2 tests): Registry contents
+   - TestBrokerFactorySingleton (2 tests): Instance reuse, cache preservation
+   - TestBrokerFactoryValidateConfig (3 tests): Success, unknown type, invalid config
+   - TestBrokerFactoryCreateBroker (4 tests): Alpaca creation, custom URL, error cases
+   - TestBrokerFactoryCache (8 tests): Same instance, different configs, use_cache=False, get/clear/remove
+   - TestBrokerFactoryProperties (2 tests): supported_broker_types, cache_size
+   - TestCreateBrokerFunction (3 tests): Convenience function behavior
+   - TestBrokerFactoryError (2 tests): Exception class
+   - TestBrokerFactoryImports (3 tests): Module imports
+
+6. All 35 tests pass
+7. All linting checks pass (ruff)
+
+**Result:** Phase A Task 3 complete. Broker factory enables type-safe broker creation with Pydantic validation and singleton caching for connection reuse.

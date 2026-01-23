@@ -14,7 +14,7 @@ See `docs/COMPARISON_SENTINEL_TRADER.md` for full comparison analysis.
 
 - [x] Implement Alpaca broker adapter (backend/execution/brokers/alpaca_broker.py) - refactor existing broker_interface.py into adapter pattern implementing BrokerInterface, handle Alpaca-specific auth (API key + secret), map Alpaca responses to unified Pydantic models, add connection pooling and retry logic using httpx. Ref: existing backend/execution/broker_interface.py
 
-- [ ] Create broker factory (backend/execution/broker_factory.py) - implement factory pattern with create_broker(broker_type: str, config: dict) -> BrokerInterface, support types: "alpaca", validate config per broker type using Pydantic, singleton pattern for connection reuse. Don't create Paper and mock yet. Concept ref: SentinelTrader broker_factory.py (Flask - adapt to FastAPI async patterns).
+- [x] Create broker factory (backend/execution/broker_factory.py) - implement factory pattern with create_broker(broker_type: str, config: dict) -> BrokerInterface, support types: "alpaca", validate config per broker type using Pydantic, singleton pattern for connection reuse. Don't create Paper and mock yet. Concept ref: SentinelTrader broker_factory.py (Flask - adapt to FastAPI async patterns).
 
 - [ ] Add broker credential encryption (backend/execution/broker_credentials.py) - implement AES encryption for API keys/secrets using cryptography library, use FLUXHERO_ENCRYPTION_KEY from env via backend/core/config.py, encrypt_credential() and decrypt_credential() functions, never log decrypted values. Concept ref: SentinelTrader broker.py encrypt_api_key() (SQLAlchemy model - adapt to our dataclass/Pydantic approach).
 
