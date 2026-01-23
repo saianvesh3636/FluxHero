@@ -1,55 +1,534 @@
 /**
  * API utility for communicating with the FluxHero backend
  * Base URL is configured through Next.js rewrites in next.config.ts
+ *
+ * All interfaces match the backend Pydantic models in backend/api/server.py
  */
 
 const API_BASE_URL = '/api';
 
-export interface Position {
+// Default development auth token (matches backend FLUXHERO_AUTH_SECRET default)
+const DEV_AUTH_TOKEN = 'fluxhero-dev-secret-change-in-production';
+
+// Auth token for API requests (set via setAuthToken)
+// Defaults to dev token for local development
+let authToken: string | null = process.env.NODE_ENV === 'development' ? DEV_AUTH_TOKEN : null;
+
+/**
+ * Set the authentication token for API requests
+ * In production, this would come from a login flow
+ */
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
+/**
+ * Get the current auth token
+ */
+export function getAuthToken(): string | null {
+  return authToken;
+}
+
+// ============================================================================
+// Backend Response Interfaces (match backend/api/server.py Pydantic models)
+// ============================================================================
+
+/**
+ * Position response from backend (PositionResponse model)
+ * Raw format as returned by /api/positions
+ */
+export interface PositionResponse {
+  id: number | null;
   symbol: string;
+  side: number;           // 1 = LONG, -1 = SHORT
+  shares: number;
+  entry_price: number;
+  current_price: number;
+  unrealized_pnl: number;
+  stop_loss: number;
+  take_profit: number | null;
+  entry_time: string;
+  updated_at: string;
+}
+
+/**
+ * Trade response from backend (TradeResponse model)
+ * Raw format as returned in trade history
+ */
+export interface TradeResponse {
+  id: number | null;
+  symbol: string;
+  side: number;           // 1 = LONG, -1 = SHORT
+  entry_price: number;
+  entry_time: string;
+  exit_price: number | null;
+  exit_time: string | null;
+  shares: number;
+  stop_loss: number;
+  take_profit: number | null;
+  realized_pnl: number | null;
+  status: number;         // Trade status code
+  strategy: string;
+  regime: string;
+  signal_reason: string;
+}
+
+/**
+ * Paginated trade history response (TradeHistoryResponse model)
+ */
+export interface TradeHistoryResponse {
+  trades: TradeResponse[];
+  total_count: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+/**
+ * Account info response (AccountInfoResponse model)
+ */
+export interface AccountInfoResponse {
+  equity: number;
+  cash: number;
+  buying_power: number;
+  total_pnl: number;
+  daily_pnl: number;
+  num_positions: number;
+}
+
+/**
+ * System status response (SystemStatusResponse model)
+ */
+export interface SystemStatusResponse {
+  status: 'ACTIVE' | 'DELAYED' | 'OFFLINE';
+  uptime_seconds: number;
+  last_update: string;
+  websocket_connected: boolean;
+  data_feed_active: boolean;
+  message: string;
+}
+
+/**
+ * Backtest request (BacktestRequest model)
+ */
+export interface BacktestRequest {
+  symbol: string;
+  start_date: string;      // YYYY-MM-DD
+  end_date: string;        // YYYY-MM-DD
+  initial_capital?: number;
+  commission_per_share?: number;
+  slippage_pct?: number;
+  strategy_mode?: 'TREND' | 'MEAN_REVERSION' | 'DUAL';
+}
+
+/**
+ * Backtest result response (BacktestResultResponse model)
+ */
+export interface BacktestResultResponse {
+  symbol: string;
+  start_date: string;
+  end_date: string;
+  initial_capital: number;
+  final_equity: number;
+  total_return: number;
+  total_return_pct: number;
+  sharpe_ratio: number;
+  max_drawdown: number;
+  max_drawdown_pct: number;
+  win_rate: number;
+  num_trades: number;
+  avg_win_loss_ratio: number;
+  success_criteria_met: boolean;
+  equity_curve: number[];
+  timestamps: string[];
+}
+
+/**
+ * Health check response
+ */
+export interface HealthResponse {
+  status: 'healthy' | 'degraded';
+  timestamp: string;
+  uptime_seconds: number;
+  database_connected: boolean;
+  websocket_connections: number;
+  data_feed_active: boolean;
+  total_requests: number;
+}
+
+/**
+ * Candle data for charts
+ */
+export interface CandleData {
+  timestamp: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+/**
+ * Symbol validation response (SymbolValidationResponse model)
+ */
+export interface SymbolValidationResponse {
+  symbol: string;
+  name: string;
+  exchange: string | null;
+  currency: string | null;
+  type: string | null;
+  is_valid: boolean;
+}
+
+/**
+ * Symbol search response (SymbolSearchResponse model)
+ */
+export interface SymbolSearchResponse {
+  query: string;
+  results: SymbolValidationResponse[];
+}
+
+/**
+ * API Error with status code
+ */
+export class ApiError extends Error {
+  status: number;
+  detail: string;
+
+  constructor(status: number, detail: string) {
+    super(detail);
+    this.status = status;
+    this.detail = detail;
+    this.name = 'ApiError';
+  }
+}
+
+// ============================================================================
+// Frontend-friendly interfaces (transformed from backend responses)
+// ============================================================================
+
+/**
+ * Position interface for frontend components
+ * Transformed from PositionResponse for easier consumption
+ */
+export interface Position {
+  id: number | null;
+  symbol: string;
+  side: 'long' | 'short';
   quantity: number;
   entry_price: number;
   current_price: number;
   pnl: number;
   pnl_percent: number;
+  stop_loss: number;
+  take_profit: number | null;
+  entry_time: string;
+  updated_at: string;
 }
 
+/**
+ * Trade interface for frontend components
+ * Transformed from TradeResponse for easier consumption
+ */
 export interface Trade {
-  id: number;
+  id: number | null;
   symbol: string;
   side: 'buy' | 'sell';
-  quantity: number;
-  price: number;
-  timestamp: string;
-  signal_explanation?: string;
-  // Extended trade fields for history page
-  entry_time?: number;
-  exit_time?: number;
-  entry_price?: number;
-  exit_price?: number;
-  shares?: number;
-  realized_pnl?: number;
-  strategy?: string;
-  regime?: string;
-  stop_loss?: number;
-  take_profit?: number;
-  signal_reason?: string;
+  entry_price: number;
+  entry_time: string;
+  exit_price: number | null;
+  exit_time: string | null;
+  shares: number;
+  stop_loss: number;
+  take_profit: number | null;
+  realized_pnl: number | null;
+  status: string;
+  strategy: string;
+  regime: string;
+  signal_reason: string;
+  // Computed fields
+  return_pct: number | null;
 }
 
+/**
+ * Account info for frontend components
+ */
 export interface AccountInfo {
   equity: number;
   cash: number;
   buying_power: number;
   daily_pnl: number;
   total_pnl: number;
+  num_positions: number;
 }
 
+/**
+ * System status for frontend components
+ */
 export interface SystemStatus {
   status: 'active' | 'delayed' | 'offline';
   last_update: string;
   uptime_seconds: number;
+  websocket_connected: boolean;
+  data_feed_active: boolean;
+  message: string;
 }
 
+// ============================================================================
+// Transform functions (backend response -> frontend format)
+// ============================================================================
+
+function transformPosition(pos: PositionResponse): Position {
+  const marketValue = pos.current_price * pos.shares;
+  const costBasis = pos.entry_price * pos.shares;
+  const pnlPercent = costBasis !== 0 ? (pos.unrealized_pnl / costBasis) * 100 : 0;
+
+  return {
+    id: pos.id,
+    symbol: pos.symbol,
+    side: pos.side === 1 ? 'long' : 'short',
+    quantity: pos.shares,
+    entry_price: pos.entry_price,
+    current_price: pos.current_price,
+    pnl: pos.unrealized_pnl,
+    pnl_percent: pnlPercent,
+    stop_loss: pos.stop_loss,
+    take_profit: pos.take_profit,
+    entry_time: pos.entry_time,
+    updated_at: pos.updated_at,
+  };
+}
+
+function transformTrade(trade: TradeResponse): Trade {
+  const returnPct = trade.entry_price && trade.shares && trade.realized_pnl
+    ? (trade.realized_pnl / (trade.entry_price * trade.shares)) * 100
+    : null;
+
+  // Map status codes to readable strings
+  const statusMap: Record<number, string> = {
+    0: 'OPEN',
+    1: 'CLOSED',
+    2: 'CANCELLED',
+  };
+
+  return {
+    id: trade.id,
+    symbol: trade.symbol,
+    side: trade.side === 1 ? 'buy' : 'sell',
+    entry_price: trade.entry_price,
+    entry_time: trade.entry_time,
+    exit_price: trade.exit_price,
+    exit_time: trade.exit_time,
+    shares: trade.shares,
+    stop_loss: trade.stop_loss,
+    take_profit: trade.take_profit,
+    realized_pnl: trade.realized_pnl,
+    status: statusMap[trade.status] || 'UNKNOWN',
+    strategy: trade.strategy,
+    regime: trade.regime,
+    signal_reason: trade.signal_reason,
+    return_pct: returnPct,
+  };
+}
+
+function transformSystemStatus(status: SystemStatusResponse): SystemStatus {
+  return {
+    status: status.status.toLowerCase() as 'active' | 'delayed' | 'offline',
+    last_update: status.last_update,
+    uptime_seconds: status.uptime_seconds,
+    websocket_connected: status.websocket_connected,
+    data_feed_active: status.data_feed_active,
+    message: status.message,
+  };
+}
+
+function transformAccountInfo(account: AccountInfoResponse): AccountInfo {
+  return {
+    equity: account.equity,
+    cash: account.cash,
+    buying_power: account.buying_power,
+    daily_pnl: account.daily_pnl,
+    total_pnl: account.total_pnl,
+    num_positions: account.num_positions,
+  };
+}
+
+// ============================================================================
+// API Client
+// ============================================================================
+
+class ApiClient {
+  private getHeaders(): HeadersInit {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
+    return headers;
+  }
+
+  private async fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...this.getHeaders(),
+        ...options?.headers,
+      },
+    });
+
+    if (!response.ok) {
+      let detail: string;
+      try {
+        const errorBody = await response.json();
+        detail = errorBody.detail || errorBody.message || response.statusText;
+      } catch {
+        detail = await response.text().catch(() => response.statusText);
+      }
+      throw new ApiError(response.status, detail);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get all open positions
+   * Transforms backend PositionResponse to frontend Position format
+   */
+  async getPositions(): Promise<Position[]> {
+    const response = await this.fetchJson<PositionResponse[]>(`${API_BASE_URL}/positions`);
+    return response.map(transformPosition);
+  }
+
+  /**
+   * Get raw positions without transformation (for debugging)
+   */
+  async getPositionsRaw(): Promise<PositionResponse[]> {
+    return this.fetchJson<PositionResponse[]>(`${API_BASE_URL}/positions`);
+  }
+
+  /**
+   * Get paginated trade history
+   * @param page - Page number (1-indexed)
+   * @param pageSize - Number of trades per page (max 100)
+   * @param status - Optional filter: 'OPEN', 'CLOSED', or 'CANCELLED'
+   */
+  async getTrades(
+    page: number = 1,
+    pageSize: number = 20,
+    status?: 'OPEN' | 'CLOSED' | 'CANCELLED'
+  ): Promise<{ trades: Trade[]; totalCount: number; totalPages: number }> {
+    let url = `${API_BASE_URL}/trades?page=${page}&page_size=${pageSize}`;
+    if (status) {
+      url += `&status=${status}`;
+    }
+
+    const response = await this.fetchJson<TradeHistoryResponse>(url);
+
+    return {
+      trades: response.trades.map(transformTrade),
+      totalCount: response.total_count,
+      totalPages: response.total_pages,
+    };
+  }
+
+  /**
+   * Get raw trade history without transformation
+   */
+  async getTradesRaw(
+    page: number = 1,
+    pageSize: number = 20,
+    status?: string
+  ): Promise<TradeHistoryResponse> {
+    let url = `${API_BASE_URL}/trades?page=${page}&page_size=${pageSize}`;
+    if (status) {
+      url += `&status=${status}`;
+    }
+    return this.fetchJson<TradeHistoryResponse>(url);
+  }
+
+  /**
+   * Get account information
+   */
+  async getAccountInfo(): Promise<AccountInfo> {
+    const response = await this.fetchJson<AccountInfoResponse>(`${API_BASE_URL}/account`);
+    return transformAccountInfo(response);
+  }
+
+  /**
+   * Get system status
+   */
+  async getSystemStatus(): Promise<SystemStatus> {
+    const response = await this.fetchJson<SystemStatusResponse>(`${API_BASE_URL}/status`);
+    return transformSystemStatus(response);
+  }
+
+  /**
+   * Run a backtest with the given configuration
+   */
+  async runBacktest(config: BacktestRequest): Promise<BacktestResultResponse> {
+    return this.fetchJson<BacktestResultResponse>(`${API_BASE_URL}/backtest`, {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+  }
+
+  /**
+   * Get health check status
+   */
+  async getHealth(): Promise<HealthResponse> {
+    return this.fetchJson<HealthResponse>('/health');
+  }
+
+  /**
+   * Get test candle data (development only)
+   * @param symbol - Symbol to fetch (SPY, AAPL, or MSFT)
+   */
+  async getTestCandles(symbol: string = 'SPY'): Promise<CandleData[]> {
+    return this.fetchJson<CandleData[]>(`${API_BASE_URL}/test/candles?symbol=${symbol}`);
+  }
+
+  /**
+   * Validate a stock symbol
+   * Returns symbol info if valid, throws ApiError (404) if not found
+   *
+   * @param symbol - Stock ticker symbol (e.g., AAPL, SPY)
+   * @throws ApiError with status 404 if symbol not found
+   */
+  async validateSymbol(symbol: string): Promise<SymbolValidationResponse> {
+    return this.fetchJson<SymbolValidationResponse>(`${API_BASE_URL}/symbol/validate`, {
+      method: 'POST',
+      body: JSON.stringify({ symbol: symbol.toUpperCase() }),
+    });
+  }
+
+  /**
+   * Search for stock symbols
+   * Returns matching symbols (currently exact match only)
+   *
+   * @param query - Search query (symbol or company name)
+   * @param limit - Maximum results to return (1-50)
+   */
+  async searchSymbols(query: string, limit: number = 10): Promise<SymbolSearchResponse> {
+    return this.fetchJson<SymbolSearchResponse>(
+      `${API_BASE_URL}/symbol/search?q=${encodeURIComponent(query)}&limit=${limit}`
+    );
+  }
+}
+
+export const apiClient = new ApiClient();
+
+// Alias for backwards compatibility
+export const api = apiClient;
+
+// ============================================================================
+// Legacy interfaces for backwards compatibility
+// These map to the new interfaces but keep old field names where code depends on them
+// ============================================================================
+
+/** @deprecated Use BacktestRequest instead */
 export interface BacktestConfig {
   symbol: string;
   start_date: string;
@@ -58,6 +537,7 @@ export interface BacktestConfig {
   parameters?: Record<string, number>;
 }
 
+/** @deprecated Use BacktestResultResponse instead */
 export interface BacktestResult {
   sharpe_ratio: number;
   max_drawdown: number;
@@ -66,86 +546,3 @@ export interface BacktestResult {
   trades: Trade[];
   tearsheet_url?: string;
 }
-
-class ApiClient {
-  private async fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.statusText}`);
-    }
-
-    return response.json();
-  }
-
-  async getPositions(): Promise<Position[]> {
-    return this.fetchJson<Position[]>(`${API_BASE_URL}/positions`);
-  }
-
-  async getTrades(page: number = 1, limit: number = 20): Promise<Trade[]> {
-    return this.fetchJson<Trade[]>(
-      `${API_BASE_URL}/trades?page=${page}&limit=${limit}`
-    );
-  }
-
-  async getAccountInfo(): Promise<AccountInfo> {
-    return this.fetchJson<AccountInfo>(`${API_BASE_URL}/account`);
-  }
-
-  async getSystemStatus(): Promise<SystemStatus> {
-    return this.fetchJson<SystemStatus>(`${API_BASE_URL}/status`);
-  }
-
-  async runBacktest(config: BacktestConfig): Promise<BacktestResult> {
-    return this.fetchJson<BacktestResult>(`${API_BASE_URL}/backtest`, {
-      method: 'POST',
-      body: JSON.stringify(config),
-    });
-  }
-
-  /**
-   * Create a WebSocket connection for live price updates
-   * @param onMessage Callback for incoming price updates
-   * @returns WebSocket instance
-   */
-  connectPriceWebSocket(
-    onMessage: (data: any) => void,
-    onError?: (error: Event) => void
-  ): WebSocket {
-    const wsUrl = `ws://${window.location.host}/ws/prices`;
-    const ws = new WebSocket(wsUrl);
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        onMessage(data);
-      } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
-      }
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      if (onError) {
-        onError(error);
-      }
-    };
-
-    ws.onclose = () => {
-      console.log('WebSocket connection closed');
-    };
-
-    return ws;
-  }
-}
-
-export const apiClient = new ApiClient();
-
-// Alias for backwards compatibility
-export const api = apiClient;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { apiClient, Position, AccountInfo as ApiAccountInfo, SystemStatus } from '../../utils/api';
 import { PageContainer, PageHeader, StatsGrid } from '../../components/layout';
 import { Card, CardTitle, Button, Badge, StatusDot, Skeleton } from '../../components/ui';
@@ -18,7 +18,14 @@ export default function LiveTradingPage() {
   const [isBackendOffline, setIsBackendOffline] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  const fetchData = async () => {
+  // Track if a fetch is already in progress to prevent duplicate calls
+  const isFetchingRef = useRef(false);
+
+  const fetchData = useCallback(async () => {
+    // Prevent duplicate concurrent fetches
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
     try {
       setError(null);
       setIsBackendOffline(false);
@@ -38,8 +45,10 @@ export default function LiveTradingPage() {
       setError(errorMessage);
       setIsBackendOffline(true);
       setLoading(false);
+    } finally {
+      isFetchingRef.current = false;
     }
-  };
+  }, []);
 
   const handleRetry = () => {
     setLoading(true);
@@ -51,7 +60,7 @@ export default function LiveTradingPage() {
     fetchData();
     const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchData]);
 
   // Calculate metrics
   const totalExposure = positions.reduce(

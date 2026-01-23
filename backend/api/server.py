@@ -41,7 +41,14 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from backend.api.auth import validate_websocket_auth
 from backend.api.rate_limit import RateLimitMiddleware
-from backend.backtesting.engine import BacktestConfig, BacktestEngine
+from backend.backtesting.engine import (
+    BacktestConfig,
+    BacktestEngine,
+    Order,
+    OrderSide,
+    OrderType,
+    Position,
+)
 from backend.backtesting.metrics import PerformanceMetrics
 from backend.core.config import get_settings
 from backend.storage.sqlite_store import (
@@ -170,6 +177,30 @@ class PriceUpdate(BaseModel):
     price: float
     timestamp: str
     volume: int | None = None
+
+
+class SymbolValidationRequest(BaseModel):
+    """Request to validate a stock symbol"""
+
+    symbol: str = Field(..., description="Stock ticker symbol to validate (e.g., AAPL)")
+
+
+class SymbolValidationResponse(BaseModel):
+    """Response from symbol validation"""
+
+    symbol: str
+    name: str
+    exchange: str | None = None
+    currency: str | None = None
+    type: str | None = None
+    is_valid: bool
+
+
+class SymbolSearchResponse(BaseModel):
+    """Response from symbol search"""
+
+    query: str
+    results: list[SymbolValidationResponse]
 
 
 # ============================================================================
@@ -668,46 +699,104 @@ async def run_backtest(config: BacktestRequest):
     """
     Execute a backtest with the provided configuration.
 
+    Fetches real market data from Yahoo Finance and runs the dual-mode
+    strategy (trend-following + mean-reversion with automatic regime detection).
+
     Args:
         config: Backtest configuration (symbol, dates, capital, strategy params)
 
     Returns:
         BacktestResultResponse: Backtest performance metrics and equity curve
     """
-    # Create synthetic data for demonstration (in production, fetch real data)
-    # This is a placeholder - in real implementation, fetch from API or cache
-
-    # Parse dates
+    # Parse and validate dates
     try:
         start_dt = datetime.strptime(config.start_date, "%Y-%m-%d")
         end_dt = datetime.strptime(config.end_date, "%Y-%m-%d")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid date format: {e}")
 
-    # Calculate number of trading days
     num_days = (end_dt - start_dt).days
     if num_days <= 0:
         raise HTTPException(status_code=400, detail="End date must be after start date")
 
-    # Generate synthetic OHLCV data for demonstration
-    # In production, use backend.data.fetcher to fetch real data
-    np.random.seed(42)
-    num_bars = num_days  # Daily bars
+    # Fetch real data from data provider (Yahoo Finance by default)
+    # No synthetic fallback - return proper errors for invalid symbols
+    from backend.data.provider import (
+        DataProviderError,
+        DateRangeError,
+        InsufficientDataError,
+        SymbolNotFoundError,
+        get_provider,
+    )
 
-    # Simulate trending price data
-    returns = np.random.normal(0.0005, 0.02, num_bars)  # 0.05% daily return, 2% volatility
-    prices = 100.0 * np.exp(np.cumsum(returns))
+    symbol = config.symbol.upper().strip()
+    if not symbol:
+        raise HTTPException(status_code=400, detail="Symbol cannot be empty")
 
-    opens = prices * (1 + np.random.uniform(-0.01, 0.01, num_bars))
-    highs = np.maximum(opens, prices) * (1 + np.random.uniform(0, 0.02, num_bars))
-    lows = np.minimum(opens, prices) * (1 - np.random.uniform(0, 0.02, num_bars))
-    closes = prices
-    volumes = np.random.randint(1000000, 10000000, num_bars)
+    try:
+        import asyncio
 
-    # Generate timestamps
-    timestamps = [start_dt.strftime("%Y-%m-%d")]
-    for i in range(1, num_bars):
-        timestamps.append((start_dt + np.timedelta64(i, "D")).strftime("%Y-%m-%d"))
+        provider = get_provider()
+
+        # Run async provider method
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # We're in an async context, use the provider directly
+            data = await provider.fetch_historical_data(
+                symbol=symbol,
+                start_date=config.start_date,
+                end_date=config.end_date,
+                interval="1d",
+            )
+        else:
+            # Fallback for sync context
+            data = asyncio.run(provider.fetch_historical_data(
+                symbol=symbol,
+                start_date=config.start_date,
+                end_date=config.end_date,
+                interval="1d",
+            ))
+
+        bars = data.bars
+        timestamps_float = data.timestamps
+        timestamps_list = data.dates
+        logger.info(f"Fetched {len(bars)} bars from {data.provider} for {symbol}")
+
+    except SymbolNotFoundError as e:
+        logger.warning(f"Symbol not found: {symbol} - {e}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Symbol '{symbol}' not found. Please verify the ticker symbol is correct. "
+            "Examples: AAPL (Apple), MSFT (Microsoft), SPY (S&P 500 ETF)",
+        )
+
+    except DateRangeError as e:
+        logger.warning(f"Date range error for {symbol}: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+    except InsufficientDataError as e:
+        logger.warning(f"Insufficient data for {symbol}: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient data for {symbol}: found {e.bars_found} trading days, "
+            f"need at least {e.bars_required}. Try a longer date range.",
+        )
+
+    except DataProviderError as e:
+        logger.error(f"Data provider error for {symbol}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching data for {symbol}: {e}",
+        )
+
+    # Validate minimum data points for indicators
+    min_bars_required = 70  # Need at least 60 for indicator warmup + some trading
+    if len(bars) < min_bars_required:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient data: got {len(bars)} bars, need at least {min_bars_required}. "
+            "Try a longer date range.",
+        )
 
     # Create BacktestConfig
     bt_config = BacktestConfig(
@@ -719,38 +808,51 @@ async def run_backtest(config: BacktestRequest):
     # Initialize backtest engine
     engine = BacktestEngine(config=bt_config)
 
-    # Generate simple buy-and-hold signals for demonstration
-    # In production, use strategy engine to generate signals
-    signals = np.zeros(num_bars, dtype=np.int32)
-    signals[0] = 1  # Buy on first bar
-    signals[-1] = -1  # Sell on last bar
+    # Initialize dual-mode strategy
+    from backend.strategy.backtest_strategy import DualModeBacktestStrategy
 
-    # Run backtest
-    results = engine.run(
-        opens=opens,
-        highs=highs,
-        lows=lows,
-        closes=closes,
-        volumes=volumes,
-        signals=signals,
-        stop_losses=None,
-        take_profits=None,
+    strategy = DualModeBacktestStrategy(
+        bars=bars,
+        initial_capital=config.initial_capital,
+        strategy_mode=config.strategy_mode,
     )
 
-    # Calculate performance metrics
+    # Run backtest with dual-mode strategy
+    state = engine.run(
+        bars=bars,
+        strategy_func=strategy.get_orders,
+        symbol=config.symbol,
+        timestamps=timestamps_float,
+    )
+
+    # Extract equity curve and trades from BacktestState
+    equity_curve = np.array(state.equity_curve, dtype=np.float64)
+    trades_pnl = np.array([t.pnl for t in state.trades], dtype=np.float64)
+    trades_holding_periods = np.array(
+        [t.holding_bars for t in state.trades], dtype=np.int32
+    )
+
+    # Calculate performance metrics with correct signature
     metrics = PerformanceMetrics.calculate_all_metrics(
-        equity_curve=results["equity_curve"],
-        trades=results["trades"],
+        equity_curve=equity_curve,
+        trades_pnl=trades_pnl,
+        trades_holding_periods=trades_holding_periods,
         initial_capital=config.initial_capital,
-        num_bars=num_bars,
     )
 
     # Check success criteria
-    success_criteria_met = PerformanceMetrics.check_success_criteria(
-        sharpe_ratio=metrics["sharpe_ratio"],
-        max_drawdown_pct=metrics["max_drawdown_pct"],
-        win_rate=metrics["win_rate"],
-    )
+    criteria = PerformanceMetrics.check_success_criteria(metrics)
+    success_criteria_met = criteria["all_criteria_met"]
+
+    # Calculate max drawdown in dollars from the peak/trough indices
+    # The metrics module returns max_drawdown_pct (percentage) but the API response
+    # also needs max_drawdown (dollar value)
+    peak_idx = metrics["max_drawdown_peak_idx"]
+    trough_idx = metrics["max_drawdown_trough_idx"]
+    if len(equity_curve) > 0 and peak_idx < len(equity_curve) and trough_idx < len(equity_curve):
+        max_drawdown_dollars = equity_curve[peak_idx] - equity_curve[trough_idx]
+    else:
+        max_drawdown_dollars = 0.0
 
     app_state.update_timestamp()
 
@@ -759,19 +861,130 @@ async def run_backtest(config: BacktestRequest):
         start_date=config.start_date,
         end_date=config.end_date,
         initial_capital=config.initial_capital,
-        final_equity=results["equity_curve"][-1],
+        final_equity=metrics["final_equity"],
         total_return=metrics["total_return"],
         total_return_pct=metrics["total_return_pct"],
         sharpe_ratio=metrics["sharpe_ratio"],
-        max_drawdown=metrics["max_drawdown"],
-        max_drawdown_pct=metrics["max_drawdown_pct"],
+        max_drawdown=max_drawdown_dollars,
+        max_drawdown_pct=abs(metrics["max_drawdown_pct"]),  # Convert negative to positive for display
         win_rate=metrics["win_rate"],
-        num_trades=len(results["trades"]),
+        num_trades=metrics["total_trades"],
         avg_win_loss_ratio=metrics["avg_win_loss_ratio"],
         success_criteria_met=success_criteria_met,
-        equity_curve=results["equity_curve"].tolist(),
-        timestamps=timestamps,
+        equity_curve=equity_curve.tolist(),
+        timestamps=timestamps_list,
     )
+
+
+# ============================================================================
+# Symbol Validation Endpoints
+# ============================================================================
+
+
+@app.post("/api/symbol/validate", response_model=SymbolValidationResponse)
+async def validate_symbol(request: SymbolValidationRequest):
+    """
+    Validate a stock symbol and get its metadata.
+
+    Returns symbol info if valid, raises 404 if symbol not found.
+    Uses the configured data provider (Yahoo Finance by default).
+
+    Args:
+        request: SymbolValidationRequest with symbol to validate
+
+    Returns:
+        SymbolValidationResponse with symbol metadata
+
+    Raises:
+        404: Symbol not found
+        500: Provider error
+    """
+    from backend.data.provider import (
+        DataProviderError,
+        SymbolNotFoundError,
+        get_provider,
+    )
+
+    symbol = request.symbol.upper().strip()
+
+    if not symbol:
+        raise HTTPException(status_code=400, detail="Symbol cannot be empty")
+
+    try:
+        provider = get_provider()
+        symbol_info = await provider.validate_symbol(symbol)
+
+        return SymbolValidationResponse(
+            symbol=symbol_info.symbol,
+            name=symbol_info.name,
+            exchange=symbol_info.exchange,
+            currency=symbol_info.currency,
+            type=symbol_info.type,
+            is_valid=symbol_info.is_valid,
+        )
+
+    except SymbolNotFoundError as e:
+        logger.warning(f"Symbol not found: {symbol} - {e}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Symbol '{symbol}' not found. Please check the ticker symbol is correct.",
+        )
+
+    except DataProviderError as e:
+        logger.error(f"Provider error validating {symbol}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error validating symbol: {e}",
+        )
+
+
+@app.get("/api/symbol/search", response_model=SymbolSearchResponse)
+async def search_symbols(
+    q: str = Query(..., min_length=1, description="Search query (symbol or company name)"),
+    limit: int = Query(default=10, ge=1, le=50, description="Maximum results"),
+):
+    """
+    Search for stock symbols matching a query.
+
+    Currently supports exact symbol matching.
+    Future: Add fuzzy company name search via external API.
+
+    Args:
+        q: Search query
+        limit: Maximum results to return (1-50)
+
+    Returns:
+        SymbolSearchResponse with matching symbols
+    """
+    from backend.data.provider import DataProviderError, get_provider
+
+    query = q.upper().strip()
+
+    try:
+        provider = get_provider()
+        results = await provider.search_symbols(query, limit)
+
+        return SymbolSearchResponse(
+            query=query,
+            results=[
+                SymbolValidationResponse(
+                    symbol=r.symbol,
+                    name=r.name,
+                    exchange=r.exchange,
+                    currency=r.currency,
+                    type=r.type,
+                    is_valid=r.is_valid,
+                )
+                for r in results
+            ],
+        )
+
+    except DataProviderError as e:
+        logger.error(f"Provider error searching '{query}': {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error searching symbols: {e}",
+        )
 
 
 # ============================================================================

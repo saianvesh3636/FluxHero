@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { getAuthToken } from '../utils/api';
 
 export interface PriceUpdate {
   symbol: string;
@@ -12,6 +13,14 @@ export interface PriceUpdate {
   volume?: number;
   bid?: number;
   ask?: number;
+  // Additional fields from CSV replay mode
+  open?: number;
+  high?: number;
+  low?: number;
+  close?: number;
+  type?: string;
+  replay_index?: number;
+  total_rows?: number;
 }
 
 export interface WebSocketOptions {
@@ -23,6 +32,8 @@ export interface WebSocketOptions {
   reconnectDelay?: number;
   /** Maximum reconnection delay in ms (default: 30000) */
   maxReconnectDelay?: number;
+  /** Authentication token (if not set, uses getAuthToken from api.ts) */
+  authToken?: string | null;
   /** Callback for connection open event */
   onOpen?: () => void;
   /** Callback for connection close event */
@@ -89,10 +100,14 @@ export function useWebSocket(
     maxReconnectAttempts = 5,
     reconnectDelay = 1000,
     maxReconnectDelay = 30000,
+    authToken,
     onOpen,
     onClose,
     onError,
   } = options;
+
+  // Get auth token from options or from api client
+  const token = authToken ?? getAuthToken();
 
   const [state, setState] = useState<WebSocketState>(WebSocketState.DISCONNECTED);
   const [data, setData] = useState<PriceUpdate | null>(null);
@@ -114,10 +129,19 @@ export function useWebSocket(
     [reconnectDelay, maxReconnectDelay]
   );
 
+  // Track consecutive failures without successful connection (likely auth issues)
+  const consecutiveFailuresRef = useRef(0);
+
   /**
    * Connect to WebSocket
    */
   const connect = useCallback(() => {
+    // Don't connect if URL is empty or invalid
+    if (!url || url.trim() === '') {
+      setState(WebSocketState.DISCONNECTED);
+      return;
+    }
+
     // Don't connect if we're already connected or connecting
     if (
       wsRef.current &&
@@ -138,10 +162,20 @@ export function useWebSocket(
         wsUrl = `${protocol}//${window.location.host}${url}`;
       }
 
+      // Add auth token as query parameter if available
+      // Browser WebSocket API doesn't support custom headers, so token must be in URL
+      if (token) {
+        const separator = wsUrl.includes('?') ? '&' : '?';
+        wsUrl = `${wsUrl}${separator}token=${encodeURIComponent(token)}`;
+      }
+
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
+      let connectionOpened = false;
 
       ws.onopen = () => {
+        connectionOpened = true;
+        consecutiveFailuresRef.current = 0; // Reset on successful connection
         setState(WebSocketState.CONNECTED);
         setReconnectAttempts(0);
         setError(null);
@@ -163,9 +197,24 @@ export function useWebSocket(
         onError?.(event);
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         setState(WebSocketState.DISCONNECTED);
         onClose?.();
+
+        // Track consecutive failures (connection closed without ever opening)
+        // This typically indicates auth issues (403) or server rejection
+        if (!connectionOpened) {
+          consecutiveFailuresRef.current += 1;
+        }
+
+        // Stop reconnecting if we've had 3+ consecutive failures without connection
+        // This likely means auth is misconfigured and retrying won't help
+        const likelyAuthFailure = consecutiveFailuresRef.current >= 3;
+        if (likelyAuthFailure) {
+          setState(WebSocketState.FAILED);
+          setError('WebSocket connection rejected - check authentication');
+          return;
+        }
 
         // Auto-reconnect if enabled
         if (
@@ -226,6 +275,7 @@ export function useWebSocket(
    */
   const reconnect = useCallback(() => {
     shouldReconnectRef.current = true;
+    consecutiveFailuresRef.current = 0; // Reset failure counter on manual reconnect
     setReconnectAttempts(0);
     disconnect();
     setTimeout(() => connect(), 100);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createChart, IChartApi, ISeriesApi, CandlestickData, LineData, Time, CandlestickSeries, LineSeries, createSeriesMarkers, ISeriesMarkersPluginApi, SeriesMarker } from 'lightweight-charts';
 import { useWebSocketContext } from '../../contexts/WebSocketContext';
 import { PageContainer, PageHeader, StatsGrid } from '../../components/layout';
@@ -67,6 +67,9 @@ export default function AnalyticsPage() {
   });
   const [loading, setLoading] = useState<boolean>(true);
   const [initialLoad, setInitialLoad] = useState<boolean>(true);
+
+  // Track if a fetch is already in progress to prevent duplicate calls
+  const isFetchingRef = useRef(false);
 
   const { prices, getPrice, subscribe } = useWebSocketContext();
 
@@ -151,54 +154,61 @@ export default function AnalyticsPage() {
   }, []);
 
   // Fetch chart data
-  useEffect(() => {
-    const fetchChartData = async () => {
-      setLoading(true);
-      try {
-        const mockData = generateMockData(100);
+  const fetchChartData = useCallback(async () => {
+    // Prevent duplicate concurrent fetches
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
 
-        if (candlestickSeriesRef.current) {
-          candlestickSeriesRef.current.setData(mockData.candles);
-        }
-        if (kamaSeriesRef.current) {
-          kamaSeriesRef.current.setData(mockData.kama);
-        }
-        if (atrUpperBandRef.current) {
-          atrUpperBandRef.current.setData(mockData.atrUpper);
-        }
-        if (atrLowerBandRef.current) {
-          atrLowerBandRef.current.setData(mockData.atrLower);
-        }
-        if (markersRef.current) {
-          markersRef.current.setMarkers(mockData.signals as SeriesMarker<Time>[]);
-        }
+    setLoading(true);
+    try {
+      const mockData = generateMockData(100);
 
-        setIndicators({
-          atr: mockData.latestIndicators.atr,
-          rsi: mockData.latestIndicators.rsi,
-          adx: mockData.latestIndicators.adx,
-          regime: mockData.latestIndicators.regime,
-        });
-
-        setMetrics({
-          totalReturn: 15420.50,
-          totalReturnPct: 15.42,
-          sharpeRatio: 1.85,
-          winRate: 58.3,
-          maxDrawdown: 12.5,
-        });
-      } catch (error) {
-        console.error('Error fetching chart data:', error);
-      } finally {
-        setLoading(false);
-        setInitialLoad(false);
+      if (candlestickSeriesRef.current) {
+        candlestickSeriesRef.current.setData(mockData.candles);
       }
-    };
+      if (kamaSeriesRef.current) {
+        kamaSeriesRef.current.setData(mockData.kama);
+      }
+      if (atrUpperBandRef.current) {
+        atrUpperBandRef.current.setData(mockData.atrUpper);
+      }
+      if (atrLowerBandRef.current) {
+        atrLowerBandRef.current.setData(mockData.atrLower);
+      }
+      if (markersRef.current) {
+        markersRef.current.setMarkers(mockData.signals as SeriesMarker<Time>[]);
+      }
 
+      setIndicators({
+        atr: mockData.latestIndicators.atr,
+        rsi: mockData.latestIndicators.rsi,
+        adx: mockData.latestIndicators.adx,
+        regime: mockData.latestIndicators.regime,
+      });
+
+      setMetrics({
+        totalReturn: 15420.50,
+        totalReturnPct: 15.42,
+        sharpeRatio: 1.85,
+        winRate: 58.3,
+        maxDrawdown: 12.5,
+      });
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
+    } finally {
+      setLoading(false);
+      setInitialLoad(false);
+      isFetchingRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    // Reset fetch flag when symbol or timeframe changes
+    isFetchingRef.current = false;
     fetchChartData();
     const interval = setInterval(fetchChartData, 5000);
     return () => clearInterval(interval);
-  }, [symbol, timeframe]);
+  }, [symbol, timeframe, fetchChartData]);
 
   useEffect(() => {
     subscribe([symbol]);

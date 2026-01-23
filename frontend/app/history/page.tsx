@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiClient, Trade } from '../../utils/api';
 import { PageContainer, PageHeader } from '../../components/layout';
 import { Card, CardTitle, Button, Badge, Skeleton, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui';
@@ -8,9 +8,22 @@ import { formatCurrency, formatPercent } from '../../lib/utils';
 
 const TRADES_PER_PAGE = 20;
 
-// Helper function to format date
-const formatDate = (timestamp: number): string => {
-  return new Date(timestamp * 1000).toLocaleString('en-US', {
+// Helper function to format date (handles both ISO strings and Unix timestamps)
+const formatDate = (timestamp: string | number | null | undefined): string => {
+  if (!timestamp) return 'N/A';
+
+  let date: Date;
+  if (typeof timestamp === 'string') {
+    // ISO string format
+    date = new Date(timestamp);
+  } else {
+    // Unix timestamp (seconds)
+    date = new Date(timestamp * 1000);
+  }
+
+  if (isNaN(date.getTime())) return 'N/A';
+
+  return date.toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -88,29 +101,40 @@ export default function HistoryPage() {
   const [initialLoad, setInitialLoad] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [expandedTradeId, setExpandedTradeId] = useState<number | null>(null);
 
+  // Track if a fetch is already in progress to prevent duplicate calls
+  const isFetchingRef = useRef(false);
+  const lastFetchedPageRef = useRef<number | null>(null);
+
   // Fetch trades from API
+  const fetchTrades = useCallback(async (page: number) => {
+    // Prevent duplicate concurrent fetches for the same page
+    if (isFetchingRef.current && lastFetchedPageRef.current === page) return;
+    isFetchingRef.current = true;
+    lastFetchedPageRef.current = page;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await apiClient.getTrades(page, TRADES_PER_PAGE);
+      setTrades(response.trades);
+      setTotalPages(response.totalPages);
+      setTotalCount(response.totalCount);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch trades');
+    } finally {
+      setLoading(false);
+      setInitialLoad(false);
+      isFetchingRef.current = false;
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await apiClient.getTrades(currentPage, TRADES_PER_PAGE);
-        setTrades(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch trades');
-      } finally {
-        setLoading(false);
-        setInitialLoad(false);
-      }
-    };
-
-    fetchTrades();
-  }, [currentPage]);
-
-  // Calculate pagination info
-  const totalPages = Math.max(1, Math.ceil(trades.length / TRADES_PER_PAGE));
+    fetchTrades(currentPage);
+  }, [currentPage, fetchTrades]);
 
   // Handle CSV export
   const handleExport = () => {
@@ -150,7 +174,7 @@ export default function HistoryPage() {
     <PageContainer>
       <PageHeader
         title="Trade History"
-        subtitle={`${trades.length} trades on page ${currentPage}`}
+        subtitle={`${totalCount} total trades - Page ${currentPage} of ${totalPages}`}
         actions={
           <Button variant="primary" onClick={handleExport} disabled={loading || trades.length === 0}>
             Export CSV
@@ -272,7 +296,7 @@ export default function HistoryPage() {
                         </TableCell>
                         <TableCell align="center">
                           <button
-                            onClick={() => toggleTradeDetails(trade.id)}
+                            onClick={() => trade.id !== null && toggleTradeDetails(trade.id)}
                             className="w-8 h-8 flex items-center justify-center rounded-lg bg-panel-500 hover:bg-panel-400 text-text-400 hover:text-text-900"
                           >
                             {isExpanded ? '−' : '+'}

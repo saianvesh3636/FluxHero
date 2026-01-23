@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiClient, Trade } from '../../utils/api';
 import { PageContainer, PageHeader, StatsGrid } from '../../components/layout';
 import { Card, CardTitle, Button, Badge, Select, Input, Skeleton, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui';
@@ -34,14 +34,36 @@ interface SignalExplanation {
 const ITEMS_PER_PAGE = 20;
 
 // Helper functions
-const formatDate = (timestamp: number): string => {
-  return new Date(timestamp * 1000).toLocaleString('en-US', {
+const formatDate = (timestamp: string | number | null | undefined): string => {
+  if (!timestamp) return 'N/A';
+
+  let date: Date;
+  if (typeof timestamp === 'string') {
+    date = new Date(timestamp);
+  } else {
+    date = new Date(timestamp * 1000);
+  }
+
+  if (isNaN(date.getTime())) return 'N/A';
+
+  return date.toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   });
+};
+
+// Convert ISO date string to Unix timestamp for filtering
+const dateToTimestamp = (dateStr: string): number => {
+  return new Date(dateStr).getTime() / 1000;
+};
+
+// Get timestamp from trade (handles both string and potential number formats)
+const getTradeTimestamp = (entry_time: string): number => {
+  const date = new Date(entry_time);
+  return date.getTime() / 1000;
 };
 
 const getSignalTypeName = (signalType: number): string => {
@@ -75,13 +97,13 @@ const getVolatilityStateName = (state: number): string => {
 };
 
 const parseSignalExplanation = (trade: Trade): SignalExplanation | null => {
-  if (!trade.signal_explanation) return null;
+  // signal_reason may contain JSON data with signal details
+  if (!trade.signal_reason) return null;
   try {
-    if (typeof trade.signal_explanation === 'object') {
-      return trade.signal_explanation as SignalExplanation;
-    }
-    return JSON.parse(trade.signal_explanation) as SignalExplanation;
+    // Try to parse as JSON first (in case it contains structured data)
+    return JSON.parse(trade.signal_reason) as SignalExplanation;
   } catch {
+    // If not JSON, it's just a plain string description - return null
     return null;
   }
 };
@@ -113,37 +135,49 @@ export default function SignalsPage() {
   // Pagination
   const [currentPage, setCurrentPage] = useState<number>(1);
 
+  // Track if a fetch is already in progress to prevent duplicate calls
+  const isFetchingRef = useRef(false);
+
   // Fetch all trades
-  useEffect(() => {
-    const fetchAllTrades = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const allTrades: Trade[] = [];
-        let page = 1;
-        let hasMore = true;
+  const fetchAllTrades = useCallback(async () => {
+    // Prevent duplicate concurrent fetches
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
 
-        while (hasMore && page <= 10) {
-          const data = await apiClient.getTrades(page, 20);
-          if (data.length === 0) {
+    try {
+      setLoading(true);
+      setError(null);
+      const allTrades: Trade[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore && page <= 10) {
+        const response = await apiClient.getTrades(page, 20);
+        if (response.trades.length === 0) {
+          hasMore = false;
+        } else {
+          allTrades.push(...response.trades);
+          // Stop if we've fetched all pages
+          if (page >= response.totalPages) {
             hasMore = false;
-          } else {
-            allTrades.push(...data);
-            page++;
           }
+          page++;
         }
-
-        setTrades(allTrades);
-        setFilteredTrades(allTrades);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch trades');
-      } finally {
-        setLoading(false);
       }
-    };
 
-    fetchAllTrades();
+      setTrades(allTrades);
+      setFilteredTrades(allTrades);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch trades');
+    } finally {
+      setLoading(false);
+      isFetchingRef.current = false;
+    }
   }, []);
+
+  useEffect(() => {
+    fetchAllTrades();
+  }, [fetchAllTrades]);
 
   // Apply filters
   useEffect(() => {
@@ -174,20 +208,28 @@ export default function SignalsPage() {
     }
 
     if (startDate) {
-      const startTimestamp = new Date(startDate).getTime() / 1000;
-      filtered = filtered.filter(t => (t.entry_time || 0) >= startTimestamp);
+      const startTimestamp = new Date(startDate).getTime();
+      filtered = filtered.filter(t => {
+        const tradeTime = t.entry_time ? new Date(t.entry_time).getTime() : 0;
+        return tradeTime >= startTimestamp;
+      });
     }
     if (endDate) {
-      const endTimestamp = new Date(endDate).getTime() / 1000;
-      filtered = filtered.filter(t => (t.entry_time || 0) <= endTimestamp);
+      const endTimestamp = new Date(endDate).getTime();
+      filtered = filtered.filter(t => {
+        const tradeTime = t.entry_time ? new Date(t.entry_time).getTime() : 0;
+        return tradeTime <= endTimestamp;
+      });
     }
 
     filtered.sort((a, b) => {
+      const aTime = a.entry_time ? new Date(a.entry_time).getTime() : 0;
+      const bTime = b.entry_time ? new Date(b.entry_time).getTime() : 0;
       switch (sortBy) {
         case 'date-desc':
-          return (b.entry_time || 0) - (a.entry_time || 0);
+          return bTime - aTime;
         case 'date-asc':
-          return (a.entry_time || 0) - (b.entry_time || 0);
+          return aTime - bTime;
         case 'pnl-desc':
           return (b.realized_pnl || 0) - (a.realized_pnl || 0);
         case 'pnl-asc':

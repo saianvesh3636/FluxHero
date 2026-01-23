@@ -1,81 +1,53 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createChart, IChartApi, LineSeries, Time } from 'lightweight-charts';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { PageContainer, PageHeader, StatsGrid } from '../../components/layout';
 import { Card, CardTitle, Button, Badge, Select, Input, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui';
-import { PLDisplay } from '../../components/trading';
+import { PLDisplay, SymbolSearch } from '../../components/trading';
 import { formatCurrency, formatPercent } from '../../lib/utils';
+import { apiClient, ApiError, BacktestRequest, BacktestResultResponse } from '../../utils/api';
 
-interface BacktestConfig {
+// Form config (camelCase for UI)
+interface BacktestFormConfig {
   symbol: string;
   startDate: string;
   endDate: string;
   initialCapital: number;
-  commission: number;
-  slippage: number;
-  emaPeriod: number;
-  rsiPeriod: number;
-  atrPeriod: number;
-  kamaPeriod: number;
-  maxPositionSize: number;
-  stopLossPct: number;
+  commissionPerShare: number;
+  slippagePct: number;
+  strategyMode: 'TREND' | 'MEAN_REVERSION' | 'DUAL';
 }
 
-interface BacktestResult {
-  totalReturn: number;
-  totalReturnPct: number;
-  sharpeRatio: number;
-  maxDrawdown: number;
-  winRate: number;
-  totalTrades: number;
-  avgWin: number;
-  avgLoss: number;
-  profitFactor: number;
-  equity_curve: number[];
-  trade_log: Array<{
-    entry_date: string;
-    exit_date: string;
-    symbol: string;
-    side: string;
-    entry_price: number;
-    exit_price: number;
-    shares: number;
-    pnl: number;
-  }>;
-}
-
-const symbolOptions = [
-  { value: 'SPY', label: 'SPY - S&P 500 ETF' },
-  { value: 'QQQ', label: 'QQQ - Nasdaq 100 ETF' },
-  { value: 'AAPL', label: 'AAPL - Apple Inc.' },
-  { value: 'TSLA', label: 'TSLA - Tesla Inc.' },
-  { value: 'MSFT', label: 'MSFT - Microsoft Corp.' },
-  { value: 'NVDA', label: 'NVDA - NVIDIA Corp.' },
-  { value: 'AMZN', label: 'AMZN - Amazon.com Inc.' },
+const strategyModeOptions = [
+  { value: 'DUAL', label: 'DUAL - Adaptive (Recommended)' },
+  { value: 'TREND', label: 'TREND - Trend Following' },
+  { value: 'MEAN_REVERSION', label: 'MEAN_REVERSION - Mean Reversion' },
 ];
 
 export default function BacktestPage() {
-  const [config, setConfig] = useState<BacktestConfig>({
+  const [config, setConfig] = useState<BacktestFormConfig>({
     symbol: 'SPY',
     startDate: '2023-01-01',
     endDate: '2024-01-01',
     initialCapital: 100000,
-    commission: 0.005,
-    slippage: 0.01,
-    emaPeriod: 20,
-    rsiPeriod: 14,
-    atrPeriod: 14,
-    kamaPeriod: 10,
-    maxPositionSize: 20,
-    stopLossPct: 3.0,
+    commissionPerShare: 0.005,
+    slippagePct: 0.01,
+    strategyMode: 'DUAL',
   });
 
   const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [results, setResults] = useState<BacktestResult | null>(null);
+  const [results, setResults] = useState<BacktestResultResponse | null>(null);
   const [showResults, setShowResults] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleConfigChange = (field: keyof BacktestConfig, value: string | number) => {
+  const handleConfigChange = (field: keyof BacktestFormConfig, value: string | number) => {
+    // Prevent NaN values from being stored
+    if (typeof value === 'number' && isNaN(value)) {
+      return;
+    }
     setConfig((prev) => ({
       ...prev,
       [field]: value,
@@ -87,24 +59,47 @@ export default function BacktestPage() {
     setError(null);
     setResults(null);
 
+    // Validate inputs
+    if (!config.symbol.trim()) {
+      setError('Please enter a stock symbol');
+      setIsRunning(false);
+      return;
+    }
+
+    if (!config.startDate || !config.endDate) {
+      setError('Please select both start and end dates');
+      setIsRunning(false);
+      return;
+    }
+
     try {
-      const response = await fetch('/api/backtest', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(config),
-      });
+      // Transform form config to backend request format
+      const request: BacktestRequest = {
+        symbol: config.symbol.toUpperCase().trim(),
+        start_date: config.startDate,
+        end_date: config.endDate,
+        initial_capital: config.initialCapital,
+        commission_per_share: config.commissionPerShare,
+        slippage_pct: config.slippagePct,
+        strategy_mode: config.strategyMode,
+      };
 
-      if (!response.ok) {
-        throw new Error(`Backtest failed: ${response.statusText}`);
-      }
-
-      const data: BacktestResult = await response.json();
+      const data = await apiClient.runBacktest(request);
       setResults(data);
       setShowResults(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      // Handle specific error types
+      if (err instanceof ApiError) {
+        if (err.status === 404) {
+          setError(`Symbol "${config.symbol.toUpperCase()}" not found. Please check the ticker is correct.`);
+        } else if (err.status === 400) {
+          setError(err.detail || 'Invalid request. Please check your inputs.');
+        } else {
+          setError(err.detail || `Server error (${err.status})`);
+        }
+      } else {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      }
       console.error('Backtest error:', err);
     } finally {
       setIsRunning(false);
@@ -116,18 +111,13 @@ export default function BacktestPage() {
   };
 
   const exportToCSV = () => {
-    if (!results || !results.trade_log) return;
+    if (!results || !results.equity_curve) return;
 
-    const headers = ['Entry Date', 'Exit Date', 'Symbol', 'Side', 'Entry Price', 'Exit Price', 'Shares', 'P&L'];
-    const rows = results.trade_log.map((trade) => [
-      trade.entry_date,
-      trade.exit_date,
-      trade.symbol,
-      trade.side,
-      trade.entry_price.toFixed(2),
-      trade.exit_price.toFixed(2),
-      trade.shares.toString(),
-      trade.pnl.toFixed(2),
+    // Export equity curve data
+    const headers = ['Date', 'Equity'];
+    const rows = results.timestamps.map((timestamp, i) => [
+      timestamp,
+      results.equity_curve[i].toFixed(2),
     ]);
 
     const csvContent = [headers, ...rows].map((row) => row.join(',')).join('\n');
@@ -152,24 +142,53 @@ export default function BacktestPage() {
         <CardTitle className="mb-6">Backtest Configuration</CardTitle>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          <Select
-            label="Symbol"
-            options={symbolOptions}
+          <SymbolSearch
             value={config.symbol}
-            onChange={(e) => handleConfigChange('symbol', e.target.value)}
+            onChange={(symbol) => handleConfigChange('symbol', symbol)}
+            placeholder="Search stocks (e.g., Apple, AAPL)"
+            disabled={isRunning}
           />
-          <Input
-            label="Start Date"
-            type="date"
-            value={config.startDate}
-            onChange={(e) => handleConfigChange('startDate', e.target.value)}
-          />
-          <Input
-            label="End Date"
-            type="date"
-            value={config.endDate}
-            onChange={(e) => handleConfigChange('endDate', e.target.value)}
-          />
+          <div>
+            <label className="block text-sm font-medium text-text-600 mb-2">Start Date</label>
+            <DatePicker
+              selected={config.startDate ? new Date(config.startDate) : null}
+              onChange={(date: Date | null) => {
+                if (date) {
+                  const formatted = date.toISOString().split('T')[0];
+                  handleConfigChange('startDate', formatted);
+                }
+              }}
+              dateFormat="yyyy-MM-dd"
+              showMonthDropdown
+              showYearDropdown
+              dropdownMode="select"
+              className="w-full bg-panel-300 text-text-800 rounded px-4 py-3 border-none focus:outline-none focus:ring-2 focus:ring-accent-500"
+              calendarClassName="dark-datepicker"
+              maxDate={new Date()}
+              placeholderText="Select start date"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-600 mb-2">End Date</label>
+            <DatePicker
+              selected={config.endDate ? new Date(config.endDate) : null}
+              onChange={(date: Date | null) => {
+                if (date) {
+                  const formatted = date.toISOString().split('T')[0];
+                  handleConfigChange('endDate', formatted);
+                }
+              }}
+              dateFormat="yyyy-MM-dd"
+              showMonthDropdown
+              showYearDropdown
+              dropdownMode="select"
+              className="w-full bg-panel-300 text-text-800 rounded px-4 py-3 border-none focus:outline-none focus:ring-2 focus:ring-accent-500"
+              calendarClassName="dark-datepicker"
+              maxDate={new Date()}
+              minDate={config.startDate ? new Date(config.startDate) : undefined}
+              placeholderText="Select end date"
+            />
+          </div>
           <Input
             label="Initial Capital ($)"
             type="number"
@@ -180,16 +199,16 @@ export default function BacktestPage() {
           <Input
             label="Commission ($/share)"
             type="number"
-            value={config.commission}
-            onChange={(e) => handleConfigChange('commission', parseFloat(e.target.value))}
+            value={config.commissionPerShare}
+            onChange={(e) => handleConfigChange('commissionPerShare', parseFloat(e.target.value))}
             min={0}
             step={0.001}
           />
           <Input
             label="Slippage (%)"
             type="number"
-            value={config.slippage}
-            onChange={(e) => handleConfigChange('slippage', parseFloat(e.target.value))}
+            value={config.slippagePct * 100}
+            onChange={(e) => handleConfigChange('slippagePct', parseFloat(e.target.value) / 100)}
             min={0}
             step={0.01}
           />
@@ -197,58 +216,20 @@ export default function BacktestPage() {
 
         {/* Strategy Parameters */}
         <h3 className="text-lg font-semibold text-text-900 mt-8 mb-4">Strategy Parameters</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          <SliderInput
-            label="EMA Period"
-            value={config.emaPeriod}
-            onChange={(val) => handleConfigChange('emaPeriod', val)}
-            min={5}
-            max={50}
-          />
-          <SliderInput
-            label="RSI Period"
-            value={config.rsiPeriod}
-            onChange={(val) => handleConfigChange('rsiPeriod', val)}
-            min={5}
-            max={30}
-          />
-          <SliderInput
-            label="ATR Period"
-            value={config.atrPeriod}
-            onChange={(val) => handleConfigChange('atrPeriod', val)}
-            min={5}
-            max={30}
-          />
-          <SliderInput
-            label="KAMA Period"
-            value={config.kamaPeriod}
-            onChange={(val) => handleConfigChange('kamaPeriod', val)}
-            min={5}
-            max={20}
-          />
-        </div>
-
-        {/* Risk Parameters */}
-        <h3 className="text-lg font-semibold text-text-900 mt-8 mb-4">Risk Parameters</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <SliderInput
-            label="Max Position Size"
-            value={config.maxPositionSize}
-            onChange={(val) => handleConfigChange('maxPositionSize', val)}
-            min={5}
-            max={50}
-            suffix="%"
+          <Select
+            label="Strategy Mode"
+            options={strategyModeOptions}
+            value={config.strategyMode}
+            onChange={(e) => handleConfigChange('strategyMode', e.target.value as 'TREND' | 'MEAN_REVERSION' | 'DUAL')}
           />
-          <SliderInput
-            label="Stop Loss"
-            value={config.stopLossPct}
-            onChange={(val) => handleConfigChange('stopLossPct', val)}
-            min={1}
-            max={10}
-            step={0.5}
-            suffix="%"
-            decimals={1}
-          />
+          <div className="flex items-end">
+            <p className="text-sm text-text-400 pb-2">
+              <strong>DUAL</strong>: Adapts between trend-following and mean-reversion based on market regime.<br />
+              <strong>TREND</strong>: Follows momentum signals only.<br />
+              <strong>MEAN_REVERSION</strong>: Trades reversals only.
+            </p>
+          </div>
         </div>
 
         {/* Run Button */}
@@ -301,132 +282,126 @@ export default function BacktestPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
                 <MetricCard
                   label="Total Return"
-                  value={<PLDisplay value={results.totalReturn} percent={results.totalReturnPct} size="lg" />}
+                  value={<PLDisplay value={results.total_return} percent={results.total_return_pct} size="lg" />}
                 />
                 <MetricCard
                   label="Sharpe Ratio"
-                  value={results.sharpeRatio.toFixed(2)}
+                  value={results.sharpe_ratio.toFixed(2)}
                   valueClass={
-                    results.sharpeRatio > 0.8 ? 'text-profit-500' :
-                    results.sharpeRatio > 0.5 ? 'text-warning-500' :
+                    results.sharpe_ratio > 0.8 ? 'text-profit-500' :
+                    results.sharpe_ratio > 0.5 ? 'text-warning-500' :
                     'text-loss-500'
                   }
                   hint={
-                    results.sharpeRatio > 0.8 ? 'Excellent' :
-                    results.sharpeRatio > 0.5 ? 'Good' : 'Poor'
+                    results.sharpe_ratio > 0.8 ? 'Excellent' :
+                    results.sharpe_ratio > 0.5 ? 'Good' : 'Poor'
                   }
                 />
                 <MetricCard
                   label="Max Drawdown"
-                  value={`${results.maxDrawdown.toFixed(2)}%`}
+                  value={`${results.max_drawdown_pct.toFixed(2)}%`}
                   valueClass={
-                    results.maxDrawdown < 15 ? 'text-profit-500' :
-                    results.maxDrawdown < 25 ? 'text-warning-500' :
+                    results.max_drawdown_pct < 15 ? 'text-profit-500' :
+                    results.max_drawdown_pct < 25 ? 'text-warning-500' :
                     'text-loss-500'
                   }
                   hint={
-                    results.maxDrawdown < 15 ? 'Low Risk' :
-                    results.maxDrawdown < 25 ? 'Moderate' : 'High Risk'
+                    results.max_drawdown_pct < 15 ? 'Low Risk' :
+                    results.max_drawdown_pct < 25 ? 'Moderate' : 'High Risk'
                   }
                 />
                 <MetricCard
                   label="Win Rate"
-                  value={`${results.winRate.toFixed(1)}%`}
+                  value={`${(results.win_rate * 100).toFixed(1)}%`}
                   valueClass={
-                    results.winRate >= 55 ? 'text-profit-500' :
-                    results.winRate >= 45 ? 'text-warning-500' :
+                    results.win_rate >= 0.55 ? 'text-profit-500' :
+                    results.win_rate >= 0.45 ? 'text-warning-500' :
                     'text-loss-500'
                   }
-                  hint={`${results.totalTrades} trades`}
+                  hint={`${results.num_trades} trades`}
                 />
                 <MetricCard
-                  label="Profit Factor"
-                  value={results.profitFactor.toFixed(2)}
+                  label="Win/Loss Ratio"
+                  value={results.avg_win_loss_ratio.toFixed(2)}
                   valueClass={
-                    results.profitFactor >= 2 ? 'text-profit-500' :
-                    results.profitFactor >= 1.5 ? 'text-warning-500' :
+                    results.avg_win_loss_ratio >= 2 ? 'text-profit-500' :
+                    results.avg_win_loss_ratio >= 1.5 ? 'text-warning-500' :
                     'text-loss-500'
                   }
-                  hint={`Avg Win: ${formatCurrency(results.avgWin)}`}
+                  hint={`Final: ${formatCurrency(results.final_equity)}`}
                 />
               </div>
 
               {/* Success Criteria Check */}
               <Card className="mb-6">
                 <h3 className="text-lg font-semibold text-text-900 mb-4">Success Criteria</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <CriteriaCheck
+                    label="All Criteria Met"
+                    passed={results.success_criteria_met}
+                  />
                   <CriteriaCheck
                     label="Sharpe > 0.8"
-                    passed={results.sharpeRatio > 0.8}
+                    passed={results.sharpe_ratio > 0.8}
                   />
                   <CriteriaCheck
                     label="Max DD < 25%"
-                    passed={results.maxDrawdown < 25}
+                    passed={results.max_drawdown_pct < 25}
                   />
                   <CriteriaCheck
                     label="Win Rate > 45%"
-                    passed={results.winRate > 45}
+                    passed={results.win_rate > 0.45}
                   />
                 </div>
               </Card>
 
+              {/* Equity Curve Chart */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-text-900 mb-4">Equity Curve</h3>
+                <EquityCurveChart
+                  equityCurve={results.equity_curve}
+                  timestamps={results.timestamps}
+                  initialCapital={results.initial_capital}
+                />
+              </div>
+
               {/* Export Button */}
               <div className="mb-6">
                 <Button variant="primary" onClick={exportToCSV}>
-                  Export Trade Log (CSV)
+                  Export Equity Curve (CSV)
                 </Button>
               </div>
 
-              {/* Trade Log Table */}
+              {/* Equity Curve Summary */}
               <div>
-                <h3 className="text-lg font-semibold text-text-900 mb-4">Trade Log (Last 20 trades)</h3>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Entry Date</TableHead>
-                        <TableHead>Exit Date</TableHead>
-                        <TableHead>Side</TableHead>
-                        <TableHead align="right">Entry</TableHead>
-                        <TableHead align="right">Exit</TableHead>
-                        <TableHead align="right">Shares</TableHead>
-                        <TableHead align="right">P&L</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {results.trade_log.slice(-20).reverse().map((trade, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell>{trade.entry_date}</TableCell>
-                          <TableCell>{trade.exit_date}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={trade.side === 'LONG' ? 'success' : 'error'}
-                              size="sm"
-                            >
-                              {trade.side}
-                            </Badge>
-                          </TableCell>
-                          <TableCell align="right" className="font-mono tabular-nums">
-                            {formatCurrency(trade.entry_price)}
-                          </TableCell>
-                          <TableCell align="right" className="font-mono tabular-nums">
-                            {formatCurrency(trade.exit_price)}
-                          </TableCell>
-                          <TableCell align="right" className="font-mono tabular-nums">
-                            {trade.shares}
-                          </TableCell>
-                          <TableCell
-                            align="right"
-                            className={`font-mono tabular-nums font-semibold ${
-                              trade.pnl >= 0 ? 'text-profit-500' : 'text-loss-500'
-                            }`}
-                          >
-                            {formatCurrency(trade.pnl)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                <h3 className="text-lg font-semibold text-text-900 mb-4">Equity Curve Statistics</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-panel-600 rounded-xl p-4">
+                    <div className="text-sm text-text-400 mb-1">Initial Capital</div>
+                    <div className="text-xl font-bold text-text-900 font-mono tabular-nums">
+                      {formatCurrency(results.initial_capital)}
+                    </div>
+                  </div>
+                  <div className="bg-panel-600 rounded-xl p-4">
+                    <div className="text-sm text-text-400 mb-1">Final Equity</div>
+                    <div className={`text-xl font-bold font-mono tabular-nums ${
+                      results.final_equity >= results.initial_capital ? 'text-profit-500' : 'text-loss-500'
+                    }`}>
+                      {formatCurrency(results.final_equity)}
+                    </div>
+                  </div>
+                  <div className="bg-panel-600 rounded-xl p-4">
+                    <div className="text-sm text-text-400 mb-1">Max Drawdown</div>
+                    <div className="text-xl font-bold text-loss-500 font-mono tabular-nums">
+                      {formatCurrency(results.max_drawdown)}
+                    </div>
+                  </div>
+                  <div className="bg-panel-600 rounded-xl p-4">
+                    <div className="text-sm text-text-400 mb-1">Data Points</div>
+                    <div className="text-xl font-bold text-text-900 font-mono tabular-nums">
+                      {results.equity_curve.length}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -515,6 +490,114 @@ function CriteriaCheck({ label, passed }: CriteriaCheckProps) {
       <span className="text-text-700">
         {label}: <span className={passed ? 'text-profit-500' : 'text-loss-500'}>{passed ? 'PASS' : 'FAIL'}</span>
       </span>
+    </div>
+  );
+}
+
+// Equity Curve Chart Component
+interface EquityCurveChartProps {
+  equityCurve: number[];
+  timestamps: string[];
+  initialCapital: number;
+}
+
+function EquityCurveChart({ equityCurve, timestamps, initialCapital }: EquityCurveChartProps) {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+
+  useEffect(() => {
+    if (!chartContainerRef.current || equityCurve.length === 0) return;
+
+    // Clean up previous chart
+    if (chartRef.current) {
+      chartRef.current.remove();
+    }
+
+    const chart = createChart(chartContainerRef.current, {
+      width: chartContainerRef.current.clientWidth,
+      height: 350,
+      layout: {
+        background: { color: '#1C1C28' }, // panel-700
+        textColor: '#CCCAD5', // text-400
+      },
+      grid: {
+        vertLines: { color: '#21222F' }, // panel-500
+        horzLines: { color: '#21222F' },
+      },
+      crosshair: {
+        mode: 1,
+      },
+      rightPriceScale: {
+        borderColor: '#21222F',
+      },
+      timeScale: {
+        borderColor: '#21222F',
+        timeVisible: true,
+        secondsVisible: false,
+      },
+    });
+
+    chartRef.current = chart;
+
+    // Add equity line series
+    const equitySeries = chart.addSeries(LineSeries, {
+      color: '#A549FC', // accent-500 (purple)
+      lineWidth: 2,
+      title: 'Equity',
+      priceFormat: {
+        type: 'custom',
+        formatter: (price: number) => `$${price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+      },
+    });
+
+    // Add initial capital reference line
+    const baselineSeries = chart.addSeries(LineSeries, {
+      color: '#6B6983', // text-300 (gray)
+      lineWidth: 1,
+      lineStyle: 2, // dashed
+      title: 'Initial Capital',
+      crosshairMarkerVisible: false,
+    });
+
+    // Convert data to chart format
+    const chartData = equityCurve.map((value, i) => ({
+      time: timestamps[i] as Time,
+      value: value,
+    }));
+
+    const baselineData = equityCurve.map((_, i) => ({
+      time: timestamps[i] as Time,
+      value: initialCapital,
+    }));
+
+    equitySeries.setData(chartData);
+    baselineSeries.setData(baselineData);
+
+    // Fit content
+    chart.timeScale().fitContent();
+
+    // Handle resize
+    const handleResize = () => {
+      if (chartContainerRef.current && chartRef.current) {
+        chartRef.current.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+        });
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (chartRef.current) {
+        chartRef.current.remove();
+        chartRef.current = null;
+      }
+    };
+  }, [equityCurve, timestamps, initialCapital]);
+
+  return (
+    <div className="bg-panel-600 rounded-xl p-4">
+      <div ref={chartContainerRef} className="w-full" />
     </div>
   );
 }

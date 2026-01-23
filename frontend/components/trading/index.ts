@@ -17,3 +17,6 @@ export type { PositionsTableProps, PositionRow } from './PositionsTable';
 
 export { TradeRow } from './TradeRow';
 export type { TradeRowProps, TradeData } from './TradeRow';
+
+export { SymbolSearch } from './SymbolSearch';
+export type { default as SymbolSearchProps } from './SymbolSearch';

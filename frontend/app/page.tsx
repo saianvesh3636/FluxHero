@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { apiClient, SystemStatus } from '../utils/api';
 import { PageContainer, PageHeader, CardGrid } from '../components/layout';
@@ -36,24 +36,14 @@ export default function Home() {
   const [isBackendOffline, setIsBackendOffline] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const checkBackend = async () => {
-      try {
-        const status = await apiClient.getSystemStatus();
-        setSystemStatus(status);
-        setIsBackendOffline(false);
-      } catch {
-        setIsBackendOffline(true);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Track if a fetch is already in progress to prevent duplicate calls
+  const isFetchingRef = useRef(false);
 
-    checkBackend();
-  }, []);
+  const checkBackend = useCallback(async () => {
+    // Prevent duplicate concurrent fetches
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
 
-  const handleRetryConnection = async () => {
-    setLoading(true);
     try {
       const status = await apiClient.getSystemStatus();
       setSystemStatus(status);
@@ -62,7 +52,18 @@ export default function Home() {
       setIsBackendOffline(true);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
+  }, []);
+
+  useEffect(() => {
+    checkBackend();
+  }, [checkBackend]);
+
+  const handleRetryConnection = () => {
+    setLoading(true);
+    isFetchingRef.current = false; // Reset to allow retry
+    checkBackend();
   };
 
   return (
