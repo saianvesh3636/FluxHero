@@ -32,7 +32,7 @@ See `docs/COMPARISON_SENTINEL_TRADER.md` for full comparison analysis.
 
 - [x] Add slippage simulation (backend/execution/brokers/paper_broker.py) - configurable slippage in basis points (default 5 bps via FLUXHERO_PAPER_SLIPPAGE_BPS env), apply slippage on order fill: buy_price = price * (1 + slippage_bps/10000), sell_price = price * (1 - slippage_bps/10000), log slippage impact using loguru. Concept ref: SentinelTrader _apply_slippage() (adapt formula to our implementation).
 
-- [ ] Add market price simulation (backend/execution/brokers/paper_broker.py) - fetch last known price from backend/data/yahoo_provider.py for realistic fills, cache prices with 1-minute TTL using simple dict cache, fallback to configurable mock prices if fetch fails, support price override for testing via method parameter.
+- [x] Add market price simulation (backend/execution/brokers/paper_broker.py) - fetch last known price from backend/data/yahoo_provider.py for realistic fills, cache prices with 1-minute TTL using simple dict cache, fallback to configurable mock prices if fetch fails, support price override for testing via method parameter.
 
 - [ ] Add paper trading API endpoints (backend/api/server.py) - add GET /api/paper/account (balance, positions), POST /api/paper/reset (reset to initial state), GET /api/paper/trades (paper trade history), return same Pydantic response models as live broker for UI compatibility. Follow existing FastAPI endpoint patterns in server.py.
 

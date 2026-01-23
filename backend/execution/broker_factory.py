@@ -51,6 +51,20 @@ class PaperBrokerConfig(BaseModel):
         ge=0,
         description="Slippage in basis points (5 bps = 0.05%)",
     )
+    mock_price: float = Field(
+        default=100.0,
+        gt=0,
+        description="Fallback mock price when price fetch fails",
+    )
+    price_cache_ttl: float = Field(
+        default=60.0,
+        gt=0,
+        description="Price cache TTL in seconds (60s = 1 minute)",
+    )
+    use_price_provider: bool = Field(
+        default=True,
+        description="Whether to fetch prices from YahooFinance provider",
+    )
 
 
 # Type alias for supported broker types
@@ -202,10 +216,29 @@ class BrokerFactory:
         elif broker_type == "paper":
             paper_config = validated_config
             assert isinstance(paper_config, PaperBrokerConfig)
+
+            # Create YahooFinance price provider if enabled
+            price_provider = None
+            if paper_config.use_price_provider:
+                try:
+                    from backend.data.yahoo_provider import YahooFinanceProvider
+
+                    price_provider = YahooFinanceProvider()
+                    logger.debug("YahooFinance price provider enabled for paper broker")
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to initialize YahooFinance provider: {e}. "
+                        "Paper broker will use mock prices."
+                    )
+
             broker = PaperBroker(
                 initial_balance=paper_config.initial_balance,
                 db_path=paper_config.db_path,
                 slippage_bps=paper_config.slippage_bps,
+                price_provider=price_provider,
+                mock_price=paper_config.mock_price,
+                price_cache_ttl=paper_config.price_cache_ttl,
+                use_price_provider=paper_config.use_price_provider,
             )
         else:
             # This shouldn't happen due to validation, but handle gracefully

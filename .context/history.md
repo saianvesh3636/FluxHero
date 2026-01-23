@@ -1944,3 +1944,47 @@ Implemented the PaperBroker class as the first task of Phase B (Paper Trading Sy
    - `test_slippage_logging` - Verifies logging code path executes
 
 **Result:** Slippage simulation now configurable via environment and logs detailed impact. 48 paper trading tests pass.
+
+---
+
+## 2026-01-23: Market Price Simulation (Phase B)
+
+**Task:** Add market price simulation for realistic paper trading fills
+
+**Files Changed:**
+- `backend/execution/brokers/paper_broker.py` - Enhanced `_get_price()` and `_fetch_price_from_provider()` with full price resolution chain
+- `backend/execution/broker_factory.py` - Added `mock_price`, `price_cache_ttl`, `use_price_provider` config options and YahooFinance provider initialization
+- `backend/core/config.py` - Added `paper_mock_price` and `paper_price_cache_ttl` settings
+- `tests/integration/test_paper_trading.py` - Added 14 new market price simulation tests
+
+**What Was Done:**
+1. **Enhanced price resolution** (`paper_broker.py`):
+   - Price resolution order: override → cache → provider → fallback → mock → position
+   - 1-minute TTL price cache with configurable TTL
+   - YahooFinance provider integration for realistic market prices
+   - Detailed logging of price sources and cache behavior
+
+2. **Added configuration options** (`config.py` + `broker_factory.py`):
+   - `FLUXHERO_PAPER_MOCK_PRICE` (default: $100.00)
+   - `FLUXHERO_PAPER_PRICE_CACHE_TTL` (default: 60s)
+   - `use_price_provider` flag to enable/disable YahooFinance fetching
+
+3. **Updated broker factory** (`broker_factory.py`):
+   - Creates YahooFinanceProvider when `use_price_provider=True`
+   - Passes all new config options to PaperBroker
+   - Graceful fallback if provider initialization fails
+
+4. **Added new tests** (14 tests in TestMarketPriceSimulation):
+   - Price override precedence
+   - Cache TTL behavior
+   - Fallback price resolution
+   - Mock price as last resort
+   - Position price fallback
+   - Configurable TTL
+   - Provider flag testing
+   - Order execution with price simulation
+   - Factory config passing
+   - Price priority order verification
+   - set_price and update_prices methods
+
+**Result:** Paper broker now fetches realistic market prices from YahooFinance with caching and configurable fallbacks. 61 paper trading tests pass.

@@ -218,6 +218,19 @@ class Settings(BaseSettings):
         description="Initial balance for paper trading account in USD.",
     )
 
+    paper_mock_price: float = Field(
+        default=100.0,
+        gt=0.0,
+        description="Fallback mock price for paper trading when price fetch fails. "
+        "Used only when YahooFinance provider is unavailable.",
+    )
+
+    paper_price_cache_ttl: float = Field(
+        default=60.0,
+        gt=0.0,
+        description="Price cache TTL in seconds for paper trading (60s = 1 minute).",
+    )
+
     # ========================================================================
     # Data Storage Settings
     # ========================================================================

@@ -5,6 +5,12 @@ This module implements a paper trading broker that simulates order execution
 without real money. It uses SQLite for state persistence and provides realistic
 order fills with configurable slippage.
 
+Features:
+- Market price simulation: fetches last known prices from Yahoo Finance
+- Price caching with configurable TTL (default 1 minute)
+- Fallback to mock prices when price fetch fails
+- Price override support for testing
+
 Feature: Paper Trading System (Phase B)
 """
 
@@ -12,7 +18,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
@@ -27,6 +33,9 @@ from backend.execution.broker_base import (
     Position,
 )
 from backend.storage.sqlite_store import SQLiteStore
+
+if TYPE_CHECKING:
+    from backend.data.yahoo_provider import YahooFinanceProvider
 
 # Default paper account settings
 DEFAULT_INITIAL_BALANCE = 100_000.0
@@ -105,7 +114,10 @@ class PaperBroker(BrokerInterface):
         initial_balance: float = DEFAULT_INITIAL_BALANCE,
         db_path: str = "data/system.db",
         slippage_bps: float = 5.0,
-        price_provider: Any = None,
+        price_provider: "YahooFinanceProvider | None" = None,
+        mock_price: float = 100.0,
+        price_cache_ttl: float = 60.0,
+        use_price_provider: bool = True,
     ):
         """
         Initialize Paper broker adapter.
@@ -114,12 +126,18 @@ class PaperBroker(BrokerInterface):
             initial_balance: Starting account balance (default: $100,000)
             db_path: Path to SQLite database for state persistence
             slippage_bps: Slippage in basis points (default: 5 bps = 0.05%)
-            price_provider: Optional price provider for realistic fills
+            price_provider: Optional YahooFinanceProvider for realistic fills
+            mock_price: Fallback price when price fetch fails (default: $100.00)
+            price_cache_ttl: Price cache TTL in seconds (default: 60s = 1 minute)
+            use_price_provider: Whether to fetch prices from provider (default: True)
         """
         self.initial_balance = initial_balance
         self.db_path = db_path
         self.slippage_bps = slippage_bps
         self.price_provider = price_provider
+        self.mock_price = mock_price
+        self.price_cache_ttl = price_cache_ttl
+        self.use_price_provider = use_price_provider
 
         # State
         self._connected = False
@@ -135,7 +153,7 @@ class PaperBroker(BrokerInterface):
 
         # Price cache with TTL (symbol -> (price, timestamp))
         self._price_cache: dict[str, tuple[float, float]] = {}
-        self._price_cache_ttl: float = 60.0  # 1 minute TTL
+        self._price_cache_ttl: float = price_cache_ttl
 
     # -------------------------------------------------------------------------
     # Connection Lifecycle Methods
@@ -731,77 +749,124 @@ class PaperBroker(BrokerInterface):
 
         return fill_price
 
-    async def _get_price(self, symbol: str, fallback_price: float | None = None) -> float | None:
+    async def _get_price(
+        self,
+        symbol: str,
+        fallback_price: float | None = None,
+        price_override: float | None = None,
+    ) -> float | None:
         """
-        Get current price for a symbol.
+        Get current price for a symbol with market price simulation.
 
-        Tries (in order):
-        1. Cache (if within TTL)
-        2. Price provider (if available)
-        3. Fallback price
+        Price resolution order:
+        1. Price override (for testing)
+        2. Cache (if within TTL)
+        3. Price provider / YahooFinance (if enabled and available)
+        4. Fallback price (from method parameter)
+        5. Configured mock price
+        6. Position's current price (if exists)
 
         Args:
             symbol: Trading symbol
             fallback_price: Fallback price if no other source available
+            price_override: Override price for testing (bypasses all other sources)
 
         Returns:
             Current price or None
         """
         symbol = symbol.upper()
 
-        # Check cache
+        # 1. Price override takes precedence (for testing)
+        if price_override is not None:
+            logger.debug(f"Using price override for {symbol}: ${price_override:.4f}")
+            return price_override
+
+        # 2. Check cache (if within TTL)
         if symbol in self._price_cache:
             cached_price, cached_time = self._price_cache[symbol]
-            if time.time() - cached_time < self._price_cache_ttl:
+            cache_age = time.time() - cached_time
+            if cache_age < self._price_cache_ttl:
+                logger.debug(
+                    f"Using cached price for {symbol}: ${cached_price:.4f} "
+                    f"(age: {cache_age:.1f}s, TTL: {self._price_cache_ttl:.1f}s)"
+                )
                 return cached_price
 
-        # Try price provider
-        if self.price_provider is not None:
+        # 3. Try price provider (YahooFinance) if enabled
+        if self.use_price_provider and self.price_provider is not None:
             try:
                 price = await self._fetch_price_from_provider(symbol)
                 if price is not None:
                     self._price_cache[symbol] = (price, time.time())
+                    logger.info(
+                        f"Fetched market price for {symbol}: ${price:.4f} "
+                        f"(cached for {self._price_cache_ttl:.0f}s)"
+                    )
                     return price
             except Exception as e:
-                logger.warning(f"Failed to fetch price for {symbol}: {e}")
+                logger.warning(f"Failed to fetch price for {symbol} from provider: {e}")
 
-        # Use fallback
+        # 4. Use fallback price from method parameter
         if fallback_price is not None:
+            logger.debug(f"Using fallback price for {symbol}: ${fallback_price:.4f}")
             return fallback_price
 
-        # Check if we have a position with a price
+        # 5. Use configured mock price
+        if self.mock_price > 0:
+            logger.debug(
+                f"Using mock price for {symbol}: ${self.mock_price:.4f} "
+                "(price fetch unavailable)"
+            )
+            return self.mock_price
+
+        # 6. Check if we have a position with a price
         if symbol in self._positions:
-            return self._positions[symbol].current_price
+            position_price = self._positions[symbol].current_price
+            if position_price > 0:
+                logger.debug(f"Using position price for {symbol}: ${position_price:.4f}")
+                return position_price
 
         return None
 
     async def _fetch_price_from_provider(self, symbol: str) -> float | None:
         """
-        Fetch price from the configured price provider.
+        Fetch last known price from the YahooFinance provider.
+
+        Fetches the last 5 days of historical data and returns the most recent
+        closing price. This provides realistic market prices for paper trading fills.
 
         Args:
-            symbol: Trading symbol
+            symbol: Trading symbol (e.g., "AAPL", "SPY")
 
         Returns:
-            Current price or None
+            Last known closing price or None if fetch fails
         """
         if self.price_provider is None:
             return None
 
         try:
-            # Try to use yahoo_provider's fetch_historical_data for last price
+            # Fetch last 5 days of data to ensure we get at least one trading day
             from datetime import datetime, timedelta
 
             end_date = datetime.now().strftime("%Y-%m-%d")
             start_date = (datetime.now() - timedelta(days=5)).strftime("%Y-%m-%d")
 
-            data = await self.price_provider.fetch_historical_data(symbol, start_date, end_date)
+            data = await self.price_provider.fetch_historical_data(
+                symbol, start_date, end_date
+            )
 
             if data and len(data.bars) > 0:
                 # Return the last close price (column index 3 is Close)
-                return float(data.bars[-1][3])
+                last_close = float(data.bars[-1][3])
+                logger.debug(
+                    f"YahooFinance price for {symbol}: ${last_close:.4f} "
+                    f"(from {len(data.bars)} bars, last date: {data.dates[-1]})"
+                )
+                return last_close
+
+            logger.warning(f"No price data returned from YahooFinance for {symbol}")
+            return None
 
         except Exception as e:
-            logger.debug(f"Price provider fetch failed for {symbol}: {e}")
-
-        return None
+            logger.debug(f"YahooFinance price fetch failed for {symbol}: {e}")
+            return None
