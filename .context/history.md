@@ -583,3 +583,58 @@
 
 **Result:** Phase 24 Task 3 complete. Signal validation suite verifies signal generation logic against hand-calculated expected values.
 
+---
+
+### 2026-01-23 - Add data validation on load (Phase 24.4)
+
+**Task:** Add data validation on load (backend/data/yahoo_provider.py)
+
+**Files Changed:**
+- backend/data/provider.py (added DataValidationError class)
+- backend/data/__init__.py (exported DataValidationError)
+- backend/data/yahoo_provider.py (added validate_ohlcv_data function, integrated validation in _fetch_data_sync)
+- tests/unit/test_data_validation.py (created - 25 tests)
+- enhancement_tasks.md (marked task complete)
+
+**What I Did:**
+1. Added `DataValidationError` exception class to `backend/data/provider.py`:
+   - Stores symbol and list of issues
+   - Inherits from DataProviderError
+   - Formatted error message with all issues
+
+2. Created `validate_ohlcv_data()` function in `backend/data/yahoo_provider.py`:
+   - Checks for NaN values in OHLCV columns (with count per column)
+   - Detects negative prices in Open/High/Low/Close
+   - Identifies zero volume bars (with percentage)
+   - Catches High < Low invalid OHLC relationships
+   - Detects data gaps > max_gap_days (configurable, default 5 days)
+   - Logs warnings for all issues found
+   - Returns list of issue strings
+
+3. Integrated validation into `_fetch_data_sync()`:
+   - Validates data before dropna() to catch NaN issues
+   - Raises DataValidationError for critical issues (NaN, negative prices, High < Low)
+   - Non-critical issues (zero volume, gaps) are logged as warnings but don't raise
+
+4. Created comprehensive test suite (25 tests) in `tests/unit/test_data_validation.py`:
+   - **TestValidateOhlcvDataCleanData** (2 tests): Valid data returns no issues
+   - **TestNaNValidation** (4 tests): NaN detection in single/multiple columns with counts
+   - **TestNegativePriceValidation** (4 tests): Negative price detection, zero not flagged
+   - **TestZeroVolumeValidation** (2 tests): Zero volume detection with percentage
+   - **TestHighLowValidation** (3 tests): High < Low detection, equal H/L (doji) allowed
+   - **TestDataGapValidation** (4 tests): Large gap detection, weekend gaps allowed, configurable threshold
+   - **TestMultipleIssuesCombined** (1 test): Multiple issue types all detected
+   - **TestEdgeCases** (3 tests): Empty DataFrame, single row, missing columns
+   - **TestDataValidationErrorIntegration** (2 tests): Error class creation and inheritance
+
+5. All 25 tests pass
+6. All linting checks pass (ruff)
+
+**Technical Details:**
+- Critical issues (NaN, negative prices, High < Low) raise DataValidationError
+- Non-critical issues (zero volume, gaps) only log warnings
+- Weekend gaps (3 days Fri-Mon) are considered normal and not flagged
+- Gap threshold is configurable via max_gap_days parameter
+
+**Result:** Phase 24 Task 4 complete. Data validation catches common data quality issues on load, preventing bad data from entering the backtesting pipeline.
+

@@ -98,7 +98,7 @@ Each task is on a single line for ralphy.sh compatibility.
 
 - [x] Create signal validation suite (tests/validation/test_signal_generation.py) - verify trend-following signals on known trending data, verify mean-reversion signals on ranging data, test regime detection on synthetic transitions.
 
-- [ ] Add data validation on load (backend/data/yahoo_provider.py) - check for NaN in OHLCV, negative prices, volume=0, high<low errors, gaps>5 days missing data.
+- [x] Add data validation on load (backend/data/yahoo_provider.py) - check for NaN in OHLCV, negative prices, volume=0, high<low errors, gaps>5 days missing data.
 
 - [ ] Add bar integrity checks (backend/backtesting/engine.py) - verify open/high/low/close relationships valid, verify timestamps monotonically increasing, log warnings for suspicious data.
 

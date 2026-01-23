@@ -196,9 +196,11 @@ next-env.d.ts
 # ============================================================================
 
 # Data files (historical market data, caches)
-data/
-cache/
-archive/
+/data/
+/cache/
+/archive/
+# But include the backend data module (source code)
+!backend/data/
 
 # Parquet files (market data caches)
 *.parquet
