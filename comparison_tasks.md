@@ -46,7 +46,7 @@ See `docs/COMPARISON_SENTINEL_TRADER.md` for full comparison analysis.
 
 - [x] Create backend Dockerfile (docker/Dockerfile.backend) - use python:3.11-slim base image, install uv package manager (curl -LsSf https://astral.sh/uv/install.sh), copy pyproject.toml and uv.lock, run uv sync, copy backend code, expose port 8000, CMD uvicorn backend.api.server:app, add HEALTHCHECK for /api/health endpoint.
 
-- [ ] Create frontend Dockerfile (docker/Dockerfile.frontend) - use node:20-alpine base image, copy package.json and package-lock.json, run npm ci, copy frontend code, run npm run build (next build), expose port 3000, CMD npm start (next start). Multi-stage build to reduce image size.
+- [x] Create frontend Dockerfile (docker/Dockerfile.frontend) - use node:20-alpine base image, copy package.json and package-lock.json, run npm ci, copy frontend code, run npm run build (next build), expose port 3000, CMD npm start (next start). Multi-stage build to reduce image size.
 
 - [ ] Create docker-compose.yml (docker-compose.yml) - define services: backend (port 8000), frontend (port 3000), volumes for data persistence (./data:/app/data for sqlite db and parquet cache, ./logs:/app/logs), env_file: .env, health checks using curl, depends_on with condition: service_healthy for startup order.
 

@@ -2138,3 +2138,32 @@ Implemented the PaperBroker class as the first task of Phase B (Paper Trading Sy
 3. All tests passed, linting passed
 
 **Result:** Backend Dockerfile ready for Docker deployment (Phase C, task 1 of 7).
+
+---
+
+## 2026-01-23: Frontend Dockerfile (Phase C)
+
+**Task:** Create frontend Dockerfile (docker/Dockerfile.frontend)
+
+**Files Changed:**
+- `docker/Dockerfile.frontend` (created)
+- `tests/integration/test_docker_config.py` (updated - added frontend tests)
+- `comparison_tasks.md` (updated - marked task complete)
+
+**What Was Done:**
+1. Created `docker/Dockerfile.frontend` with:
+   - Multi-stage build using node:20-alpine base image (deps, builder, runner stages)
+   - npm ci for clean dependency installation
+   - npm run build for Next.js production build
+   - Non-root user (nextjs) for security
+   - NODE_ENV=production and NEXT_TELEMETRY_DISABLED=1
+   - HEALTHCHECK using wget to verify port 3000
+   - CMD running npm start
+
+2. Extended test suite `tests/integration/test_docker_config.py` with 19 new tests:
+   - TestFrontendDockerfile (14 tests): Validates Dockerfile structure
+   - TestFrontendBuildPrerequisites (5 tests): Validates required frontend files
+
+3. All 45 tests passed, linting passed
+
+**Result:** Frontend Dockerfile ready for Docker deployment (Phase C, task 2 of 7).

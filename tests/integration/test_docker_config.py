@@ -62,18 +62,12 @@ class TestBackendDockerfile:
 
     def test_copies_dependency_files(self, dockerfile_content: str) -> None:
         """Should copy pyproject.toml and uv.lock for dependency installation."""
-        assert "COPY pyproject.toml" in dockerfile_content, (
-            "Dockerfile should copy pyproject.toml"
-        )
-        assert "uv.lock" in dockerfile_content, (
-            "Dockerfile should reference uv.lock"
-        )
+        assert "COPY pyproject.toml" in dockerfile_content, "Dockerfile should copy pyproject.toml"
+        assert "uv.lock" in dockerfile_content, "Dockerfile should reference uv.lock"
 
     def test_runs_uv_sync(self, dockerfile_content: str) -> None:
         """Should run uv sync for dependency installation."""
-        assert "uv sync" in dockerfile_content, (
-            "Dockerfile should run uv sync"
-        )
+        assert "uv sync" in dockerfile_content, "Dockerfile should run uv sync"
 
     def test_copies_backend_code(self, dockerfile_content: str) -> None:
         """Should copy the backend directory."""
@@ -83,51 +77,35 @@ class TestBackendDockerfile:
 
     def test_exposes_port_8000(self, dockerfile_content: str) -> None:
         """Should expose port 8000 for FastAPI."""
-        assert "EXPOSE 8000" in dockerfile_content, (
-            "Dockerfile should expose port 8000"
-        )
+        assert "EXPOSE 8000" in dockerfile_content, "Dockerfile should expose port 8000"
 
     def test_has_healthcheck(self, dockerfile_content: str) -> None:
         """Should have HEALTHCHECK instruction using /health endpoint."""
-        assert "HEALTHCHECK" in dockerfile_content, (
-            "Dockerfile should have HEALTHCHECK instruction"
-        )
-        assert "/health" in dockerfile_content, (
-            "HEALTHCHECK should use /health endpoint"
-        )
+        assert "HEALTHCHECK" in dockerfile_content, "Dockerfile should have HEALTHCHECK instruction"
+        assert "/health" in dockerfile_content, "HEALTHCHECK should use /health endpoint"
 
     def test_cmd_runs_uvicorn(self, dockerfile_content: str) -> None:
         """Should have CMD that runs uvicorn with correct app path."""
-        assert "uvicorn" in dockerfile_content, (
-            "Dockerfile should run uvicorn"
-        )
+        assert "uvicorn" in dockerfile_content, "Dockerfile should run uvicorn"
         assert "backend.api.server:app" in dockerfile_content, (
             "Dockerfile should reference backend.api.server:app"
         )
 
     def test_sets_pythonpath(self, dockerfile_content: str) -> None:
         """Should set PYTHONPATH environment variable."""
-        assert "PYTHONPATH" in dockerfile_content, (
-            "Dockerfile should set PYTHONPATH"
-        )
+        assert "PYTHONPATH" in dockerfile_content, "Dockerfile should set PYTHONPATH"
 
     def test_sets_pythonunbuffered(self, dockerfile_content: str) -> None:
         """Should set PYTHONUNBUFFERED for proper logging."""
-        assert "PYTHONUNBUFFERED" in dockerfile_content, (
-            "Dockerfile should set PYTHONUNBUFFERED=1"
-        )
+        assert "PYTHONUNBUFFERED" in dockerfile_content, "Dockerfile should set PYTHONUNBUFFERED=1"
 
     def test_creates_data_directory(self, dockerfile_content: str) -> None:
         """Should create /app/data directory for SQLite and cache."""
-        assert "/app/data" in dockerfile_content, (
-            "Dockerfile should create /app/data directory"
-        )
+        assert "/app/data" in dockerfile_content, "Dockerfile should create /app/data directory"
 
     def test_creates_logs_directory(self, dockerfile_content: str) -> None:
         """Should create /app/logs directory for log files."""
-        assert "/app/logs" in dockerfile_content, (
-            "Dockerfile should create /app/logs directory"
-        )
+        assert "/app/logs" in dockerfile_content, "Dockerfile should create /app/logs directory"
 
     def test_uses_multistage_build(self, dockerfile_content: str) -> None:
         """Should use multi-stage build for smaller image size."""
@@ -157,39 +135,27 @@ class TestDockerignore:
 
     def test_excludes_git_directory(self, dockerignore_content: str) -> None:
         """Should exclude .git directory."""
-        assert ".git" in dockerignore_content, (
-            ".dockerignore should exclude .git/"
-        )
+        assert ".git" in dockerignore_content, ".dockerignore should exclude .git/"
 
     def test_excludes_pycache(self, dockerignore_content: str) -> None:
         """Should exclude __pycache__ directories."""
-        assert "__pycache__" in dockerignore_content, (
-            ".dockerignore should exclude __pycache__"
-        )
+        assert "__pycache__" in dockerignore_content, ".dockerignore should exclude __pycache__"
 
     def test_excludes_node_modules(self, dockerignore_content: str) -> None:
         """Should exclude node_modules directory."""
-        assert "node_modules" in dockerignore_content, (
-            ".dockerignore should exclude node_modules/"
-        )
+        assert "node_modules" in dockerignore_content, ".dockerignore should exclude node_modules/"
 
     def test_excludes_tests(self, dockerignore_content: str) -> None:
         """Should exclude tests directory."""
-        assert "tests" in dockerignore_content, (
-            ".dockerignore should exclude tests/"
-        )
+        assert "tests" in dockerignore_content, ".dockerignore should exclude tests/"
 
     def test_excludes_ide_configs(self, dockerignore_content: str) -> None:
         """Should exclude IDE configuration directories."""
-        assert ".vscode" in dockerignore_content, (
-            ".dockerignore should exclude .vscode/"
-        )
+        assert ".vscode" in dockerignore_content, ".dockerignore should exclude .vscode/"
 
     def test_excludes_coverage_files(self, dockerignore_content: str) -> None:
         """Should exclude coverage files."""
-        assert ".coverage" in dockerignore_content, (
-            ".dockerignore should exclude .coverage"
-        )
+        assert ".coverage" in dockerignore_content, ".dockerignore should exclude .coverage"
 
 
 class TestDockerBuildPrerequisites:
@@ -225,3 +191,125 @@ class TestDockerBuildPrerequisites:
         """config/ directory should exist for configuration files."""
         config = project_root / "config"
         assert config.exists(), "config/ directory should exist"
+
+
+class TestFrontendDockerfile:
+    """Tests for frontend Dockerfile structure and content."""
+
+    @pytest.fixture
+    def dockerfile_path(self) -> Path:
+        """Get the path to the frontend Dockerfile."""
+        return Path(__file__).parent.parent.parent / "docker" / "Dockerfile.frontend"
+
+    @pytest.fixture
+    def dockerfile_content(self, dockerfile_path: Path) -> str:
+        """Read the Dockerfile content."""
+        assert dockerfile_path.exists(), f"Dockerfile not found at {dockerfile_path}"
+        return dockerfile_path.read_text()
+
+    def test_dockerfile_exists(self, dockerfile_path: Path) -> None:
+        """Dockerfile.frontend should exist in docker/ directory."""
+        assert dockerfile_path.exists(), "docker/Dockerfile.frontend does not exist"
+
+    def test_uses_node_20_alpine_base(self, dockerfile_content: str) -> None:
+        """Should use node:20-alpine as base image."""
+        assert "FROM node:20-alpine" in dockerfile_content, (
+            "Dockerfile should use node:20-alpine base image"
+        )
+
+    def test_uses_multistage_build(self, dockerfile_content: str) -> None:
+        """Should use multi-stage build for smaller image size."""
+        from_count = dockerfile_content.count("FROM node:20-alpine")
+        assert from_count >= 2, (
+            "Dockerfile should use multi-stage build (at least 2 FROM instructions)"
+        )
+
+    def test_copies_package_files(self, dockerfile_content: str) -> None:
+        """Should copy package.json and package-lock.json for dependency installation."""
+        assert "package.json" in dockerfile_content, "Dockerfile should copy package.json"
+        assert "package-lock.json" in dockerfile_content, "Dockerfile should copy package-lock.json"
+
+    def test_runs_npm_ci(self, dockerfile_content: str) -> None:
+        """Should run npm ci for clean dependency installation."""
+        assert "npm ci" in dockerfile_content, "Dockerfile should run npm ci"
+
+    def test_runs_npm_build(self, dockerfile_content: str) -> None:
+        """Should run npm run build for Next.js build."""
+        assert "npm run build" in dockerfile_content, "Dockerfile should run npm run build"
+
+    def test_exposes_port_3000(self, dockerfile_content: str) -> None:
+        """Should expose port 3000 for Next.js."""
+        assert "EXPOSE 3000" in dockerfile_content, "Dockerfile should expose port 3000"
+
+    def test_has_healthcheck(self, dockerfile_content: str) -> None:
+        """Should have HEALTHCHECK instruction."""
+        assert "HEALTHCHECK" in dockerfile_content, "Dockerfile should have HEALTHCHECK instruction"
+
+    def test_cmd_runs_npm_start(self, dockerfile_content: str) -> None:
+        """Should have CMD that runs npm start."""
+        assert re.search(r"CMD.*npm.*start", dockerfile_content), "Dockerfile should run npm start"
+
+    def test_sets_node_env_production(self, dockerfile_content: str) -> None:
+        """Should set NODE_ENV to production."""
+        assert "NODE_ENV=production" in dockerfile_content, (
+            "Dockerfile should set NODE_ENV=production"
+        )
+
+    def test_sets_next_telemetry_disabled(self, dockerfile_content: str) -> None:
+        """Should disable Next.js telemetry."""
+        assert "NEXT_TELEMETRY_DISABLED" in dockerfile_content, (
+            "Dockerfile should disable Next.js telemetry"
+        )
+
+    def test_creates_non_root_user(self, dockerfile_content: str) -> None:
+        """Should create a non-root user for security."""
+        assert "adduser" in dockerfile_content or "useradd" in dockerfile_content, (
+            "Dockerfile should create a non-root user"
+        )
+        assert "USER" in dockerfile_content, "Dockerfile should switch to non-root user"
+
+    def test_copies_next_build_output(self, dockerfile_content: str) -> None:
+        """Should copy .next build output from builder stage."""
+        assert ".next" in dockerfile_content, "Dockerfile should copy .next directory"
+
+    def test_copies_public_directory(self, dockerfile_content: str) -> None:
+        """Should copy public directory for static assets."""
+        assert "/public" in dockerfile_content or "public" in dockerfile_content, (
+            "Dockerfile should copy public directory"
+        )
+
+
+class TestFrontendBuildPrerequisites:
+    """Tests for files required for frontend Docker build."""
+
+    @pytest.fixture
+    def project_root(self) -> Path:
+        """Get the project root path."""
+        return Path(__file__).parent.parent.parent
+
+    def test_frontend_directory_exists(self, project_root: Path) -> None:
+        """frontend/ directory should exist."""
+        frontend = project_root / "frontend"
+        assert frontend.exists(), "frontend/ directory is required"
+        assert frontend.is_dir(), "frontend should be a directory"
+
+    def test_package_json_exists(self, project_root: Path) -> None:
+        """frontend/package.json should exist."""
+        package_json = project_root / "frontend" / "package.json"
+        assert package_json.exists(), "frontend/package.json is required for Docker build"
+
+    def test_package_lock_exists(self, project_root: Path) -> None:
+        """frontend/package-lock.json should exist for reproducible builds."""
+        package_lock = project_root / "frontend" / "package-lock.json"
+        assert package_lock.exists(), "frontend/package-lock.json is required for Docker build"
+
+    def test_next_config_exists(self, project_root: Path) -> None:
+        """frontend/next.config.ts should exist."""
+        next_config = project_root / "frontend" / "next.config.ts"
+        assert next_config.exists(), "frontend/next.config.ts is required"
+
+    def test_app_directory_exists(self, project_root: Path) -> None:
+        """frontend/app/ directory should exist (Next.js App Router)."""
+        app_dir = project_root / "frontend" / "app"
+        assert app_dir.exists(), "frontend/app/ directory is required for Next.js"
+        assert app_dir.is_dir(), "frontend/app should be a directory"
