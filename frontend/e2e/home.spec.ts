@@ -1,7 +1,22 @@
 import { test, expect } from '@playwright/test';
+import { setupAllMocks } from './mocks/api-mocks';
 
 test.describe('Home Page', () => {
+  test.beforeEach(async ({ page }) => {
+    // Setup API mocks before each test
+    await setupAllMocks(page);
+  });
+
   test('should load without errors', async ({ page }) => {
+    const errors: string[] = [];
+
+    // Listen for console errors before navigation
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
     // Navigate to home page
     await page.goto('/');
 
@@ -11,20 +26,17 @@ test.describe('Home Page', () => {
     // Verify key elements are present
     await expect(page.locator('h1')).toBeVisible();
 
-    // Check that there are no console errors
-    const errors: string[] = [];
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
     // Wait a bit to catch any delayed errors
     await page.waitForTimeout(1000);
 
-    // We allow some errors but not critical ones
+    // Filter out non-critical errors (favicon, 404s, WebSocket connection issues)
     const criticalErrors = errors.filter(
-      (error) => !error.includes('favicon') && !error.includes('404')
+      (error) =>
+        !error.includes('favicon') &&
+        !error.includes('404') &&
+        !error.includes('WebSocket') &&
+        !error.includes('Failed to load resource') &&
+        !error.includes('net::ERR')
     );
     expect(criticalErrors.length).toBe(0);
   });

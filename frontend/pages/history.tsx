@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { api, Trade } from '../utils/api';
+import { apiClient, Trade } from '../utils/api';
 import LoadingSpinner, { SkeletonTable } from '../components/LoadingSpinner';
 
 /**
@@ -179,7 +179,7 @@ const TradeHistoryPage: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await api.getTrades(currentPage, tradesPerPage);
+        const data = await apiClient.getTrades(currentPage, tradesPerPage);
         setTrades(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch trades');

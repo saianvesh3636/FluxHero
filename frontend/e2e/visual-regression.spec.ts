@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { setupAllMocks } from './mocks/api-mocks';
 
 /**
  * Visual Regression Tests
@@ -12,6 +13,9 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Visual Regression Tests', () => {
   test.beforeEach(async ({ page }) => {
+    // Setup API mocks before each test
+    await setupAllMocks(page);
+
     // Wait for fonts and styles to load
     await page.addStyleTag({
       content: `
@@ -225,7 +229,7 @@ test.describe('Visual Regression Tests', () => {
 
   test.describe('Error state visual tests', () => {
     test('error message display', async ({ page }) => {
-      // Test error state by navigating to a page and simulating offline backend
+      // Override mocks to simulate offline backend
       await page.route('**/api/**', route => route.abort());
 
       await page.goto('/live');

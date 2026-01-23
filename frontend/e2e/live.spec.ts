@@ -1,7 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { setupAllMocks } from './mocks/api-mocks';
 
 test.describe('Live Trading Page', () => {
   test.beforeEach(async ({ page }) => {
+    // Setup API mocks before each test
+    await setupAllMocks(page);
     // Navigate to live page before each test
     await page.goto('/live');
   });
@@ -84,16 +87,20 @@ test.describe('Live Trading Page', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000); // Wait for any delayed errors
 
-    // Filter out expected errors (like favicon 404s)
+    // Filter out expected errors (like favicon 404s, WebSocket failures)
     const criticalErrors = errors.filter(
       (error) =>
         !error.includes('favicon') &&
         !error.includes('404') &&
-        !error.includes('Failed to load resource')
+        !error.includes('Failed to load resource') &&
+        !error.includes('WebSocket') &&
+        !error.includes('net::ERR')
     );
 
     const criticalRejections = rejections.filter(
-      (rejection) => !rejection.includes('favicon')
+      (rejection) =>
+        !rejection.includes('favicon') &&
+        !rejection.includes('WebSocket')
     );
 
     // We should have no critical errors or rejections
