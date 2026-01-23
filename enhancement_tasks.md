@@ -16,7 +16,7 @@ Each task is on a single line for ralphy.sh compatibility.
 
 - [x] Create walk-forward API endpoint (backend/api/server.py) - add WalkForwardRequest/WalkForwardResponse Pydantic models, create POST /api/backtest/walk-forward endpoint with per-window metrics in response.
 
-- [ ] Add walk-forward frontend page (frontend/app/walk-forward/page.tsx) - create form for walk-forward config, display per-window results table, show pass/fail status, visualize equity curves per window.
+- [x] Add walk-forward frontend page (frontend/app/walk-forward/page.tsx) - create form for walk-forward config, display per-window results table, show pass/fail status, visualize equity curves per window.
 
 - [x] Create walk-forward unit tests (tests/unit/test_walk_forward.py) - test window generation with 12-month synthetic data, verify no data leakage between windows, test 4-month minimal case, test 1+ year multiple windows, test edge cases.
 

@@ -144,6 +144,75 @@ export interface BacktestResultResponse {
 }
 
 /**
+ * Walk-forward backtest request (WalkForwardRequest model)
+ */
+export interface WalkForwardRequest {
+  symbol: string;
+  start_date: string;      // YYYY-MM-DD
+  end_date: string;        // YYYY-MM-DD
+  initial_capital?: number;
+  commission_per_share?: number;
+  slippage_pct?: number;
+  train_bars?: number;     // Training period bars (~3 months = 63)
+  test_bars?: number;      // Test period bars (~1 month = 21)
+  strategy_mode?: 'TREND' | 'MEAN_REVERSION' | 'DUAL';
+  pass_threshold?: number; // Pass rate threshold (default 0.6)
+}
+
+/**
+ * Metrics for a single walk-forward test window
+ */
+export interface WalkForwardWindowMetrics {
+  window_id: number;
+  train_start_date: string | null;
+  train_end_date: string | null;
+  test_start_date: string | null;
+  test_end_date: string | null;
+  initial_equity: number;
+  final_equity: number;
+  return_pct: number;
+  sharpe_ratio: number;
+  max_drawdown_pct: number;
+  win_rate: number;
+  num_trades: number;
+  is_profitable: boolean;
+}
+
+/**
+ * Walk-forward backtest response (WalkForwardResponse model)
+ */
+export interface WalkForwardResponse {
+  symbol: string;
+  start_date: string;
+  end_date: string;
+  initial_capital: number;
+  final_capital: number;
+  total_return_pct: number;
+
+  // Walk-forward specific metrics
+  total_windows: number;
+  profitable_windows: number;
+  pass_rate: number;
+  passes_walk_forward_test: boolean;
+  pass_threshold: number;
+
+  // Aggregate metrics across all windows
+  aggregate_sharpe: number;
+  aggregate_max_drawdown_pct: number;
+  aggregate_win_rate: number;
+  total_trades: number;
+
+  // Per-window results
+  window_results: WalkForwardWindowMetrics[];
+
+  // Combined equity curve and timestamps
+  combined_equity_curve: number[];
+  timestamps: string[];
+  train_bars: number;
+  test_bars: number;
+}
+
+/**
  * Health check response
  */
 export interface HealthResponse {
@@ -470,6 +539,16 @@ class ApiClient {
    */
   async runBacktest(config: BacktestRequest): Promise<BacktestResultResponse> {
     return this.fetchJson<BacktestResultResponse>(`${API_BASE_URL}/backtest`, {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+  }
+
+  /**
+   * Run a walk-forward backtest with the given configuration
+   */
+  async runWalkForwardBacktest(config: WalkForwardRequest): Promise<WalkForwardResponse> {
+    return this.fetchJson<WalkForwardResponse>(`${API_BASE_URL}/backtest/walk-forward`, {
       method: 'POST',
       body: JSON.stringify(config),
     });

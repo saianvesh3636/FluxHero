@@ -22,6 +22,7 @@ const defaultNavItems: NavItem[] = [
   { label: 'Live', href: '/live' },
   { label: 'Analytics', href: '/analytics' },
   { label: 'Backtest', href: '/backtest' },
+  { label: 'Walk-Forward', href: '/walk-forward' },
   { label: 'History', href: '/history' },
   { label: 'Signals', href: '/signals' },
 ];

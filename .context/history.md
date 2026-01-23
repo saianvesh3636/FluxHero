@@ -1293,3 +1293,68 @@
 - Edge cases test minimum viable data and market condition extremes
 
 **Result:** Phase 18 Task 7 complete. Walk-forward integration tests validate the walk-forward module works correctly with real strategy and SPY data.
+
+---
+
+## 2026-01-23: Add walk-forward frontend page (Phase 18)
+
+**Task:** Add walk-forward frontend page (frontend/app/walk-forward/page.tsx)
+
+**Files Changed:**
+- `frontend/app/walk-forward/page.tsx` - Created walk-forward testing page
+- `frontend/app/walk-forward/__tests__/page.test.tsx` - Created test suite (12 tests)
+- `frontend/utils/api.ts` - Added WalkForwardRequest, WalkForwardWindowMetrics, WalkForwardResponse types and runWalkForwardBacktest() method
+- `frontend/components/layout/Navigation.tsx` - Added Walk-Forward nav link
+- `frontend/__mocks__/lightweight-charts.js` - Created mock for chart library
+- `frontend/jest.config.js` - Added lightweight-charts mock mapping
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Added TypeScript interfaces to `frontend/utils/api.ts`:
+   - **WalkForwardRequest:** symbol, dates, capital, commission, slippage, train_bars, test_bars, strategy_mode, pass_threshold
+   - **WalkForwardWindowMetrics:** window_id, dates, equity, return_pct, sharpe, drawdown, win_rate, trades, is_profitable
+   - **WalkForwardResponse:** Complete response with aggregate metrics, pass rate, window results, equity curve
+   - **runWalkForwardBacktest():** API client method for POST /api/backtest/walk-forward
+
+2. Created `frontend/app/walk-forward/page.tsx` with:
+   - Configuration form with symbol search, date pickers, capital inputs
+   - Walk-forward specific parameters: train_bars, test_bars, pass_threshold, strategy_mode
+   - Info box explaining walk-forward testing
+   - Results modal with:
+     - Pass/fail status banner (green/red with checkmark/X)
+     - Summary metrics cards (total return, Sharpe, drawdown, win rate, final capital)
+     - Combined equity curve chart (using lightweight-charts)
+     - Per-window results table with PASS/FAIL badges
+     - Export to CSV functionality
+     - Test configuration summary
+   - Error handling with retry functionality
+
+3. Added navigation link in `frontend/components/layout/Navigation.tsx`
+
+4. Created comprehensive test suite (12 tests) in `page.test.tsx`:
+   - Page title and form rendering
+   - Walk-forward specific configuration inputs
+   - Error message and retry button display
+   - Loading state handling
+   - Successful results with PASS status
+   - Failed results with FAIL status
+   - API error handling
+   - Error clearing on new run
+   - Retry button functionality
+   - Per-window results table
+   - Info box display
+
+5. Created `frontend/__mocks__/lightweight-charts.js` for Jest testing
+
+6. All 12 tests pass
+7. TypeScript compiles without errors
+
+**Technical Details:**
+- Follows existing backtest page patterns for consistency
+- Uses existing UI components (Card, Button, Badge, Table, etc.)
+- Badge variant uses 'error' (not 'danger') per Badge component interface
+- Chart uses lightweight-charts with same styling as backtest page
+- Pass/fail status prominently displayed with visual indicators
+
+**Result:** Phase 18 Task 6 complete. Walk-forward frontend page enables users to run walk-forward tests, view per-window results, and see pass/fail status with equity curve visualization.
