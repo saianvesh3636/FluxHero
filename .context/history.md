@@ -805,3 +805,52 @@
 - Can be run standalone with `python test_benchmark_comparison.py` for report
 
 **Result:** Phase 24 Task 7 complete. Benchmark comparison tests flag when strategy significantly underperforms buy-and-hold, providing visibility into relative performance.
+
+---
+
+## 2026-01-23: Create assumptions document (Phase 24)
+
+**Task:** Create assumptions document (docs/ASSUMPTIONS.md)
+
+**Files Changed:**
+- `docs/ASSUMPTIONS.md` - Comprehensive assumptions documentation
+- `tests/validation/test_assumptions_documented.py` - 19 validation tests
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Created `docs/ASSUMPTIONS.md` with comprehensive documentation of all system assumptions:
+   - **Return Calculations:** Simple returns (current) vs log returns (future), formulas, rationale
+   - **Commission Model:** $0.005/share, Alpaca-like structure, breakdown of real-world costs
+   - **Slippage Model:** 0.01% base slippage, 0.05% impact penalty for orders >10% avg volume
+   - **Order Fill Assumptions:** Next-bar open fill (signal bar N → fill bar N+1)
+   - **Position Sizing:** Risk-based formula, 1% trend/0.75% mean-reversion, 20% max position, 50% max deployment
+   - **Risk-Free Rate:** 4.0% annual for Sharpe ratio calculations
+   - **Data Quality:** Validation rules, survivorship bias notes, dividend handling
+   - **Market Assumptions:** Trading hours, liquidity, correlation handling
+
+2. Created validation test suite (19 tests) in `tests/validation/test_assumptions_documented.py`:
+   - **TestCommissionAssumptions** (2 tests): Default commission value, round-trip cost calculation
+   - **TestSlippageAssumptions** (4 tests): Base slippage, impact penalty, impact threshold, direction
+   - **TestFillAssumptions** (1 test): Fill delay is 1 bar
+   - **TestRiskFreeRateAssumptions** (1 test): Default risk-free rate
+   - **TestPositionSizingAssumptions** (7 tests): Risk percentages, position limits, stop losses
+   - **TestPositionSizingFormula** (1 test): Formula verification with example calculation
+   - **TestCorrelationAssumptions** (2 tests): Threshold and size reduction
+   - **TestReturnsTypeAssumption** (1 test): Simple vs log returns verification
+
+3. Tests ensure documentation stays in sync with implementation:
+   - Each test verifies a documented assumption matches actual code values
+   - Tests reference specific sections in ASSUMPTIONS.md
+   - Tests include requirement references (R9.x, R11.x)
+
+4. All 19 tests pass
+5. All linting checks pass (ruff)
+
+**Technical Details:**
+- Documentation includes rationale and alternatives considered for each assumption
+- Summary table at end for quick reference
+- Instructions for updating assumptions when code changes
+- Cross-references to requirement specifications
+
+**Result:** Phase 24 Task 8 complete. Assumptions document provides comprehensive documentation of system design decisions with validated tests ensuring accuracy.

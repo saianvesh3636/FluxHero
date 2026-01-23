@@ -106,7 +106,7 @@ Each task is on a single line for ralphy.sh compatibility.
 
 - [x] Add benchmark comparison (tests/regression/test_benchmark_comparison.py) - compare strategy returns vs buy-and-hold, compare vs SPY total return, flag if significantly underperforming.
 
-- [ ] Create assumptions document (docs/ASSUMPTIONS.md) - document simple vs log returns choice, commission model ($0.005/share), slippage model (0.01%), fill assumptions (next-bar open), position sizing risk model.
+- [x] Create assumptions document (docs/ASSUMPTIONS.md) - document simple vs log returns choice, commission model ($0.005/share), slippage model (0.01%), fill assumptions (next-bar open), position sizing risk model.
 
 - [ ] Add inline assumption comments (various files) - mark every assumption with # ASSUMPTION: comment, include rationale and alternatives considered, make assumptions searchable via grep.
 
