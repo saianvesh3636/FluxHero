@@ -202,6 +202,23 @@ class Settings(BaseSettings):
     )
 
     # ========================================================================
+    # Paper Trading Settings
+    # ========================================================================
+
+    paper_slippage_bps: float = Field(
+        default=5.0,
+        ge=0.0,
+        description="Slippage in basis points for paper trading (5 bps = 0.05%). "
+        "Applied to buy orders as price increase and sell orders as price decrease.",
+    )
+
+    paper_initial_balance: float = Field(
+        default=100_000.0,
+        gt=0.0,
+        description="Initial balance for paper trading account in USD.",
+    )
+
+    # ========================================================================
     # Data Storage Settings
     # ========================================================================
 

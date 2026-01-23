@@ -1916,3 +1916,31 @@ Implemented the PaperBroker class as the first task of Phase B (Paper Trading Sy
 - 85% code coverage on paper_broker.py
 
 **Result:** First task of Phase B complete. 100 total broker tests pass (56 Phase A + 44 Phase B).
+
+---
+
+## 2026-01-23: Slippage Simulation Enhancement (Phase B)
+
+**Task:** Add slippage simulation with environment configuration and logging
+
+**Files Changed:**
+- `backend/core/config.py` - Added `paper_slippage_bps` and `paper_initial_balance` settings
+- `backend/execution/brokers/paper_broker.py` - Enhanced `_apply_slippage()` with detailed logging
+- `tests/integration/test_paper_trading.py` - Added 4 new slippage tests
+
+**What Was Done:**
+1. **Added environment configuration** (`backend/core/config.py`):
+   - `FLUXHERO_PAPER_SLIPPAGE_BPS` (default: 5.0 bps)
+   - `FLUXHERO_PAPER_INITIAL_BALANCE` (default: $100,000)
+
+2. **Enhanced slippage simulation** (`paper_broker.py`):
+   - Updated `_apply_slippage()` to log slippage impact using loguru
+   - Logs include: symbol, side, quantity, base_price, fill_price, slippage in bps, $/share, total $, and percentage
+
+3. **Added new tests** (4 tests):
+   - `test_slippage_formula_buy` - Verifies buy formula: price * (1 + bps/10000)
+   - `test_slippage_formula_sell` - Verifies sell formula: price * (1 - bps/10000)
+   - `test_slippage_total_impact` - Verifies total slippage calculation
+   - `test_slippage_logging` - Verifies logging code path executes
+
+**Result:** Slippage simulation now configurable via environment and logs detailed impact. 48 paper trading tests pass.

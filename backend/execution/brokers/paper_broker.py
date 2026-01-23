@@ -160,9 +160,7 @@ class PaperBroker(BrokerInterface):
             if initialized is None:
                 # First time setup - initialize account
                 await self._initialize_account()
-                logger.info(
-                    f"Paper broker initialized with ${self.initial_balance:,.2f}"
-                )
+                logger.info(f"Paper broker initialized with ${self.initial_balance:,.2f}")
             else:
                 # Load existing state
                 await self._load_state()
@@ -393,9 +391,7 @@ class PaperBroker(BrokerInterface):
 
         # Can only cancel pending orders
         if order.status != OrderStatus.PENDING:
-            logger.warning(
-                f"Cannot cancel paper order {order_id}: status is {order.status.name}"
-            )
+            logger.warning(f"Cannot cancel paper order {order_id}: status is {order.status.name}")
             return False
 
         order.status = OrderStatus.CANCELLED
@@ -446,9 +442,7 @@ class PaperBroker(BrokerInterface):
         # Save cleared state
         await self._save_state()
 
-        logger.info(
-            f"Paper account reset complete - balance: ${self.initial_balance:,.2f}"
-        )
+        logger.info(f"Paper account reset complete - balance: ${self.initial_balance:,.2f}")
 
     async def get_trades(self) -> list[PaperTrade]:
         """
@@ -535,9 +529,7 @@ class PaperBroker(BrokerInterface):
         assert self._store is not None  # Caller ensures this
 
         # Load balance
-        balance_str = await self._store.get_setting(
-            self.SETTING_BALANCE, str(self.initial_balance)
-        )
+        balance_str = await self._store.get_setting(self.SETTING_BALANCE, str(self.initial_balance))
         self._balance = float(balance_str) if balance_str else self.initial_balance
 
         # Load realized P&L
@@ -609,7 +601,7 @@ class PaperBroker(BrokerInterface):
             raise ValueError(f"Cannot determine price for {order.symbol}")
 
         # Apply slippage
-        fill_price = self._apply_slippage(base_price, order.side)
+        fill_price = self._apply_slippage(base_price, order.side, order.symbol, order.qty)
 
         # Calculate order value
         order_value = fill_price * order.qty
@@ -618,8 +610,7 @@ class PaperBroker(BrokerInterface):
             # Check if we have enough cash
             if order_value > self._balance:
                 raise ValueError(
-                    f"Insufficient funds: need ${order_value:,.2f}, "
-                    f"have ${self._balance:,.2f}"
+                    f"Insufficient funds: need ${order_value:,.2f}, have ${self._balance:,.2f}"
                 )
 
             # Deduct cash
@@ -654,8 +645,7 @@ class PaperBroker(BrokerInterface):
 
             if order.qty > position.qty:
                 raise ValueError(
-                    f"Insufficient shares: have {position.qty}, "
-                    f"trying to sell {order.qty}"
+                    f"Insufficient shares: have {position.qty}, trying to sell {order.qty}"
                 )
 
             # Calculate realized P&L
@@ -677,9 +667,7 @@ class PaperBroker(BrokerInterface):
 
             # Record the realized P&L
             order.filled_price = fill_price
-            logger.info(
-                f"Paper sell realized P&L: ${realized_pnl:,.2f} on {order.symbol}"
-            )
+            logger.info(f"Paper sell realized P&L: ${realized_pnl:,.2f} on {order.symbol}")
 
         # Update order status
         order.status = OrderStatus.FILLED
@@ -701,16 +689,22 @@ class PaperBroker(BrokerInterface):
         )
         self._trades.append(trade)
 
-    def _apply_slippage(self, price: float, side: OrderSide) -> float:
+    def _apply_slippage(self, price: float, side: OrderSide, symbol: str, qty: int) -> float:
         """
         Apply slippage to execution price.
 
         For buys, price increases (worse fill).
         For sells, price decreases (worse fill).
 
+        Slippage formula:
+        - Buy: fill_price = price * (1 + slippage_bps / 10000)
+        - Sell: fill_price = price * (1 - slippage_bps / 10000)
+
         Args:
             price: Base price
             side: Order side
+            symbol: Trading symbol (for logging)
+            qty: Order quantity (for logging)
 
         Returns:
             Price with slippage applied
@@ -718,13 +712,26 @@ class PaperBroker(BrokerInterface):
         slippage_factor = self.slippage_bps / 10000.0
 
         if side == OrderSide.BUY:
-            return price * (1 + slippage_factor)
+            fill_price = price * (1 + slippage_factor)
         else:
-            return price * (1 - slippage_factor)
+            fill_price = price * (1 - slippage_factor)
 
-    async def _get_price(
-        self, symbol: str, fallback_price: float | None = None
-    ) -> float | None:
+        # Calculate slippage impact
+        slippage_per_share = abs(fill_price - price)
+        slippage_total = slippage_per_share * qty
+        slippage_pct = (slippage_per_share / price) * 100
+
+        # Log slippage impact
+        logger.debug(
+            f"Slippage applied to {symbol} {side.name} {qty} shares: "
+            f"base_price=${price:.4f}, fill_price=${fill_price:.4f}, "
+            f"slippage={self.slippage_bps:.1f}bps (${slippage_per_share:.4f}/share, "
+            f"${slippage_total:.2f} total, {slippage_pct:.3f}%)"
+        )
+
+        return fill_price
+
+    async def _get_price(self, symbol: str, fallback_price: float | None = None) -> float | None:
         """
         Get current price for a symbol.
 
@@ -788,9 +795,7 @@ class PaperBroker(BrokerInterface):
             end_date = datetime.now().strftime("%Y-%m-%d")
             start_date = (datetime.now() - timedelta(days=5)).strftime("%Y-%m-%d")
 
-            data = await self.price_provider.fetch_historical_data(
-                symbol, start_date, end_date
-            )
+            data = await self.price_provider.fetch_historical_data(symbol, start_date, end_date)
 
             if data and len(data.bars) > 0:
                 # Return the last close price (column index 3 is Close)
