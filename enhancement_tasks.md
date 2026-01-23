@@ -30,7 +30,7 @@ Each task is on a single line for ralphy.sh compatibility.
 
 - [x] Add backtest operation logging (backend/backtesting/engine.py) - log backtest start with config summary, log progress every 10% of bars, log final metrics summary, include duration in milliseconds.
 
-- [ ] Add strategy decision logging (backend/strategy/backtest_strategy.py) - add DEBUG level logging for signal generation, log regime changes, log entry/exit decisions with reasoning, configurable via log level.
+- [x] Add strategy decision logging (backend/strategy/backtest_strategy.py) - add DEBUG level logging for signal generation, log regime changes, log entry/exit decisions with reasoning, configurable via log level.
 
 - [ ] Evaluate structlog migration (backend/core/logging_config.py) - research structlog for better context propagation, compare with current setup, create decision document, pros: automatic context binding, better async support.
 

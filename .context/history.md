@@ -1441,3 +1441,60 @@ Added comprehensive logging to the BacktestEngine.run() method:
 - Request body stream is reconstructed after reading for downstream processing
 
 **Result:** Phase 19 Task 1 complete. Optional request body logging enables debugging during development while ensuring security (masking sensitive fields) and performance (truncation) without ever logging in production.
+
+---
+
+## 2026-01-23: Add strategy decision logging (Phase 19)
+
+**Task:** Add strategy decision logging (backend/strategy/backtest_strategy.py)
+
+**Files Changed:**
+- `backend/strategy/backtest_strategy.py` - Added DEBUG level logging for signals, regime changes, and entry/exit decisions
+- `tests/unit/test_strategy_decision_logging.py` - Created comprehensive test suite (15 tests)
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Added name mapping dictionaries for readable log output:
+   - `_SIGNAL_NAMES`: Maps signal constants to readable names (NONE, LONG, SHORT, EXIT_LONG, EXIT_SHORT)
+   - `_REGIME_NAMES`: Maps regime constants to names (MEAN_REVERSION, NEUTRAL, STRONG_TREND)
+   - `_MODE_NAMES`: Maps mode constants to names (TREND_FOLLOWING, MEAN_REVERSION, NEUTRAL)
+
+2. Added `_prev_regime` tracking for regime change detection
+
+3. Added DEBUG logging in `get_orders()` method:
+   - **Regime changes:** Logs when regime transitions with ADX and R² values
+   - **Signal decisions:** Logs when signal != SIGNAL_NONE with mode, regime, and risk percentage
+   - **LONG entry:** Logs price, shares, mode, regime, ATR, RSI
+   - **EXIT LONG:** Logs exit price, entry price, shares, regime, RSI
+   - **EXIT SHORT:** Logs exit price, entry price, shares, regime, RSI
+
+4. Added DEBUG logging in `_get_active_signal()` method for DUAL mode:
+   - **STRONG_TREND:** Logs when selecting trend-following with both signal values
+   - **MEAN_REVERSION:** Logs when selecting mean-reversion with both signal values
+   - **NEUTRAL signals agree:** Logs when both strategies agree
+   - **NEUTRAL trend exit:** Logs when using trend exit signal
+   - **NEUTRAL mr exit:** Logs when using mean-reversion exit signal
+
+5. Created comprehensive test suite (15 tests):
+   - **TestSignalNameMappings** (3 tests): Verify mapping dictionaries complete
+   - **TestStrategyInitialization** (1 test): Verify _prev_regime initialized
+   - **TestRegimeChangeLogging** (2 tests): Regime change logging with ADX/R²
+   - **TestSignalDecisionLogging** (1 test): Signal logged when not NONE
+   - **TestEntryDecisionLogging** (1 test): LONG entry logged with details
+   - **TestExitDecisionLogging** (1 test): EXIT LONG logged with details
+   - **TestDualModeSignalLogging** (3 tests): DUAL mode signal selection logging
+   - **TestLoggingConfigurability** (2 tests): DEBUG vs INFO level behavior
+   - **TestLoggingPerformance** (1 test): No errors on large datasets
+
+6. All 15 tests pass
+7. All linting checks pass (ruff)
+
+**Technical Details:**
+- All strategy decision logging is at DEBUG level (configurable via log level)
+- Logging uses %-style formatting for performance (lazy evaluation)
+- Regime changes include ADX and R² values for context
+- Entry/exit logs include all relevant indicator values for debugging
+- Tests verify logging is suppressed at INFO level
+
+**Result:** Phase 19 Task 3 complete. Strategy decision logging provides full visibility into signal generation, regime changes, and entry/exit decisions when DEBUG logging is enabled.

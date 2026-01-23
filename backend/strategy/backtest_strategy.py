@@ -12,7 +12,6 @@ dual-mode strategy implementation.
 """
 
 import logging
-from typing import Optional
 
 import numpy as np
 
@@ -42,6 +41,29 @@ from backend.strategy.regime_detector import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Signal name mappings for debug logging
+_SIGNAL_NAMES = {
+    SIGNAL_NONE: "NONE",
+    SIGNAL_LONG: "LONG",
+    SIGNAL_SHORT: "SHORT",
+    SIGNAL_EXIT_LONG: "EXIT_LONG",
+    SIGNAL_EXIT_SHORT: "EXIT_SHORT",
+}
+
+# Regime name mappings for debug logging
+_REGIME_NAMES = {
+    REGIME_MEAN_REVERSION: "MEAN_REVERSION",
+    REGIME_NEUTRAL: "NEUTRAL",
+    REGIME_STRONG_TREND: "STRONG_TREND",
+}
+
+# Mode name mappings for debug logging
+_MODE_NAMES = {
+    MODE_TREND_FOLLOWING: "TREND_FOLLOWING",
+    MODE_MEAN_REVERSION: "MEAN_REVERSION",
+    MODE_NEUTRAL: "NEUTRAL",
+}
 
 
 class DualModeBacktestStrategy:
@@ -96,6 +118,9 @@ class DualModeBacktestStrategy:
 
         # Pre-compute all indicators
         self._compute_indicators(bars)
+
+        # Track previous regime for change detection
+        self._prev_regime: int | None = None
 
         logger.info(
             f"Initialized DualModeBacktestStrategy: mode={self.strategy_mode}, "
@@ -180,7 +205,7 @@ class DualModeBacktestStrategy:
         self,
         bars: np.ndarray,
         bar_index: int,
-        position: Optional[Position],
+        position: Position | None,
     ) -> list[Order]:
         """
         Strategy callback for BacktestEngine.
@@ -211,10 +236,33 @@ class DualModeBacktestStrategy:
         if np.isnan(current_close) or np.isnan(current_atr):
             return orders
 
+        # Log regime changes
+        if self._prev_regime is not None and current_regime != self._prev_regime:
+            logger.debug(
+                "Regime change at bar %d: %s -> %s (ADX=%.2f, R²=%.3f)",
+                bar_index,
+                _REGIME_NAMES.get(self._prev_regime, "UNKNOWN"),
+                _REGIME_NAMES.get(current_regime, "UNKNOWN"),
+                self.adx[bar_index],
+                self.r_squared[bar_index],
+            )
+        self._prev_regime = current_regime
+
         # Determine which signal to use based on strategy mode and regime
         active_signal, risk_pct, active_mode = self._get_active_signal(
             bar_index, current_regime
         )
+
+        # Log signal decisions at DEBUG level (only when there's a signal)
+        if active_signal != SIGNAL_NONE:
+            logger.debug(
+                "Signal at bar %d: %s (mode=%s, regime=%s, risk=%.2f%%)",
+                bar_index,
+                _SIGNAL_NAMES.get(active_signal, "UNKNOWN"),
+                _MODE_NAMES.get(active_mode, "UNKNOWN"),
+                _REGIME_NAMES.get(current_regime, "UNKNOWN"),
+                risk_pct * 100,
+            )
 
         # ENTRY LOGIC
         if position is None:
@@ -229,6 +277,17 @@ class DualModeBacktestStrategy:
                 )
                 if order is not None:
                     orders.append(order)
+                    logger.debug(
+                        "LONG entry at bar %d: price=%.2f, shares=%d, "
+                        "mode=%s, regime=%s, ATR=%.4f, RSI=%.2f",
+                        bar_index,
+                        current_close,
+                        order.shares,
+                        _MODE_NAMES.get(active_mode, "UNKNOWN"),
+                        _REGIME_NAMES.get(current_regime, "UNKNOWN"),
+                        current_atr,
+                        self.rsi[bar_index],
+                    )
 
             elif active_signal == SIGNAL_SHORT:
                 # Short selling (if supported)
@@ -247,6 +306,16 @@ class DualModeBacktestStrategy:
                         order_type=OrderType.MARKET,
                     )
                 )
+                logger.debug(
+                    "EXIT LONG at bar %d: price=%.2f, entry_price=%.2f, "
+                    "shares=%d, regime=%s, RSI=%.2f",
+                    bar_index,
+                    current_close,
+                    position.entry_price,
+                    position.shares,
+                    _REGIME_NAMES.get(current_regime, "UNKNOWN"),
+                    self.rsi[bar_index],
+                )
 
         elif position is not None and position.side == PositionSide.SHORT:
             if active_signal == SIGNAL_EXIT_SHORT:
@@ -258,6 +327,16 @@ class DualModeBacktestStrategy:
                         shares=position.shares,
                         order_type=OrderType.MARKET,
                     )
+                )
+                logger.debug(
+                    "EXIT SHORT at bar %d: price=%.2f, entry_price=%.2f, "
+                    "shares=%d, regime=%s, RSI=%.2f",
+                    bar_index,
+                    current_close,
+                    position.entry_price,
+                    position.shares,
+                    _REGIME_NAMES.get(current_regime, "UNKNOWN"),
+                    self.rsi[bar_index],
                 )
 
         return orders
@@ -285,21 +364,52 @@ class DualModeBacktestStrategy:
         # Strategy mode: DUAL (automatic regime-based switching)
         if current_regime == REGIME_STRONG_TREND:
             # Strong trend detected - use trend-following
+            if trend_signal != SIGNAL_NONE:
+                logger.debug(
+                    "DUAL mode at bar %d: STRONG_TREND -> trend-following "
+                    "(trend=%s, mr=%s)",
+                    bar_index,
+                    _SIGNAL_NAMES.get(trend_signal, "UNKNOWN"),
+                    _SIGNAL_NAMES.get(mr_signal, "UNKNOWN"),
+                )
             return trend_signal, self.trend_risk_pct, MODE_TREND_FOLLOWING
 
         elif current_regime == REGIME_MEAN_REVERSION:
             # Range-bound market - use mean-reversion
+            if mr_signal != SIGNAL_NONE:
+                logger.debug(
+                    "DUAL mode at bar %d: MEAN_REVERSION -> mean-reversion "
+                    "(trend=%s, mr=%s)",
+                    bar_index,
+                    _SIGNAL_NAMES.get(trend_signal, "UNKNOWN"),
+                    _SIGNAL_NAMES.get(mr_signal, "UNKNOWN"),
+                )
             return mr_signal, self.mr_risk_pct, MODE_MEAN_REVERSION
 
         else:  # REGIME_NEUTRAL
             # Neutral regime - require both strategies to agree
             if trend_signal == mr_signal and trend_signal != SIGNAL_NONE:
                 # Both agree on a signal
+                logger.debug(
+                    "DUAL mode at bar %d: NEUTRAL -> signals agree (%s)",
+                    bar_index,
+                    _SIGNAL_NAMES.get(trend_signal, "UNKNOWN"),
+                )
                 return trend_signal, self.mr_risk_pct * 0.7, MODE_NEUTRAL
             # Check for exit signals (more lenient)
             if trend_signal in (SIGNAL_EXIT_LONG, SIGNAL_EXIT_SHORT):
+                logger.debug(
+                    "DUAL mode at bar %d: NEUTRAL -> trend exit signal (%s)",
+                    bar_index,
+                    _SIGNAL_NAMES.get(trend_signal, "UNKNOWN"),
+                )
                 return trend_signal, self.mr_risk_pct, MODE_NEUTRAL
             if mr_signal in (SIGNAL_EXIT_LONG, SIGNAL_EXIT_SHORT):
+                logger.debug(
+                    "DUAL mode at bar %d: NEUTRAL -> mr exit signal (%s)",
+                    bar_index,
+                    _SIGNAL_NAMES.get(mr_signal, "UNKNOWN"),
+                )
                 return mr_signal, self.mr_risk_pct, MODE_NEUTRAL
             # No clear signal
             return SIGNAL_NONE, 0.0, MODE_NEUTRAL
@@ -312,7 +422,7 @@ class DualModeBacktestStrategy:
         atr: float,
         risk_pct: float,
         active_mode: int,
-    ) -> Optional[Order]:
+    ) -> Order | None:
         """
         Create an entry order with proper position sizing.
 
