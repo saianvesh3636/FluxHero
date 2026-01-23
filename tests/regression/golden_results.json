@@ -1,0 +1,37 @@
+{
+    "description": "Golden test baseline results for regression testing",
+    "version": "1.0.0",
+    "generated_date": "2026-01-23",
+    "test_config": {
+        "random_seed": 42,
+        "num_days": 252,
+        "initial_capital": 100000.0,
+        "commission_per_share": 0.005,
+        "slippage_pct": 0.0001,
+        "impact_threshold": 0.1,
+        "impact_penalty_pct": 0.0005,
+        "risk_free_rate": 0.04,
+        "symbol": "SPY"
+    },
+    "deviation_threshold_pct": 1.0,
+    "expected_metrics": {
+        "total_return": 1443.9127443356265,
+        "total_return_pct": 1.4439127443356266,
+        "annualized_return_pct": 2.0981342013941973,
+        "final_equity": 101443.91274433563,
+        "initial_capital": 100000.0,
+        "sharpe_ratio": -1.5369278162150486,
+        "max_drawdown_pct": -0.557965351576669,
+        "max_drawdown_peak_idx": 222,
+        "max_drawdown_trough_idx": 228,
+        "total_trades": 1,
+        "winning_trades": 1,
+        "losing_trades": 0,
+        "win_rate": 1.0,
+        "avg_win": 78.8176608327849,
+        "avg_loss": 0.0,
+        "avg_win_loss_ratio": 0.0,
+        "avg_holding_period": 4.0,
+        "risk_free_rate": 0.04
+    }
+}

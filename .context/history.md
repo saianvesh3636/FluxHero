@@ -691,3 +691,62 @@
 - Both datetime64 and numeric timestamps are supported
 
 **Result:** Phase 24 Task 5 complete. Bar integrity checks catch suspicious OHLC data during backtest execution.
+
+---
+
+## 2026-01-23: Create golden test suite (Phase 24)
+
+**Task:** Create golden test suite (tests/regression/test_golden_results.py)
+
+**Files Changed:**
+- `tests/regression/__init__.py` - Created regression test package
+- `tests/regression/golden_results.json` - Golden baseline metrics for 252-day SPY backtest
+- `tests/regression/test_golden_results.py` - Golden test suite with 12 tests
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Created `tests/regression/test_golden_results.py` with comprehensive golden test suite:
+   - Runs deterministic backtest with fixed seed (42) on 252-day synthetic SPY data
+   - Compares current metrics against pre-computed golden baseline
+   - Alerts on >1% deviation for key metrics
+   - Exact match required for total_trades (no deviation allowed)
+
+2. Created `tests/regression/golden_results.json` with baseline metrics:
+   - Total Return: 1.4439%
+   - Sharpe Ratio: -1.5369
+   - Max Drawdown: -0.5580%
+   - Win Rate: 1.0000
+   - Total Trades: 1
+   - Final Equity: $101,443.91
+
+3. Test coverage (12 tests):
+   - **TestGoldenResults** (9 tests):
+     - test_golden_file_exists: Verifies baseline file exists
+     - test_golden_file_has_expected_metrics: Verifies required keys present
+     - test_total_return_within_threshold: 1% deviation check
+     - test_sharpe_ratio_within_threshold: 1% deviation check
+     - test_max_drawdown_within_threshold: 1% deviation check
+     - test_win_rate_within_threshold: 1% deviation check
+     - test_total_trades_exact_match: Exact match required
+     - test_final_equity_within_threshold: 1% deviation check
+     - test_annualized_return_within_threshold: 1% deviation check
+     - test_avg_win_loss_ratio_within_threshold: Skipped when no losses
+   - **TestGoldenResultsIntegrity** (2 tests):
+     - test_config_matches_test_parameters: Config consistency
+     - test_deviation_threshold_is_reasonable: 0.1-5% range
+
+4. Command-line utilities:
+   - `--generate-baseline`: Regenerate golden baseline (for intentional changes)
+   - `--compare`: Print comparison report without failing
+
+5. All 11 tests pass (1 skipped - avg_win_loss_ratio has no losses in baseline)
+6. All linting checks pass (ruff)
+
+**Technical Details:**
+- Uses DualModeStrategy from scripts/run_spy_backtest.py
+- Fixed random seed (42) ensures reproducible synthetic data
+- Deviation threshold of 1% catches unintended calculation changes
+- Total trades requires exact match (detects signal generation changes)
+
+**Result:** Phase 24 Task 6 complete. Golden test suite catches unintended changes in backtest behavior by comparing against pre-computed baseline metrics.
