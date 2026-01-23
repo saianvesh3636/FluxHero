@@ -969,3 +969,52 @@
 - Summary logged showing number of issues found
 
 **Result:** Phase 24 Task 10 complete. Metric sanity checks catch impossible or suspicious metric values with appropriate error/warning levels.
+
+---
+
+## 2026-01-23: Create walk-forward module (Phase 18)
+
+**Task:** Create walk-forward module (backend/backtesting/walk_forward.py)
+
+**Files Changed:**
+- `backend/backtesting/walk_forward.py` - Created walk-forward testing module
+- `tests/unit/test_walk_forward.py` - Created unit tests (28 tests)
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Created `backend/backtesting/walk_forward.py` with:
+   - **WalkForwardWindow dataclass:** Contains train/test indices and dates, with train_size and test_size properties
+   - **InsufficientDataError:** Custom exception for insufficient data cases
+   - **generate_walk_forward_windows():** Generates consecutive train/test windows with configurable periods
+     - Default: 63-bar train (3 months) / 21-bar test (1 month)
+     - Handles edge cases: insufficient data, uneven final window, min_test_bars threshold
+     - Optional timestamps parameter for date extraction
+   - **validate_no_data_leakage():** Validates no overlap between windows
+   - **check_date_gaps():** Identifies large gaps in timestamp data
+
+2. Created comprehensive test suite (28 tests) in `tests/unit/test_walk_forward.py`:
+   - **TestWalkForwardWindow** (6 tests): Dataclass creation, properties, repr formatting
+   - **TestGenerateWalkForwardWindows** (12 tests):
+     - 12-month synthetic data (252 bars → 3 windows)
+     - 4-month minimal case (84 bars → 1 window)
+     - 1+ year multiple windows (504 bars → 6 windows)
+     - Insufficient data error handling
+     - Uneven final window handling
+     - Partial final test window
+     - Custom min_test_bars threshold
+     - With timestamps for date extraction
+     - Invalid train_bars/test_bars validation
+   - **TestValidateNoDataLeakage** (6 tests): Valid windows, overlapping cases, invalid periods
+   - **TestCheckDateGaps** (4 tests): Gap detection with configurable threshold
+
+3. All 28 tests pass with 100% coverage on walk_forward.py
+4. All linting checks pass (ruff)
+
+**Technical Details:**
+- Window generation: Sequential non-overlapping windows where test period of window N is followed by train period of window N+1
+- Default config: 63 train bars + 21 test bars = 84-bar window size
+- min_test_bars default: test_bars // 2 (ensures final window has meaningful test period)
+- Timestamps supported: Converts Unix epoch to datetime for date extraction
+
+**Result:** Phase 18 Task 1 complete. Walk-forward module provides foundation for out-of-sample strategy validation with proper train/test window generation.

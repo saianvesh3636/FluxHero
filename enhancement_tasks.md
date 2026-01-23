@@ -6,7 +6,7 @@ Each task is on a single line for ralphy.sh compatibility.
 
 ## Phase 18: Walk-Forward Testing (R9.4) - NOT IMPLEMENTED
 
-- [ ] Create walk-forward module (backend/backtesting/walk_forward.py) - implement WalkForwardWindow dataclass with train/test indices and dates, generate_walk_forward_windows() function with 3-month train (63 days) / 1-month test (21 days) windows, handle edge cases (insufficient data, uneven final window, date gaps). Ref: FLUXHERO_REQUIREMENTS.md R9.4.1
+- [x] Create walk-forward module (backend/backtesting/walk_forward.py) - implement WalkForwardWindow dataclass with train/test indices and dates, generate_walk_forward_windows() function with 3-month train (63 days) / 1-month test (21 days) windows, handle edge cases (insufficient data, uneven final window, date gaps). Ref: FLUXHERO_REQUIREMENTS.md R9.4.1
 
 - [ ] Implement rolling window execution (backend/backtesting/walk_forward.py) - create run_walk_forward_backtest() orchestrator that executes backtest on each test window sequentially, optionally re-optimizes strategy params on train window, tracks results per window. Ref: R9.4.2
 
