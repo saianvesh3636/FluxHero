@@ -1532,3 +1532,66 @@ Added comprehensive logging to the BacktestEngine.run() method:
 - Tests verify logging is suppressed at INFO level
 
 **Result:** Phase 19 Task 3 complete. Strategy decision logging provides full visibility into signal generation, regime changes, and entry/exit decisions when DEBUG logging is enabled.
+
+---
+
+## 2026-01-23: Implement Alpaca broker adapter (Phase A - Multi-Broker Architecture)
+
+**Task:** Implement Alpaca broker adapter (backend/execution/brokers/alpaca_broker.py)
+
+**Files Changed:**
+- `backend/execution/brokers/__init__.py` - Created brokers package with AlpacaBroker export
+- `backend/execution/brokers/alpaca_broker.py` - Created Alpaca broker adapter implementing BrokerInterface
+- `tests/unit/test_alpaca_broker.py` - Created comprehensive test suite (37 tests)
+- `comparison_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Created `backend/execution/brokers/` package:
+   - Package `__init__.py` exports AlpacaBroker
+
+2. Created `AlpacaBroker` class implementing `BrokerInterface`:
+   - **Connection lifecycle:** `connect()`, `disconnect()`, `health_check()`
+   - **Account/positions:** `get_account()`, `get_positions()`
+   - **Order operations:** `place_order()`, `cancel_order()`, `get_order_status()`
+   - Uses httpx.AsyncClient with connection pooling
+   - Retry logic with exponential backoff (1s, 2s, 4s delays)
+   - Alpaca-specific authentication headers (APCA-API-KEY-ID, APCA-API-SECRET-KEY)
+
+3. Response mapping from Alpaca format to unified models:
+   - `_map_alpaca_status()`: Maps Alpaca status strings to OrderStatus enum
+   - `_map_order_side()`: Maps OrderSide to Alpaca "buy"/"sell" strings
+   - `_map_order_type()`: Maps OrderType to Alpaca type strings
+   - `_parse_alpaca_order()`: Parses Alpaca order response to Order dataclass
+   - `_parse_order_type()`: Parses Alpaca type string to OrderType enum
+
+4. Configuration from backend/core/config.py:
+   - Uses FLUXHERO_ALPACA_API_KEY, FLUXHERO_ALPACA_API_SECRET, FLUXHERO_ALPACA_API_URL
+   - Supports constructor overrides for testing
+
+5. Created comprehensive test suite (37 tests):
+   - **TestAlpacaBrokerInit** (3 tests): Credentials, timeout, default state
+   - **TestAlpacaBrokerConnect** (3 tests): Success, no credentials, auth failure
+   - **TestAlpacaBrokerDisconnect** (2 tests): State clearing, safe when not connected
+   - **TestAlpacaBrokerHealthCheck** (3 tests): Not connected, success, account not active
+   - **TestAlpacaBrokerGetAccount** (2 tests): Success, not connected
+   - **TestAlpacaBrokerGetPositions** (3 tests): Success, empty, short positions
+   - **TestAlpacaBrokerPlaceOrder** (4 tests): Market, limit, missing limit price, missing stop price
+   - **TestAlpacaBrokerCancelOrder** (3 tests): Success, not found, already filled
+   - **TestAlpacaBrokerGetOrderStatus** (2 tests): Success, not found
+   - **TestAlpacaBrokerStatusMapping** (6 tests): All status mappings
+   - **TestAlpacaBrokerOrderTypeMapping** (3 tests): Side, type, parse
+   - **TestAlpacaBrokerHeaders** (1 test): Authentication headers
+   - **TestAlpacaBrokerImports** (2 tests): Package import, interface implementation
+
+6. All 37 tests pass
+7. All linting checks pass (ruff)
+
+**Technical Details:**
+- Uses httpx.MockTransport for HTTP mocking in tests
+- Handles Alpaca-specific response fields (account_number, long_market_value, etc.)
+- Short positions return negative qty values
+- Order validation for limit_price/stop_price requirements
+- Logs all order placements and connection events
+
+**Result:** Phase A Task 2 complete. Alpaca broker adapter enables trading via Alpaca API through the unified BrokerInterface abstraction.

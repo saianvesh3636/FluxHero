@@ -12,7 +12,7 @@ See `docs/COMPARISON_SENTINEL_TRADER.md` for full comparison analysis.
 
 - [x] Create broker abstraction base class (backend/execution/broker_base.py) - define abstract BrokerInterface with methods: connect(), disconnect(), get_account(), get_positions(), place_order(), cancel_order(), get_order_status(), health_check(), use Python ABC for interface definition. Use async methods compatible with FastAPI. Concept ref: SentinelTrader broker_factory.py (Flask/SQLAlchemy - adapt to our FastAPI/Pydantic patterns).
 
-- [ ] Implement Alpaca broker adapter (backend/execution/brokers/alpaca_broker.py) - refactor existing broker_interface.py into adapter pattern implementing BrokerInterface, handle Alpaca-specific auth (API key + secret), map Alpaca responses to unified Pydantic models, add connection pooling and retry logic using httpx. Ref: existing backend/execution/broker_interface.py
+- [x] Implement Alpaca broker adapter (backend/execution/brokers/alpaca_broker.py) - refactor existing broker_interface.py into adapter pattern implementing BrokerInterface, handle Alpaca-specific auth (API key + secret), map Alpaca responses to unified Pydantic models, add connection pooling and retry logic using httpx. Ref: existing backend/execution/broker_interface.py
 
 - [ ] Create broker factory (backend/execution/broker_factory.py) - implement factory pattern with create_broker(broker_type: str, config: dict) -> BrokerInterface, support types: "alpaca", validate config per broker type using Pydantic, singleton pattern for connection reuse. Don't create Paper and mock yet. Concept ref: SentinelTrader broker_factory.py (Flask - adapt to FastAPI async patterns).
 
