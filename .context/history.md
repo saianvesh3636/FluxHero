@@ -2272,3 +2272,38 @@ Added Docker commands to the Makefile as part of Phase C (Docker Deployment):
 4. All 11 tests passed, linting passed
 
 **Result:** Docker workflow accessible via Makefile (Phase C, task 5 of 7).
+
+
+---
+
+## 2026-01-23: Create Docker Environment Template (Phase C)
+
+**Task:** Create docker environment template (docker/.env.docker.example)
+
+**Files Changed:**
+- `docker/.env.docker.example` (created)
+- `tests/integration/test_docker_config.py` (added TestDockerEnvTemplate class)
+- `comparison_tasks.md` (marked task complete)
+
+**What was done:**
+
+1. **Created docker/.env.docker.example** with comprehensive documentation:
+   - All FLUXHERO_* environment variables from backend/core/config.py
+   - Docker-specific container paths (/app/data/cache, /app/logs/fluxhero.log)
+   - Security settings with generation instructions for AUTH_SECRET and ENCRYPTION_KEY
+   - Alpaca API configuration (defaults to paper trading)
+   - Risk management settings
+   - Paper trading configuration (slippage, balance, mock price, cache TTL)
+   - CORS configuration including frontend Docker service
+   - Documented frontend environment variables (NEXT_PUBLIC_API_URL, NEXT_PUBLIC_WS_URL)
+
+2. **Added 26 tests** in TestDockerEnvTemplate class validating:
+   - Template file existence
+   - All required environment variables present
+   - Docker container paths configured correctly
+   - Security warnings and generation instructions included
+   - Frontend environment documented
+
+3. All 26 tests passed, linting passed
+
+**Result:** Docker environment template complete (Phase C, task 6 of 7).

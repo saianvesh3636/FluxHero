@@ -544,3 +544,237 @@ class TestDockerCompose:
         assert "FLUXHERO_LOG_FILE" in compose_content, (
             "Backend should set FLUXHERO_LOG_FILE"
         )
+
+
+class TestDockerEnvTemplate:
+    """Tests for docker/.env.docker.example environment template.
+
+    This test suite validates that the Docker environment template:
+    1. Exists in the correct location
+    2. Contains all required FLUXHERO_* environment variables
+    3. Has correct Docker container paths configured
+    4. Documents critical security settings
+    5. Includes paper trading configuration
+    """
+
+    @pytest.fixture
+    def env_template_path(self) -> Path:
+        """Get the path to .env.docker.example."""
+        return Path(__file__).parent.parent.parent / "docker" / ".env.docker.example"
+
+    @pytest.fixture
+    def env_template_content(self, env_template_path: Path) -> str:
+        """Read the .env.docker.example content."""
+        assert env_template_path.exists(), f".env.docker.example not found at {env_template_path}"
+        return env_template_path.read_text()
+
+    def test_env_template_exists(self, env_template_path: Path) -> None:
+        """docker/.env.docker.example should exist."""
+        assert env_template_path.exists(), "docker/.env.docker.example does not exist"
+
+    # =========================================================================
+    # Authentication Settings
+    # =========================================================================
+
+    def test_contains_auth_secret(self, env_template_content: str) -> None:
+        """Should contain FLUXHERO_AUTH_SECRET setting."""
+        assert "FLUXHERO_AUTH_SECRET" in env_template_content, (
+            "Template should contain FLUXHERO_AUTH_SECRET"
+        )
+
+    def test_auth_secret_generation_instructions(self, env_template_content: str) -> None:
+        """Should include instructions for generating secure auth secret."""
+        assert "secrets.token" in env_template_content, (
+            "Template should include secret generation instructions"
+        )
+
+    # =========================================================================
+    # Security Settings (Encryption)
+    # =========================================================================
+
+    def test_contains_encryption_key(self, env_template_content: str) -> None:
+        """Should contain FLUXHERO_ENCRYPTION_KEY setting."""
+        assert "FLUXHERO_ENCRYPTION_KEY" in env_template_content, (
+            "Template should contain FLUXHERO_ENCRYPTION_KEY for broker credentials"
+        )
+
+    def test_encryption_key_generation_instructions(self, env_template_content: str) -> None:
+        """Should include instructions for generating encryption key."""
+        assert "token_hex(32)" in env_template_content, (
+            "Template should include encryption key generation instructions"
+        )
+
+    # =========================================================================
+    # Alpaca API Settings
+    # =========================================================================
+
+    def test_contains_alpaca_api_url(self, env_template_content: str) -> None:
+        """Should contain FLUXHERO_ALPACA_API_URL setting."""
+        assert "FLUXHERO_ALPACA_API_URL" in env_template_content, (
+            "Template should contain FLUXHERO_ALPACA_API_URL"
+        )
+
+    def test_contains_alpaca_ws_url(self, env_template_content: str) -> None:
+        """Should contain FLUXHERO_ALPACA_WS_URL setting."""
+        assert "FLUXHERO_ALPACA_WS_URL" in env_template_content, (
+            "Template should contain FLUXHERO_ALPACA_WS_URL"
+        )
+
+    def test_contains_alpaca_api_key(self, env_template_content: str) -> None:
+        """Should contain FLUXHERO_ALPACA_API_KEY setting."""
+        assert "FLUXHERO_ALPACA_API_KEY" in env_template_content, (
+            "Template should contain FLUXHERO_ALPACA_API_KEY"
+        )
+
+    def test_contains_alpaca_api_secret(self, env_template_content: str) -> None:
+        """Should contain FLUXHERO_ALPACA_API_SECRET setting."""
+        assert "FLUXHERO_ALPACA_API_SECRET" in env_template_content, (
+            "Template should contain FLUXHERO_ALPACA_API_SECRET"
+        )
+
+    def test_alpaca_defaults_to_paper(self, env_template_content: str) -> None:
+        """Default Alpaca URL should be paper trading endpoint."""
+        assert "paper-api.alpaca.markets" in env_template_content, (
+            "Default Alpaca API URL should be paper trading"
+        )
+
+    # =========================================================================
+    # Docker Container Paths
+    # =========================================================================
+
+    def test_contains_cache_dir_docker_path(self, env_template_content: str) -> None:
+        """Should set FLUXHERO_CACHE_DIR to Docker container path."""
+        assert "FLUXHERO_CACHE_DIR=/app/data/cache" in env_template_content, (
+            "Template should set FLUXHERO_CACHE_DIR to /app/data/cache"
+        )
+
+    def test_contains_log_file_docker_path(self, env_template_content: str) -> None:
+        """Should set FLUXHERO_LOG_FILE to Docker container path."""
+        assert "FLUXHERO_LOG_FILE=/app/logs/fluxhero.log" in env_template_content, (
+            "Template should set FLUXHERO_LOG_FILE to /app/logs/fluxhero.log"
+        )
+
+    # =========================================================================
+    # API Configuration
+    # =========================================================================
+
+    def test_contains_api_title(self, env_template_content: str) -> None:
+        """Should contain FLUXHERO_API_TITLE setting."""
+        assert "FLUXHERO_API_TITLE" in env_template_content, (
+            "Template should contain FLUXHERO_API_TITLE"
+        )
+
+    def test_contains_api_version(self, env_template_content: str) -> None:
+        """Should contain FLUXHERO_API_VERSION setting."""
+        assert "FLUXHERO_API_VERSION" in env_template_content, (
+            "Template should contain FLUXHERO_API_VERSION"
+        )
+
+    # =========================================================================
+    # CORS Configuration
+    # =========================================================================
+
+    def test_contains_cors_origins(self, env_template_content: str) -> None:
+        """Should contain FLUXHERO_CORS_ORIGINS setting."""
+        assert "FLUXHERO_CORS_ORIGINS" in env_template_content, (
+            "Template should contain FLUXHERO_CORS_ORIGINS"
+        )
+
+    def test_cors_includes_frontend_service(self, env_template_content: str) -> None:
+        """CORS origins should include frontend Docker service name."""
+        assert "frontend:3000" in env_template_content, (
+            "CORS origins should include frontend Docker service"
+        )
+
+    # =========================================================================
+    # Risk Management Settings
+    # =========================================================================
+
+    def test_contains_risk_management_settings(self, env_template_content: str) -> None:
+        """Should contain risk management configuration."""
+        risk_settings = [
+            "FLUXHERO_MAX_RISK_PCT_TREND",
+            "FLUXHERO_MAX_RISK_PCT_MEAN_REV",
+            "FLUXHERO_MAX_POSITION_SIZE_PCT",
+            "FLUXHERO_MAX_TOTAL_EXPOSURE_PCT",
+            "FLUXHERO_MAX_OPEN_POSITIONS",
+        ]
+        for setting in risk_settings:
+            assert setting in env_template_content, (
+                f"Template should contain {setting}"
+            )
+
+    def test_contains_stop_loss_settings(self, env_template_content: str) -> None:
+        """Should contain stop loss configuration."""
+        assert "FLUXHERO_TREND_STOP_ATR_MULTIPLIER" in env_template_content, (
+            "Template should contain FLUXHERO_TREND_STOP_ATR_MULTIPLIER"
+        )
+        assert "FLUXHERO_MEAN_REV_STOP_PCT" in env_template_content, (
+            "Template should contain FLUXHERO_MEAN_REV_STOP_PCT"
+        )
+
+    # =========================================================================
+    # Paper Trading Settings
+    # =========================================================================
+
+    def test_contains_paper_slippage_setting(self, env_template_content: str) -> None:
+        """Should contain paper trading slippage configuration."""
+        assert "FLUXHERO_PAPER_SLIPPAGE_BPS" in env_template_content, (
+            "Template should contain FLUXHERO_PAPER_SLIPPAGE_BPS"
+        )
+
+    def test_contains_paper_initial_balance(self, env_template_content: str) -> None:
+        """Should contain paper trading initial balance."""
+        assert "FLUXHERO_PAPER_INITIAL_BALANCE" in env_template_content, (
+            "Template should contain FLUXHERO_PAPER_INITIAL_BALANCE"
+        )
+
+    def test_contains_paper_mock_price(self, env_template_content: str) -> None:
+        """Should contain paper trading mock price fallback."""
+        assert "FLUXHERO_PAPER_MOCK_PRICE" in env_template_content, (
+            "Template should contain FLUXHERO_PAPER_MOCK_PRICE"
+        )
+
+    def test_contains_paper_price_cache_ttl(self, env_template_content: str) -> None:
+        """Should contain paper trading price cache TTL."""
+        assert "FLUXHERO_PAPER_PRICE_CACHE_TTL" in env_template_content, (
+            "Template should contain FLUXHERO_PAPER_PRICE_CACHE_TTL"
+        )
+
+    # =========================================================================
+    # Market Data Settings
+    # =========================================================================
+
+    def test_contains_market_data_settings(self, env_template_content: str) -> None:
+        """Should contain market data configuration."""
+        assert "FLUXHERO_DEFAULT_TIMEFRAME" in env_template_content, (
+            "Template should contain FLUXHERO_DEFAULT_TIMEFRAME"
+        )
+        assert "FLUXHERO_INITIAL_CANDLES" in env_template_content, (
+            "Template should contain FLUXHERO_INITIAL_CANDLES"
+        )
+
+    # =========================================================================
+    # Documentation and Comments
+    # =========================================================================
+
+    def test_has_usage_instructions(self, env_template_content: str) -> None:
+        """Should include usage instructions at the top."""
+        assert "cp docker/.env.docker.example .env" in env_template_content, (
+            "Template should include copy instructions"
+        )
+
+    def test_has_security_warnings(self, env_template_content: str) -> None:
+        """Should include security warnings about credentials."""
+        assert "CRITICAL" in env_template_content or "IMPORTANT" in env_template_content, (
+            "Template should include security warnings"
+        )
+
+    def test_documents_frontend_environment(self, env_template_content: str) -> None:
+        """Should document frontend environment variables."""
+        assert "NEXT_PUBLIC_API_URL" in env_template_content, (
+            "Template should document NEXT_PUBLIC_API_URL"
+        )
+        assert "NEXT_PUBLIC_WS_URL" in env_template_content, (
+            "Template should document NEXT_PUBLIC_WS_URL"
+        )
