@@ -12,7 +12,7 @@ Each task is on a single line for ralphy.sh compatibility.
 
 - [x] Implement results aggregation (backend/backtesting/walk_forward.py) - create aggregate_walk_forward_results() to combine equity curves from all test periods, calculate aggregate Sharpe/drawdown/win_rate, count profitable windows. Ref: R9.4.3
 
-- [ ] Implement pass rate calculation (backend/backtesting/walk_forward.py) - calculate percentage of profitable test windows (final equity > initial), strategy passes if >60% profitable, add passes_walk_forward_test boolean. Ref: R9.4.4
+- [x] Implement pass rate calculation (backend/backtesting/walk_forward.py) - calculate percentage of profitable test windows (final equity > initial), strategy passes if >60% profitable, add passes_walk_forward_test boolean. Ref: R9.4.4
 
 - [ ] Create walk-forward API endpoint (backend/api/server.py) - add WalkForwardRequest/WalkForwardResponse Pydantic models, create POST /api/backtest/walk-forward endpoint with per-window metrics in response.
 

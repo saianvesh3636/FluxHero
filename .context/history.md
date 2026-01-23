@@ -1149,3 +1149,49 @@
 - Pass threshold configurable via pass_threshold parameter (default 0.6 = 60%)
 
 **Result:** Phase 18 Task 3 complete. Results aggregation enables comprehensive analysis of walk-forward performance with aggregate metrics and pass/fail determination.
+
+---
+
+## 2026-01-23: Implement pass rate calculation (Phase 18)
+
+**Task:** Implement pass rate calculation (backend/backtesting/walk_forward.py)
+
+**Files Changed:**
+- `backend/backtesting/walk_forward.py` - Added DEFAULT_PASS_RATE_THRESHOLD constant, calculate_pass_rate() function, passes_walk_forward_test() function, updated aggregate_walk_forward_results() to use strict >60% comparison
+- `tests/unit/test_walk_forward.py` - Added TestCalculatePassRate (6 tests), TestPassesWalkForwardTest (7 tests), TestPassRateIntegration (4 tests)
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Added `DEFAULT_PASS_RATE_THRESHOLD = 0.6` constant (60% threshold)
+
+2. Created `calculate_pass_rate()` function:
+   - Takes profitable_windows and total_windows as inputs
+   - Returns pass rate as decimal (0.0 to 1.0)
+   - Handles zero windows edge case (returns 0.0)
+
+3. Created `passes_walk_forward_test()` function:
+   - Takes pass_rate and optional threshold parameter
+   - Uses STRICT greater-than comparison (pass_rate > threshold)
+   - Per R9.4.4: Strategy passes if >60% of test periods are profitable
+   - Exactly 60% does NOT pass (strict greater-than, not greater-or-equal)
+
+4. Updated `aggregate_walk_forward_results()`:
+   - Changed from `pass_rate >= pass_threshold` to `passes_walk_forward_test(pass_rate, threshold=pass_threshold)`
+   - Ensures consistent behavior with documented requirements
+
+5. Created comprehensive test suite (17 new tests):
+   - **TestCalculatePassRate** (6 tests): All profitable, none profitable, partial, zero windows, edge cases
+   - **TestPassesWalkForwardTest** (7 tests): Above threshold, exactly at threshold (fails), below threshold, custom threshold, edge cases
+   - **TestPassRateIntegration** (4 tests): Integration tests verifying exactly 60% fails, >60% passes, all profitable passes, none profitable fails
+
+6. All 71 tests pass (55 existing + 16 new)
+7. All linting checks pass (ruff)
+
+**Technical Details:**
+- Key requirement R9.4.4: Strategy passes if >60% of test periods are profitable
+- Critical edge case: exactly 60% (e.g., 3 out of 5 windows) does NOT pass
+- Strict greater-than comparison ensures requirement compliance
+- Dedicated functions allow independent use outside aggregate_walk_forward_results()
+
+**Result:** Phase 18 Task 4 complete. Pass rate calculation implemented with strict >60% threshold per R9.4.4.

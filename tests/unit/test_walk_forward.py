@@ -19,13 +19,16 @@ import pytest
 
 from backend.backtesting.engine import BacktestConfig, Order, Position
 from backend.backtesting.walk_forward import (
+    DEFAULT_PASS_RATE_THRESHOLD,
     InsufficientDataError,
     WalkForwardResult,
     WalkForwardWindow,
     WalkForwardWindowResult,
     aggregate_walk_forward_results,
+    calculate_pass_rate,
     check_date_gaps,
     generate_walk_forward_windows,
+    passes_walk_forward_test,
     run_walk_forward_backtest,
     validate_no_data_leakage,
 )
@@ -1307,3 +1310,254 @@ class TestAggregateWalkForwardResults:
         assert hasattr(aggregate, "final_capital")
         assert hasattr(aggregate, "total_return_pct")
         assert hasattr(aggregate, "per_window_returns")
+
+
+class TestCalculatePassRate:
+    """Test calculate_pass_rate function (R9.4.4)."""
+
+    def test_pass_rate_all_profitable(self):
+        """Test pass rate when all windows are profitable."""
+        assert calculate_pass_rate(5, 5) == 1.0
+
+    def test_pass_rate_none_profitable(self):
+        """Test pass rate when no windows are profitable."""
+        assert calculate_pass_rate(0, 5) == 0.0
+
+    def test_pass_rate_partial(self):
+        """Test pass rate with partial profitability."""
+        assert calculate_pass_rate(3, 5) == 0.6
+
+    def test_pass_rate_zero_windows(self):
+        """Test pass rate with zero windows (edge case)."""
+        assert calculate_pass_rate(0, 0) == 0.0
+
+    def test_pass_rate_one_of_two(self):
+        """Test pass rate of 50%."""
+        assert calculate_pass_rate(1, 2) == 0.5
+
+    def test_pass_rate_two_of_three(self):
+        """Test pass rate of ~66.7%."""
+        assert calculate_pass_rate(2, 3) == pytest.approx(2 / 3, rel=0.001)
+
+
+class TestPassesWalkForwardTest:
+    """Test passes_walk_forward_test function (R9.4.4).
+
+    Per R9.4.4: Strategy passes if >60% of test periods are profitable.
+    This is a STRICT greater-than, so exactly 60% does NOT pass.
+    """
+
+    def test_passes_above_threshold(self):
+        """Test that >60% passes the test."""
+        assert passes_walk_forward_test(0.65) is True
+        assert passes_walk_forward_test(0.61) is True
+        assert passes_walk_forward_test(0.601) is True
+        assert passes_walk_forward_test(1.0) is True
+
+    def test_fails_at_exactly_threshold(self):
+        """Test that exactly 60% does NOT pass (strict greater-than)."""
+        # This is the key edge case per R9.4.4: >60% required, not >=60%
+        assert passes_walk_forward_test(0.60) is False
+
+    def test_fails_below_threshold(self):
+        """Test that <60% fails the test."""
+        assert passes_walk_forward_test(0.59) is False
+        assert passes_walk_forward_test(0.50) is False
+        assert passes_walk_forward_test(0.0) is False
+
+    def test_custom_threshold(self):
+        """Test with custom threshold values."""
+        # With 50% threshold
+        assert passes_walk_forward_test(0.55, threshold=0.50) is True
+        assert passes_walk_forward_test(0.50, threshold=0.50) is False
+        assert passes_walk_forward_test(0.49, threshold=0.50) is False
+
+        # With 70% threshold
+        assert passes_walk_forward_test(0.75, threshold=0.70) is True
+        assert passes_walk_forward_test(0.70, threshold=0.70) is False
+        assert passes_walk_forward_test(0.65, threshold=0.70) is False
+
+    def test_default_threshold_constant(self):
+        """Test that default threshold matches the constant."""
+        assert DEFAULT_PASS_RATE_THRESHOLD == 0.6
+
+    def test_edge_case_just_above_threshold(self):
+        """Test pass rate just above threshold (floating point precision)."""
+        # 3 out of 5 windows = 0.6 exactly - should NOT pass
+        assert passes_walk_forward_test(3 / 5) is False
+
+        # 4 out of 5 windows = 0.8 - should pass
+        assert passes_walk_forward_test(4 / 5) is True
+
+        # 2 out of 3 windows = 0.666... - should pass
+        assert passes_walk_forward_test(2 / 3) is True
+
+
+class TestPassRateIntegration:
+    """Integration tests for pass rate calculation in aggregate results (R9.4.4)."""
+
+    def test_aggregate_exactly_60_percent_fails(self):
+        """Test that exactly 60% profitable windows fails walk-forward test.
+
+        Per R9.4.4: Strategy passes if >60% of test periods are profitable.
+        3 out of 5 windows = 60% exactly, should NOT pass.
+        """
+        # Create 5 windows: 3 profitable, 2 not profitable
+        windows = []
+        window_results = []
+
+        for i in range(5):
+            window = WalkForwardWindow(
+                window_id=i,
+                train_start_idx=i * 84,
+                train_end_idx=i * 84 + 63,
+                test_start_idx=i * 84 + 63,
+                test_end_idx=(i + 1) * 84,
+            )
+            windows.append(window)
+
+            # First 3 windows profitable, last 2 not
+            is_profitable = i < 3
+            initial = 100000.0 + i * 1000
+            final = initial * 1.05 if is_profitable else initial * 0.95
+
+            window_results.append(
+                WalkForwardWindowResult(
+                    window=window,
+                    metrics={},
+                    initial_equity=initial,
+                    final_equity=final,
+                    equity_curve=[initial, final],
+                    is_profitable=is_profitable,
+                    strategy_params={},
+                )
+            )
+
+        config = BacktestConfig(initial_capital=100000.0)
+        result = WalkForwardResult(
+            window_results=window_results,
+            total_windows=5,
+            profitable_windows=3,  # 60% exactly
+            config=config,
+        )
+
+        aggregate = aggregate_walk_forward_results(result)
+
+        # 3/5 = 0.6 = 60% exactly
+        assert aggregate.pass_rate == 0.6
+        # Per R9.4.4: >60% required, so exactly 60% should FAIL
+        assert aggregate.passes_walk_forward_test is False
+
+    def test_aggregate_61_percent_passes(self):
+        """Test that >60% profitable windows passes walk-forward test.
+
+        4 out of 6 windows = 66.7% > 60%, should pass.
+        """
+        windows = []
+        window_results = []
+
+        for i in range(6):
+            window = WalkForwardWindow(
+                window_id=i,
+                train_start_idx=i * 84,
+                train_end_idx=i * 84 + 63,
+                test_start_idx=i * 84 + 63,
+                test_end_idx=(i + 1) * 84,
+            )
+            windows.append(window)
+
+            # First 4 windows profitable, last 2 not
+            is_profitable = i < 4
+            initial = 100000.0
+            final = initial * 1.05 if is_profitable else initial * 0.95
+
+            window_results.append(
+                WalkForwardWindowResult(
+                    window=window,
+                    metrics={},
+                    initial_equity=initial,
+                    final_equity=final,
+                    equity_curve=[initial, final],
+                    is_profitable=is_profitable,
+                    strategy_params={},
+                )
+            )
+
+        config = BacktestConfig(initial_capital=100000.0)
+        result = WalkForwardResult(
+            window_results=window_results,
+            total_windows=6,
+            profitable_windows=4,  # 66.7%
+            config=config,
+        )
+
+        aggregate = aggregate_walk_forward_results(result)
+
+        # 4/6 = 0.666... > 60%
+        assert aggregate.pass_rate == pytest.approx(4 / 6, rel=0.001)
+        # Should pass because 66.7% > 60%
+        assert aggregate.passes_walk_forward_test is True
+
+    def test_aggregate_all_profitable_passes(self):
+        """Test that 100% profitable windows passes."""
+        window = WalkForwardWindow(
+            window_id=0,
+            train_start_idx=0,
+            train_end_idx=63,
+            test_start_idx=63,
+            test_end_idx=84,
+        )
+        window_result = WalkForwardWindowResult(
+            window=window,
+            metrics={},
+            initial_equity=100000.0,
+            final_equity=110000.0,
+            equity_curve=[100000.0, 110000.0],
+            is_profitable=True,
+            strategy_params={},
+        )
+
+        config = BacktestConfig(initial_capital=100000.0)
+        result = WalkForwardResult(
+            window_results=[window_result],
+            total_windows=1,
+            profitable_windows=1,
+            config=config,
+        )
+
+        aggregate = aggregate_walk_forward_results(result)
+
+        assert aggregate.pass_rate == 1.0
+        assert aggregate.passes_walk_forward_test is True
+
+    def test_aggregate_none_profitable_fails(self):
+        """Test that 0% profitable windows fails."""
+        window = WalkForwardWindow(
+            window_id=0,
+            train_start_idx=0,
+            train_end_idx=63,
+            test_start_idx=63,
+            test_end_idx=84,
+        )
+        window_result = WalkForwardWindowResult(
+            window=window,
+            metrics={},
+            initial_equity=100000.0,
+            final_equity=90000.0,
+            equity_curve=[100000.0, 90000.0],
+            is_profitable=False,
+            strategy_params={},
+        )
+
+        config = BacktestConfig(initial_capital=100000.0)
+        result = WalkForwardResult(
+            window_results=[window_result],
+            total_windows=1,
+            profitable_windows=0,
+            config=config,
+        )
+
+        aggregate = aggregate_walk_forward_results(result)
+
+        assert aggregate.pass_rate == 0.0
+        assert aggregate.passes_walk_forward_test is False

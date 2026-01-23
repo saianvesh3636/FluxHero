@@ -375,6 +375,82 @@ OptimizerFunc = Callable[[NDArray, BacktestConfig], dict[str, Any]]
 An optimizer takes (train_bars, config) and returns optimized strategy parameters.
 """
 
+# Default pass rate threshold: strategy must have >60% profitable windows
+DEFAULT_PASS_RATE_THRESHOLD = 0.6
+
+
+def calculate_pass_rate(profitable_windows: int, total_windows: int) -> float:
+    """
+    Calculate the pass rate (percentage of profitable test windows).
+
+    Parameters
+    ----------
+    profitable_windows : int
+        Number of windows where final_equity > initial_equity
+    total_windows : int
+        Total number of test windows
+
+    Returns
+    -------
+    float
+        Pass rate as a decimal (0.0 to 1.0)
+
+    Examples
+    --------
+    >>> calculate_pass_rate(3, 5)
+    0.6
+    >>> calculate_pass_rate(0, 5)
+    0.0
+    >>> calculate_pass_rate(0, 0)
+    0.0
+
+    Reference: FLUXHERO_REQUIREMENTS.md R9.4.4
+    """
+    if total_windows == 0:
+        return 0.0
+    return profitable_windows / total_windows
+
+
+def passes_walk_forward_test(
+    pass_rate: float,
+    threshold: float = DEFAULT_PASS_RATE_THRESHOLD,
+) -> bool:
+    """
+    Determine if a strategy passes the walk-forward test.
+
+    A strategy passes if the pass rate is STRICTLY GREATER than the threshold.
+    By default, this means >60% of test windows must be profitable.
+
+    Parameters
+    ----------
+    pass_rate : float
+        Percentage of profitable windows (0.0 to 1.0)
+    threshold : float
+        Minimum pass rate threshold (default: 0.6 = 60%)
+
+    Returns
+    -------
+    bool
+        True if pass_rate > threshold (strategy passes)
+
+    Examples
+    --------
+    >>> passes_walk_forward_test(0.65)  # 65% > 60%
+    True
+    >>> passes_walk_forward_test(0.60)  # 60% is NOT > 60%
+    False
+    >>> passes_walk_forward_test(0.55)  # 55% < 60%
+    False
+
+    Notes
+    -----
+    Per R9.4.4, strategy passes if >60% of test periods are profitable.
+    This is a strict greater-than comparison, so exactly 60% does NOT pass.
+
+    Reference: FLUXHERO_REQUIREMENTS.md R9.4.4
+    """
+    return pass_rate > threshold
+
 
 def run_walk_forward_backtest(
     bars: NDArray,
@@ -814,7 +890,9 @@ def aggregate_walk_forward_results(
         total_return_pct = 0.0
 
     # Determine if strategy passes walk-forward test
-    passes_test = pass_rate >= pass_threshold
+    # Per R9.4.4: strategy passes if >60% of test periods are profitable
+    # Using strict greater-than comparison
+    passes_test = passes_walk_forward_test(pass_rate, threshold=pass_threshold)
 
     logger.info(
         f"Aggregate walk-forward metrics: "
