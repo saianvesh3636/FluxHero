@@ -206,12 +206,12 @@ describe('Backtest Page', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Backtest Results')).toBeInTheDocument();
-      expect(screen.getByText('$5,000.00')).toBeInTheDocument();
-      expect(screen.getByText('+50.00%')).toBeInTheDocument();
+      expect(screen.getByText('+$5,000.00')).toBeInTheDocument();
+      expect(screen.getByText('(+50.00%)')).toBeInTheDocument();
     });
   });
 
-  test('retry button is disabled while backtest is running', async () => {
+  test('error is cleared when retry is clicked', async () => {
     // Mock initial failure
     (global.fetch as jest.Mock).mockRejectedValueOnce(
       new Error('Network error')
@@ -225,6 +225,7 @@ describe('Backtest Page', () => {
     // Wait for error
     await waitFor(() => {
       expect(screen.getByText('Retry')).toBeInTheDocument();
+      expect(screen.getByText('Network error')).toBeInTheDocument();
     });
 
     // Mock slow response for retry
@@ -236,9 +237,9 @@ describe('Backtest Page', () => {
     const retryButton = screen.getByText('Retry');
     fireEvent.click(retryButton);
 
-    // Retry button should be disabled
+    // Error should be cleared when running
     await waitFor(() => {
-      expect(retryButton).toBeDisabled();
+      expect(screen.queryByText('Network error')).not.toBeInTheDocument();
     });
   });
 });

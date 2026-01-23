@@ -1,19 +1,12 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart, IChartApi, ISeriesApi, CandlestickData, LineData, Time } from 'lightweight-charts';
-import LoadingSpinner, { LoadingOverlay, SkeletonCard } from '../../components/LoadingSpinner';
-import { WebSocketStatus } from '../../components/WebSocketStatus';
+import { createChart, IChartApi, ISeriesApi, CandlestickData, LineData, Time, CandlestickSeries, LineSeries, createSeriesMarkers, ISeriesMarkersPluginApi, SeriesMarker } from 'lightweight-charts';
 import { useWebSocketContext } from '../../contexts/WebSocketContext';
-
-// Type definitions for chart data
-interface CandleWithIndicators extends CandlestickData {
-  kama?: number;
-  atr?: number;
-  rsi?: number;
-  adx?: number;
-  regime?: number;
-}
+import { PageContainer, PageHeader, StatsGrid } from '../../components/layout';
+import { Card, CardTitle, Select, Badge, Skeleton } from '../../components/ui';
+import { PLDisplay } from '../../components/trading';
+import { formatCurrency, formatPercent } from '../../lib/utils';
 
 interface SignalMarker {
   time: Time;
@@ -31,6 +24,23 @@ interface PerformanceMetrics {
   maxDrawdown: number;
 }
 
+const symbolOptions = [
+  { value: 'SPY', label: 'SPY' },
+  { value: 'QQQ', label: 'QQQ' },
+  { value: 'AAPL', label: 'AAPL' },
+  { value: 'TSLA', label: 'TSLA' },
+  { value: 'MSFT', label: 'MSFT' },
+];
+
+const timeframeOptions = [
+  { value: '1m', label: '1 Minute' },
+  { value: '5m', label: '5 Minutes' },
+  { value: '15m', label: '15 Minutes' },
+  { value: '1h', label: '1 Hour' },
+  { value: '4h', label: '4 Hours' },
+  { value: '1d', label: '1 Day' },
+];
+
 export default function AnalyticsPage() {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -38,6 +48,7 @@ export default function AnalyticsPage() {
   const kamaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const atrUpperBandRef = useRef<ISeriesApi<'Line'> | null>(null);
   const atrLowerBandRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
 
   const [symbol, setSymbol] = useState<string>('SPY');
   const [timeframe, setTimeframe] = useState<string>('1h');
@@ -57,33 +68,31 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [initialLoad, setInitialLoad] = useState<boolean>(true);
 
-  // WebSocket context for real-time price updates
-  const { connectionState, prices, getPrice, subscribe } = useWebSocketContext();
+  const { prices, getPrice, subscribe } = useWebSocketContext();
 
-  // Initialize chart
+  // Initialize chart with design system colors
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Create chart
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
-      height: 600,
+      height: 500,
       layout: {
-        background: { color: '#1a1a1a' },
-        textColor: '#d1d4dc',
+        background: { color: '#1C1C28' }, // panel-700
+        textColor: '#CCCAD5', // text-400
       },
       grid: {
-        vertLines: { color: '#2b2b2b' },
-        horzLines: { color: '#2b2b2b' },
+        vertLines: { color: '#21222F' }, // panel-500
+        horzLines: { color: '#21222F' },
       },
       crosshair: {
         mode: 1,
       },
       rightPriceScale: {
-        borderColor: '#2b2b2b',
+        borderColor: '#21222F',
       },
       timeScale: {
-        borderColor: '#2b2b2b',
+        borderColor: '#21222F',
         timeVisible: true,
         secondsVisible: false,
       },
@@ -91,43 +100,41 @@ export default function AnalyticsPage() {
 
     chartRef.current = chart;
 
-    // Create candlestick series
-    const candlestickSeries = chart.addCandlestickSeries({
-      upColor: '#26a69a',
-      downColor: '#ef5350',
+    const candlestickSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#22C55E', // profit-500
+      downColor: '#EF4444', // loss-500
       borderVisible: false,
-      wickUpColor: '#26a69a',
-      wickDownColor: '#ef5350',
+      wickUpColor: '#22C55E',
+      wickDownColor: '#EF4444',
     });
     candlestickSeriesRef.current = candlestickSeries;
 
-    // Create KAMA line series
-    const kamaSeries = chart.addLineSeries({
-      color: '#2962ff',
+    const markers = createSeriesMarkers(candlestickSeries, []);
+    markersRef.current = markers;
+
+    const kamaSeries = chart.addSeries(LineSeries, {
+      color: '#A549FC', // accent-500
       lineWidth: 2,
       title: 'KAMA',
     });
     kamaSeriesRef.current = kamaSeries;
 
-    // Create ATR upper band series
-    const atrUpperBand = chart.addLineSeries({
-      color: '#ff6b6b',
+    const atrUpperBand = chart.addSeries(LineSeries, {
+      color: '#3E7AEE', // blue-500
       lineWidth: 1,
-      lineStyle: 2, // dashed
+      lineStyle: 2,
       title: 'ATR Upper',
     });
     atrUpperBandRef.current = atrUpperBand;
 
-    // Create ATR lower band series
-    const atrLowerBand = chart.addLineSeries({
-      color: '#ff6b6b',
+    const atrLowerBand = chart.addSeries(LineSeries, {
+      color: '#3E7AEE',
       lineWidth: 1,
-      lineStyle: 2, // dashed
+      lineStyle: 2,
       title: 'ATR Lower',
     });
     atrLowerBandRef.current = atrLowerBand;
 
-    // Handle resize
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
         chartRef.current.applyOptions({
@@ -137,8 +144,6 @@ export default function AnalyticsPage() {
     };
 
     window.addEventListener('resize', handleResize);
-
-    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
       chart.remove();
@@ -150,35 +155,24 @@ export default function AnalyticsPage() {
     const fetchChartData = async () => {
       setLoading(true);
       try {
-        // TODO: Replace with actual API call
-        // const response = await fetch(`/api/chart-data?symbol=${symbol}&timeframe=${timeframe}`);
-        // const data = await response.json();
-
-        // Mock data for demonstration
         const mockData = generateMockData(100);
 
         if (candlestickSeriesRef.current) {
           candlestickSeriesRef.current.setData(mockData.candles);
         }
-
         if (kamaSeriesRef.current) {
           kamaSeriesRef.current.setData(mockData.kama);
         }
-
         if (atrUpperBandRef.current) {
           atrUpperBandRef.current.setData(mockData.atrUpper);
         }
-
         if (atrLowerBandRef.current) {
           atrLowerBandRef.current.setData(mockData.atrLower);
         }
-
-        // Add signal markers
-        if (candlestickSeriesRef.current) {
-          candlestickSeriesRef.current.setMarkers(mockData.signals);
+        if (markersRef.current) {
+          markersRef.current.setMarkers(mockData.signals as SeriesMarker<Time>[]);
         }
 
-        // Update indicators
         setIndicators({
           atr: mockData.latestIndicators.atr,
           rsi: mockData.latestIndicators.rsi,
@@ -186,10 +180,6 @@ export default function AnalyticsPage() {
           regime: mockData.latestIndicators.regime,
         });
 
-        // Fetch and update performance metrics
-        // TODO: Replace with actual API call
-        // const metricsResponse = await fetch('/api/performance-metrics');
-        // const metricsData = await metricsResponse.json();
         setMetrics({
           totalReturn: 15420.50,
           totalReturnPct: 15.42,
@@ -197,7 +187,6 @@ export default function AnalyticsPage() {
           winRate: 58.3,
           maxDrawdown: 12.5,
         });
-
       } catch (error) {
         console.error('Error fetching chart data:', error);
       } finally {
@@ -207,242 +196,200 @@ export default function AnalyticsPage() {
     };
 
     fetchChartData();
-
-    // Set up auto-refresh every 5 seconds
     const interval = setInterval(fetchChartData, 5000);
     return () => clearInterval(interval);
   }, [symbol, timeframe]);
 
-  // Subscribe to WebSocket price updates for current symbol
   useEffect(() => {
     subscribe([symbol]);
   }, [symbol, subscribe]);
 
-  // Update chart with real-time price data from WebSocket
   useEffect(() => {
     const priceData = getPrice(symbol);
     if (priceData && candlestickSeriesRef.current) {
-      // Update the latest candle with real-time price
-      // This is a simple implementation that updates the last candle
-      // In production, you'd want more sophisticated logic to update or add candles
-      const timestamp = Math.floor(new Date(priceData.timestamp).getTime() / 1000) as Time;
-
-      // For demo purposes, we're just logging the price update
-      // In a real implementation, you would update the chart data
-      console.log('Real-time price update:', {
-        symbol: priceData.symbol,
-        price: priceData.price,
-        timestamp: priceData.timestamp,
-      });
+      console.log('Real-time price update:', priceData);
     }
   }, [prices, symbol, getPrice]);
 
-  // Show full-screen loading on initial load
   if (initialLoad) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <LoadingSpinner size="xl" message="Loading analytics dashboard..." />
-      </div>
+      <PageContainer>
+        <PageHeader title="Analytics Dashboard" subtitle="Loading..." />
+        <Card className="mb-6">
+          <Skeleton height={500} className="rounded-lg" />
+        </Card>
+        <StatsGrid columns={4}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <Skeleton variant="text" className="mb-2" />
+              <Skeleton variant="title" />
+            </Card>
+          ))}
+        </StatsGrid>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6 page-container">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6 page-header">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Analytics Dashboard</h1>
-              <p className="text-gray-400">Real-time market analysis and performance metrics</p>
-            </div>
-            <WebSocketStatus showText className="ml-4" />
-          </div>
-        </div>
+    <PageContainer>
+      <PageHeader
+        title="Analytics Dashboard"
+        subtitle="Real-time market analysis and performance metrics"
+      />
 
-        {/* Controls */}
-        <div className="mb-6 flex gap-4 flex-col-tablet">
-          <div>
-            <label className="block text-sm font-medium mb-2">Symbol</label>
-            <select
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-              className="bg-gray-800 border border-gray-700 rounded px-4 py-2 text-white"
-            >
-              <option value="SPY">SPY</option>
-              <option value="QQQ">QQQ</option>
-              <option value="AAPL">AAPL</option>
-              <option value="TSLA">TSLA</option>
-              <option value="MSFT">MSFT</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Timeframe</label>
-            <select
-              value={timeframe}
-              onChange={(e) => setTimeframe(e.target.value)}
-              className="bg-gray-800 border border-gray-700 rounded px-4 py-2 text-white"
-            >
-              <option value="1m">1 Minute</option>
-              <option value="5m">5 Minutes</option>
-              <option value="15m">15 Minutes</option>
-              <option value="1h">1 Hour</option>
-              <option value="4h">4 Hours</option>
-              <option value="1d">1 Day</option>
-            </select>
-          </div>
+      {/* Controls */}
+      <div className="flex flex-wrap gap-4 mb-6">
+        <div className="w-40">
+          <Select
+            label="Symbol"
+            options={symbolOptions}
+            value={symbol}
+            onChange={(e) => setSymbol(e.target.value)}
+          />
         </div>
-
-        {/* Chart Container */}
-        <div className="bg-gray-800 rounded-lg p-4 mb-6 chart-container card relative">
-          <LoadingOverlay isLoading={loading} message="Updating chart data...">
-            <div ref={chartContainerRef} />
-          </LoadingOverlay>
-        </div>
-
-        {/* Indicators Panel */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stats-grid">
-          <div className="bg-gray-800 rounded-lg p-4">
-            <div className="text-sm text-gray-400 mb-1">ATR (14)</div>
-            <div className="text-2xl font-bold">{indicators.atr.toFixed(2)}</div>
-            <div className="text-xs text-gray-500 mt-1">Average True Range</div>
-          </div>
-          <div className="bg-gray-800 rounded-lg p-4">
-            <div className="text-sm text-gray-400 mb-1">RSI (14)</div>
-            <div className={`text-2xl font-bold ${
-              indicators.rsi > 70 ? 'text-red-400' :
-              indicators.rsi < 30 ? 'text-green-400' :
-              'text-white'
-            }`}>
-              {indicators.rsi.toFixed(1)}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {indicators.rsi > 70 ? 'Overbought' :
-               indicators.rsi < 30 ? 'Oversold' :
-               'Neutral'}
-            </div>
-          </div>
-          <div className="bg-gray-800 rounded-lg p-4">
-            <div className="text-sm text-gray-400 mb-1">ADX (14)</div>
-            <div className={`text-2xl font-bold ${
-              indicators.adx > 25 ? 'text-green-400' : 'text-yellow-400'
-            }`}>
-              {indicators.adx.toFixed(1)}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {indicators.adx > 25 ? 'Strong Trend' : 'Weak Trend'}
-            </div>
-          </div>
-          <div className="bg-gray-800 rounded-lg p-4">
-            <div className="text-sm text-gray-400 mb-1">Market Regime</div>
-            <div className={`text-2xl font-bold ${
-              indicators.regime === 'TRENDING' ? 'text-blue-400' :
-              indicators.regime === 'MEAN_REVERSION' ? 'text-purple-400' :
-              'text-gray-400'
-            }`}>
-              {indicators.regime}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">Detected Mode</div>
-          </div>
-        </div>
-
-        {/* Performance Metrics */}
-        <div className="bg-gray-800 rounded-lg p-6">
-          <h2 className="text-xl font-bold mb-4">Performance Metrics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            <div>
-              <div className="text-sm text-gray-400 mb-1">Total Return</div>
-              <div className={`text-2xl font-bold ${
-                metrics.totalReturn >= 0 ? 'text-green-400' : 'text-red-400'
-              }`}>
-                ${metrics.totalReturn.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-              <div className={`text-sm ${
-                metrics.totalReturnPct >= 0 ? 'text-green-400' : 'text-red-400'
-              }`}>
-                {metrics.totalReturnPct >= 0 ? '+' : ''}{metrics.totalReturnPct.toFixed(2)}%
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-400 mb-1">Sharpe Ratio</div>
-              <div className={`text-2xl font-bold ${
-                metrics.sharpeRatio > 1.0 ? 'text-green-400' :
-                metrics.sharpeRatio > 0.5 ? 'text-yellow-400' :
-                'text-red-400'
-              }`}>
-                {metrics.sharpeRatio.toFixed(2)}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {metrics.sharpeRatio > 1.0 ? 'Excellent' :
-                 metrics.sharpeRatio > 0.5 ? 'Good' :
-                 'Poor'}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-400 mb-1">Win Rate</div>
-              <div className={`text-2xl font-bold ${
-                metrics.winRate >= 55 ? 'text-green-400' :
-                metrics.winRate >= 45 ? 'text-yellow-400' :
-                'text-red-400'
-              }`}>
-                {metrics.winRate.toFixed(1)}%
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {metrics.winRate >= 55 ? 'Strong' :
-                 metrics.winRate >= 45 ? 'Average' :
-                 'Weak'}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-400 mb-1">Max Drawdown</div>
-              <div className={`text-2xl font-bold ${
-                metrics.maxDrawdown < 15 ? 'text-green-400' :
-                metrics.maxDrawdown < 25 ? 'text-yellow-400' :
-                'text-red-400'
-              }`}>
-                {metrics.maxDrawdown.toFixed(1)}%
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {metrics.maxDrawdown < 15 ? 'Low Risk' :
-                 metrics.maxDrawdown < 25 ? 'Moderate Risk' :
-                 'High Risk'}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-400 mb-1">Status</div>
-              <div className="text-2xl font-bold text-green-400">Active</div>
-              <div className="text-xs text-gray-500 mt-1">System Running</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div className="mt-4 text-sm text-gray-400">
-          <div className="flex gap-6">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <span>KAMA Line</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-              <span>ATR Bands</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-b-8 border-b-green-400"></div>
-              <span>Buy Signal</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-8 border-t-red-400"></div>
-              <span>Sell Signal</span>
-            </div>
-          </div>
+        <div className="w-40">
+          <Select
+            label="Timeframe"
+            options={timeframeOptions}
+            value={timeframe}
+            onChange={(e) => setTimeframe(e.target.value)}
+          />
         </div>
       </div>
-    </div>
+
+      {/* Chart */}
+      <Card noPadding className="mb-6 overflow-hidden">
+        <div className="p-4 border-b border-panel-500 flex items-center justify-between">
+          <CardTitle>{symbol} - {timeframeOptions.find(t => t.value === timeframe)?.label}</CardTitle>
+          {loading && <Badge variant="warning">Updating...</Badge>}
+        </div>
+        <div ref={chartContainerRef} className="bg-panel-700" />
+      </Card>
+
+      {/* Indicators */}
+      <h2 className="text-xl font-semibold text-text-900 mb-4">Technical Indicators</h2>
+      <StatsGrid columns={4} className="mb-8">
+        <Card>
+          <span className="text-sm text-text-400 block mb-1">ATR (14)</span>
+          <span className="text-2xl font-bold text-text-900 font-mono tabular-nums">
+            {indicators.atr.toFixed(2)}
+          </span>
+          <span className="text-xs text-text-300 block mt-1">Average True Range</span>
+        </Card>
+
+        <Card>
+          <span className="text-sm text-text-400 block mb-1">RSI (14)</span>
+          <span className={`text-2xl font-bold font-mono tabular-nums ${
+            indicators.rsi > 70 ? 'text-loss-500' :
+            indicators.rsi < 30 ? 'text-profit-500' :
+            'text-text-900'
+          }`}>
+            {indicators.rsi.toFixed(1)}
+          </span>
+          <span className="text-xs text-text-300 block mt-1">
+            {indicators.rsi > 70 ? 'Overbought' :
+             indicators.rsi < 30 ? 'Oversold' :
+             'Neutral'}
+          </span>
+        </Card>
+
+        <Card>
+          <span className="text-sm text-text-400 block mb-1">ADX (14)</span>
+          <span className={`text-2xl font-bold font-mono tabular-nums ${
+            indicators.adx > 25 ? 'text-profit-500' : 'text-warning-500'
+          }`}>
+            {indicators.adx.toFixed(1)}
+          </span>
+          <span className="text-xs text-text-300 block mt-1">
+            {indicators.adx > 25 ? 'Strong Trend' : 'Weak Trend'}
+          </span>
+        </Card>
+
+        <Card>
+          <span className="text-sm text-text-400 block mb-1">Market Regime</span>
+          <Badge
+            variant={indicators.regime === 'TRENDING' ? 'info' : 'neutral'}
+            size="md"
+            className="mt-1"
+          >
+            {indicators.regime}
+          </Badge>
+          <span className="text-xs text-text-300 block mt-2">Detected Mode</span>
+        </Card>
+      </StatsGrid>
+
+      {/* Performance Metrics */}
+      <h2 className="text-xl font-semibold text-text-900 mb-4">Performance Metrics</h2>
+      <Card>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+          <div>
+            <span className="text-sm text-text-400 block mb-1">Total Return</span>
+            <PLDisplay value={metrics.totalReturn} percent={metrics.totalReturnPct} size="lg" />
+          </div>
+          <div>
+            <span className="text-sm text-text-400 block mb-1">Sharpe Ratio</span>
+            <span className={`text-2xl font-bold font-mono tabular-nums ${
+              metrics.sharpeRatio > 1.0 ? 'text-profit-500' :
+              metrics.sharpeRatio > 0.5 ? 'text-warning-500' :
+              'text-loss-500'
+            }`}>
+              {metrics.sharpeRatio.toFixed(2)}
+            </span>
+            <span className="text-xs text-text-300 block mt-1">
+              {metrics.sharpeRatio > 1.0 ? 'Excellent' :
+               metrics.sharpeRatio > 0.5 ? 'Good' : 'Poor'}
+            </span>
+          </div>
+          <div>
+            <span className="text-sm text-text-400 block mb-1">Win Rate</span>
+            <span className={`text-2xl font-bold font-mono tabular-nums ${
+              metrics.winRate >= 55 ? 'text-profit-500' :
+              metrics.winRate >= 45 ? 'text-warning-500' :
+              'text-loss-500'
+            }`}>
+              {metrics.winRate.toFixed(1)}%
+            </span>
+          </div>
+          <div>
+            <span className="text-sm text-text-400 block mb-1">Max Drawdown</span>
+            <span className={`text-2xl font-bold font-mono tabular-nums ${
+              metrics.maxDrawdown < 15 ? 'text-profit-500' :
+              metrics.maxDrawdown < 25 ? 'text-warning-500' :
+              'text-loss-500'
+            }`}>
+              {metrics.maxDrawdown.toFixed(1)}%
+            </span>
+          </div>
+          <div>
+            <span className="text-sm text-text-400 block mb-1">Status</span>
+            <Badge variant="success" size="md">ACTIVE</Badge>
+          </div>
+        </div>
+      </Card>
+
+      {/* Legend */}
+      <div className="mt-6 flex flex-wrap gap-6 text-sm text-text-400">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 bg-accent-500 rounded-full" />
+          <span>KAMA Line</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 bg-blue-500 rounded-full" />
+          <span>ATR Bands</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-b-8 border-b-profit-500" />
+          <span>Buy Signal</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-8 border-t-loss-500" />
+          <span>Sell Signal</span>
+        </div>
+      </div>
+    </PageContainer>
   );
 }
 
-// Helper function to generate mock data
 function generateMockData(numCandles: number) {
   const candles: CandlestickData[] = [];
   const kama: LineData[] = [];
@@ -457,7 +404,6 @@ function generateMockData(numCandles: number) {
     const time = (basetime + i * 3600) as Time;
     const volatility = 2 + Math.random() * 3;
 
-    // Random price movement
     basePrice += (Math.random() - 0.5) * 5;
 
     const open = basePrice;
@@ -465,28 +411,18 @@ function generateMockData(numCandles: number) {
     const high = Math.max(open, close) + Math.random() * 2;
     const low = Math.min(open, close) - Math.random() * 2;
 
-    candles.push({
-      time,
-      open,
-      high,
-      low,
-      close,
-    });
+    candles.push({ time, open, high, low, close });
 
-    // KAMA line (smoother than price)
     const kamaValue = basePrice + Math.sin(i / 10) * 3;
     kama.push({ time, value: kamaValue });
-
-    // ATR bands
     atrUpper.push({ time, value: kamaValue + volatility * 0.5 });
     atrLower.push({ time, value: kamaValue - volatility * 0.5 });
 
-    // Add some buy/sell signals
     if (i % 15 === 0 && i > 0) {
       signals.push({
         time,
         position: 'belowBar',
-        color: '#26a69a',
+        color: '#22C55E',
         shape: 'arrowUp',
         text: 'B',
       });
@@ -494,7 +430,7 @@ function generateMockData(numCandles: number) {
       signals.push({
         time,
         position: 'aboveBar',
-        color: '#ef5350',
+        color: '#EF4444',
         shape: 'arrowDown',
         text: 'S',
       });

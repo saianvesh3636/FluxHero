@@ -15,7 +15,7 @@ test.describe('WebSocket Connection', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for loading spinner to disappear (with generous timeout)
-    await page.waitForSelector('text=Loading analytics dashboard...', {
+    await page.waitForSelector('p:has-text("Loading...")', {
       state: 'hidden',
       timeout: 15000
     }).catch(() => {
@@ -29,19 +29,19 @@ test.describe('WebSocket Connection', () => {
     const pageBody = page.locator('body');
     await expect(pageBody).toBeVisible();
 
-    // Check for status indicator (any color emoji)
-    const emojiIndicators = ['🟢', '🟡', '🔴', '🟠', '⚪'];
-    let foundEmoji = false;
+    // Check for status indicator - new design uses text labels
+    const statusIndicators = ['connected', 'disconnected', 'connecting', 'CONNECTED', 'DISCONNECTED'];
+    let foundStatus = false;
 
-    for (const emoji of emojiIndicators) {
-      if (await page.locator(`text=${emoji}`).isVisible().catch(() => false)) {
-        foundEmoji = true;
+    for (const status of statusIndicators) {
+      if (await page.locator(`text=${status}`).isVisible().catch(() => false)) {
+        foundStatus = true;
         break;
       }
     }
 
     // Page should have loaded with some status indicator
-    expect(foundEmoji).toBeTruthy();
+    expect(foundStatus).toBeTruthy();
   });
 
   test('should show connection status indicator when backend is mocked', async ({ page }) => {
@@ -49,19 +49,19 @@ test.describe('WebSocket Connection', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for loading to complete
-    await page.waitForSelector('text=Loading analytics dashboard...', {
+    await page.waitForSelector('p:has-text("Loading...")', {
       state: 'hidden',
       timeout: 15000
     }).catch(() => {});
 
     await page.waitForTimeout(2000);
 
-    // Check for any status indicator
-    const emojiIndicators = ['🟢', '🟡', '🔴', '🟠', '⚪'];
+    // Check for any status indicator - new design uses text labels
+    const statusIndicators = ['connected', 'disconnected', 'connecting', 'CONNECTED', 'DISCONNECTED'];
     let foundIndicator = false;
 
-    for (const emoji of emojiIndicators) {
-      if (await page.locator(`text=${emoji}`).isVisible().catch(() => false)) {
+    for (const status of statusIndicators) {
+      if (await page.locator(`text=${status}`).isVisible().catch(() => false)) {
         foundIndicator = true;
         break;
       }
@@ -84,7 +84,7 @@ test.describe('WebSocket Connection', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for loading to complete
-    await page.waitForSelector('text=Loading analytics dashboard...', {
+    await page.waitForSelector('p:has-text("Loading...")', {
       state: 'hidden',
       timeout: 15000
     }).catch(() => {});
@@ -106,25 +106,25 @@ test.describe('WebSocket Connection', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for loading to complete
-    await page.waitForSelector('text=Loading analytics dashboard...', {
+    await page.waitForSelector('p:has-text("Loading...")', {
       state: 'hidden',
       timeout: 15000
     }).catch(() => {});
 
     await page.waitForTimeout(2000);
 
-    // Check for any status indicator
-    const emojiIndicators = ['🟢', '🟡', '🔴', '🟠', '⚪'];
-    let foundEmoji = false;
+    // Check for any status indicator - new design uses text labels
+    const statusIndicators = ['connected', 'disconnected', 'connecting', 'CONNECTED', 'DISCONNECTED'];
+    let foundStatus = false;
 
-    for (const emoji of emojiIndicators) {
-      if (await page.locator(`text=${emoji}`).isVisible().catch(() => false)) {
-        foundEmoji = true;
+    for (const status of statusIndicators) {
+      if (await page.locator(`text=${status}`).isVisible().catch(() => false)) {
+        foundStatus = true;
         break;
       }
     }
 
-    expect(foundEmoji).toBeTruthy();
+    expect(foundStatus).toBeTruthy();
 
     // If retry button exists, try clicking it
     const retryButton = page.locator('button:has-text("Retry")');
@@ -143,7 +143,7 @@ test.describe('WebSocket Connection', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for loading to complete
-    await page.waitForSelector('text=Loading analytics dashboard...', {
+    await page.waitForSelector('p:has-text("Loading...")', {
       state: 'hidden',
       timeout: 15000
     }).catch(() => {});
@@ -190,7 +190,7 @@ test.describe('WebSocket Connection', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for loading to complete
-    await page.waitForSelector('text=Loading analytics dashboard...', {
+    await page.waitForSelector('p:has-text("Loading...")', {
       state: 'hidden',
       timeout: 15000
     }).catch(() => {});

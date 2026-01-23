@@ -29,7 +29,7 @@ interface PageErrorBoundaryProps {
 export default function PageErrorBoundary({
   children,
   pageName = 'Page',
-}: PageErrorBoundaryProps): JSX.Element {
+}: PageErrorBoundaryProps): React.ReactElement {
   const handleError = (error: Error): void => {
     // Log error with page context
     console.error(`[${pageName}] Error occurred:`, error);

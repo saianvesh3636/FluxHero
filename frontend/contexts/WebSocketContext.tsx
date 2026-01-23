@@ -66,6 +66,9 @@ export function WebSocketProvider({
   url = '/ws/prices',
   enabled = true,
 }: WebSocketProviderProps) {
+  // Disable WebSocket in E2E tests to prevent connections to backend
+  const isE2ETest = typeof window !== 'undefined' && (window as { __PLAYWRIGHT_TEST__?: boolean }).__PLAYWRIGHT_TEST__;
+  const effectiveEnabled = enabled && !isE2ETest;
   const [prices, setPrices] = useState<PriceMap>({});
   const [subscribedSymbols, setSubscribedSymbols] = useState<Set<string>>(new Set());
 
@@ -85,7 +88,7 @@ export function WebSocketProvider({
     reconnectAttempts,
     reconnect,
     send,
-  } = useWebSocket(enabled ? url : '', {
+  } = useWebSocket(effectiveEnabled ? url : '', {
     autoReconnect: true,
     maxReconnectAttempts: 5,
     reconnectDelay: 1000,

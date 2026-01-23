@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { ThemeProvider } from '../utils/theme-context';
 import { WebSocketProvider } from '../contexts/WebSocketContext';
-import ThemeToggle from '../components/ThemeToggle';
 import ErrorBoundary from '../components/ErrorBoundary';
+import { AppShell } from '../components/layout';
 
 export const metadata: Metadata = {
   title: 'FluxHero - Adaptive Quant Trading System',
@@ -16,17 +15,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" className="dark">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
+      <body className="bg-panel-900 text-text-800 antialiased">
         <ErrorBoundary>
-          <ThemeProvider>
-            <WebSocketProvider url="/ws/prices">
-              <div className="theme-toggle-container">
-                <ThemeToggle />
-              </div>
+          <WebSocketProvider url="/ws/prices">
+            <AppShell>
               {children}
-            </WebSocketProvider>
-          </ThemeProvider>
+            </AppShell>
+          </WebSocketProvider>
         </ErrorBoundary>
       </body>
     </html>

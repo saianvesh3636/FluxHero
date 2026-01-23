@@ -121,7 +121,7 @@ function DefaultErrorFallback({
   error,
   errorInfo,
   resetErrorBoundary,
-}: DefaultErrorFallbackProps): JSX.Element {
+}: DefaultErrorFallbackProps): React.ReactElement {
   return (
     <div
       style={{

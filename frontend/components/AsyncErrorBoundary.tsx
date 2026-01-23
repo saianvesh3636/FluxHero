@@ -44,7 +44,7 @@ export default function AsyncErrorBoundary({
   error = null,
   onRetry,
   fallbackType = 'default',
-}: AsyncErrorBoundaryProps): JSX.Element {
+}: AsyncErrorBoundaryProps): React.ReactElement {
   const [resetKey, setResetKey] = useState(0);
 
   // Reset error boundary when retry is triggered

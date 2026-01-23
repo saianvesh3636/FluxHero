@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { setupAllMocks } from './mocks/api-mocks';
 
 test.describe('Backtest Page', () => {
   test.beforeEach(async ({ page }) => {
+    await setupAllMocks(page);
     await page.goto('/backtest');
   });
 
@@ -137,8 +139,7 @@ test.describe('Backtest Page', () => {
   });
 
   test('should display all configuration sections', async ({ page }) => {
-    // Check main sections
-    await expect(page.locator('h2:has-text("Backtest Configuration")')).toBeVisible();
+    // Check main sections - new design uses h3 for section headers
     await expect(page.locator('h3:has-text("Strategy Parameters")')).toBeVisible();
     await expect(page.locator('h3:has-text("Risk Parameters")')).toBeVisible();
 

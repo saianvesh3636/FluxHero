@@ -59,8 +59,8 @@ describe('Home Page', () => {
     render(<Home />);
 
     await waitFor(() => {
-      expect(screen.getByText('🟢')).toBeInTheDocument();
-      expect(screen.getByText('active')).toBeInTheDocument();
+      expect(screen.getByText('Connected')).toBeInTheDocument();
+      expect(screen.getByText('ACTIVE')).toBeInTheDocument();
       expect(screen.getByText('Backend API is connected and ready.')).toBeInTheDocument();
     });
   });
@@ -73,7 +73,6 @@ describe('Home Page', () => {
     render(<Home />);
 
     await waitFor(() => {
-      expect(screen.getByText('🔴')).toBeInTheDocument();
       expect(screen.getByText('Backend Offline')).toBeInTheDocument();
       expect(screen.getByText(/Unable to connect to the backend server/)).toBeInTheDocument();
     });
@@ -124,7 +123,7 @@ describe('Home Page', () => {
     expect(apiClient.getSystemStatus).toHaveBeenCalledTimes(2);
   });
 
-  test('displays delayed status with yellow indicator', async () => {
+  test('displays delayed status with warning badge', async () => {
     (apiClient.getSystemStatus as jest.Mock).mockResolvedValue({
       status: 'delayed',
       last_update: '2024-01-01T00:00:00Z',
@@ -134,12 +133,11 @@ describe('Home Page', () => {
     render(<Home />);
 
     await waitFor(() => {
-      expect(screen.getByText('🟡')).toBeInTheDocument();
-      expect(screen.getByText('delayed')).toBeInTheDocument();
+      expect(screen.getByText('DELAYED')).toBeInTheDocument();
     });
   });
 
-  test('displays offline status with red indicator', async () => {
+  test('displays offline status with error badge', async () => {
     (apiClient.getSystemStatus as jest.Mock).mockResolvedValue({
       status: 'offline',
       last_update: '2024-01-01T00:00:00Z',
@@ -149,8 +147,7 @@ describe('Home Page', () => {
     render(<Home />);
 
     await waitFor(() => {
-      expect(screen.getByText('🔴')).toBeInTheDocument();
-      expect(screen.getByText('offline')).toBeInTheDocument();
+      expect(screen.getByText('OFFLINE')).toBeInTheDocument();
     });
   });
 });

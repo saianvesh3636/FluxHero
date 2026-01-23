@@ -22,6 +22,18 @@ export interface Trade {
   price: number;
   timestamp: string;
   signal_explanation?: string;
+  // Extended trade fields for history page
+  entry_time?: number;
+  exit_time?: number;
+  entry_price?: number;
+  exit_price?: number;
+  shares?: number;
+  realized_pnl?: number;
+  strategy?: string;
+  regime?: string;
+  stop_loss?: number;
+  take_profit?: number;
+  signal_reason?: string;
 }
 
 export interface AccountInfo {
@@ -134,3 +146,6 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+
+// Alias for backwards compatibility
+export const api = apiClient;

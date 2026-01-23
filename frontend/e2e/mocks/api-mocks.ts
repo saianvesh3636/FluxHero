@@ -199,11 +199,11 @@ fluxhero_requests_total 1234
  * but we can intercept the initial HTTP upgrade request)
  */
 export async function setupWebSocketMock(page: Page) {
-  // For WebSocket, we can't fully mock the connection, but we can handle it gracefully
-  // The frontend should handle connection failures
+  // Abort WebSocket connections to prevent them from hitting the real backend
+  // The frontend should handle connection failures gracefully
   await page.route('**/ws/**', async (route) => {
-    // Let WebSocket connections through - they'll fail gracefully
-    await route.continue();
+    // Abort the WebSocket upgrade request - this prevents 403 errors from backend
+    await route.abort('connectionfailed');
   });
 }
 
@@ -211,6 +211,11 @@ export async function setupWebSocketMock(page: Page) {
  * Setup all mocks (API + WebSocket)
  */
 export async function setupAllMocks(page: Page) {
+  // Set flag to disable WebSocket in the app
+  await page.addInitScript(() => {
+    (window as { __PLAYWRIGHT_TEST__?: boolean }).__PLAYWRIGHT_TEST__ = true;
+  });
+
   await setupApiMocks(page);
   await setupWebSocketMock(page);
 }

@@ -2,7 +2,7 @@
  * Unit tests for Live Trading Page
  *
  * Tests:
- * - Loading spinner display
+ * - Loading state display
  * - Error states and handling
  * - Backend offline indicator
  * - Retry functionality
@@ -60,7 +60,7 @@ describe('Live Trading Page', () => {
     uptime_seconds: 3600,
   };
 
-  test('displays loading spinner initially', () => {
+  test('displays loading state initially', () => {
     (apiClient.getPositions as jest.Mock).mockImplementation(
       () => new Promise(() => {}) // Never resolves
     );
@@ -73,8 +73,7 @@ describe('Live Trading Page', () => {
 
     render(<LiveTradingPage />);
 
-    expect(screen.getByText('Loading live data...')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
   test('displays data when API calls succeed', async () => {
@@ -106,7 +105,6 @@ describe('Live Trading Page', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Backend Offline')).toBeInTheDocument();
-      expect(screen.getByText('🔴')).toBeInTheDocument();
       expect(screen.getByText(/API request failed: Network error/)).toBeInTheDocument();
     });
   });
@@ -157,11 +155,6 @@ describe('Live Trading Page', () => {
     const retryButton = screen.getByText('Retry Connection');
     fireEvent.click(retryButton);
 
-    // Wait for loading state
-    await waitFor(() => {
-      expect(screen.getByText('Loading live data...')).toBeInTheDocument();
-    });
-
     // Wait for success state
     await waitFor(() => {
       expect(screen.getByText('SPY')).toBeInTheDocument();
@@ -181,7 +174,6 @@ describe('Live Trading Page', () => {
 
     await waitFor(() => {
       expect(screen.getByText('No open positions')).toBeInTheDocument();
-      expect(screen.getByText('Positions will appear here when trades are executed')).toBeInTheDocument();
     });
   });
 
@@ -197,8 +189,7 @@ describe('Live Trading Page', () => {
     render(<LiveTradingPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('🟢')).toBeInTheDocument();
-      expect(screen.getByText('active')).toBeInTheDocument();
+      expect(screen.getByText('ACTIVE')).toBeInTheDocument();
     });
   });
 

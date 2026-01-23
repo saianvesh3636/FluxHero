@@ -25,7 +25,7 @@ export default function ErrorFallback({
   resetErrorBoundary,
   title = 'Something went wrong',
   message = 'An unexpected error occurred. Please try again.',
-}: ErrorFallbackProps): JSX.Element {
+}: ErrorFallbackProps): React.ReactElement {
   return (
     <div className="error-fallback-container">
       <div className="error-fallback-card">
@@ -163,7 +163,7 @@ export function APIErrorFallback({
   resetErrorBoundary,
 }: {
   resetErrorBoundary?: () => void;
-}): JSX.Element {
+}): React.ReactElement {
   return (
     <ErrorFallback
       title="Connection Error"
@@ -180,7 +180,7 @@ export function DataLoadErrorFallback({
   resetErrorBoundary,
 }: {
   resetErrorBoundary?: () => void;
-}): JSX.Element {
+}): React.ReactElement {
   return (
     <ErrorFallback
       title="Data Load Error"
@@ -196,7 +196,7 @@ export function DataLoadErrorFallback({
 export function ComponentErrorFallback({
   error,
   resetErrorBoundary,
-}: ErrorFallbackProps): JSX.Element {
+}: ErrorFallbackProps): React.ReactElement {
   return (
     <ErrorFallback
       error={error}

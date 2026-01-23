@@ -13,18 +13,18 @@ test.describe('Live Trading Page', () => {
     // Wait for the page to load
     await page.waitForLoadState('networkidle');
 
-    // The page should not be stuck in loading state
-    const loadingSpinner = page.locator('text=Loading live data...');
-    await expect(loadingSpinner).not.toBeVisible({ timeout: 10000 });
+    // The page should not be stuck in loading state (new design uses "Loading..." in subtitle)
+    const loadingText = page.locator('p:has-text("Loading...")');
+    await expect(loadingText).not.toBeVisible({ timeout: 10000 });
 
     // Check that the page header is present
     await expect(page.locator('h1:has-text("Live Trading")')).toBeVisible();
 
     // Check that "Last updated" timestamp is shown
-    await expect(page.locator('text=/Last updated:/i')).toBeVisible();
+    await expect(page.locator('text=/Last updated/i')).toBeVisible();
 
-    // Look for the positions table or "No open positions" message
-    const positionsHeader = page.locator('h2:has-text("Open Positions")');
+    // Look for the positions section - new design uses CardTitle
+    const positionsHeader = page.locator('text=/Open Positions/i');
     await expect(positionsHeader).toBeVisible();
 
     // Check if there's either position data or the "no positions" message
@@ -41,7 +41,6 @@ test.describe('Live Trading Page', () => {
 
       // Verify it's not a placeholder
       expect(symbolText).not.toContain('Loading');
-      expect(symbolText).not.toContain('...');
       expect(symbolText?.trim().length).toBeGreaterThan(0);
     }
   });
@@ -50,20 +49,17 @@ test.describe('Live Trading Page', () => {
     // Wait for the page to load
     await page.waitForLoadState('networkidle');
 
-    // Wait for loading to complete
-    await page.waitForSelector('text=Loading live data...', { state: 'hidden', timeout: 10000 });
+    // Wait for loading to complete (new design uses "Loading..." in subtitle)
+    await page.waitForSelector('p:has-text("Loading...")', { state: 'hidden', timeout: 10000 });
 
-    // Check for account summary section
-    const accountSummary = page.locator('h3:has-text("Account Summary")');
+    // Check for account summary section - new design uses Card with grid layout
+    const accountCard = page.locator('text=/Account Summary/i');
+    await expect(accountCard).toBeVisible();
 
-    // Account summary might not be visible if there's no data, but stats should be
-    const statsGrid = page.locator('.stats-grid').first();
-    await expect(statsGrid).toBeVisible();
-
-    // Check for key metrics (these should always be present)
-    await expect(page.locator('text=/Daily P&L/i')).toBeVisible();
-    await expect(page.locator('text=/System Status/i')).toBeVisible();
-    await expect(page.locator('text=/Total Exposure/i')).toBeVisible();
+    // Check for key metrics (these should always be present in the new design)
+    await expect(page.locator('text=/Total P&L/i').first()).toBeVisible();
+    await expect(page.locator('text=/Daily P&L/i').first()).toBeVisible();
+    await expect(page.locator('text=/Cash/i').first()).toBeVisible();
   });
 
   test('should not have unhandled promise rejections', async ({ page }) => {
@@ -110,10 +106,10 @@ test.describe('Live Trading Page', () => {
 
   test('should auto-refresh data', async ({ page }) => {
     await page.waitForLoadState('networkidle');
-    await page.waitForSelector('text=Loading live data...', { state: 'hidden', timeout: 10000 });
+    await page.waitForSelector('p:has-text("Loading...")', { state: 'hidden', timeout: 10000 });
 
     // Get the initial timestamp
-    const timestampLocator = page.locator('text=/Last updated:/i');
+    const timestampLocator = page.locator('text=/Last updated/i');
     await expect(timestampLocator).toBeVisible();
 
     // Just verify that the page has auto-refresh functionality by checking the timestamp exists
@@ -128,24 +124,21 @@ test.describe('Live Trading Page', () => {
 
   test('should display system status indicator', async ({ page }) => {
     await page.waitForLoadState('networkidle');
-    await page.waitForSelector('text=Loading live data...', { state: 'hidden', timeout: 10000 });
+    await page.waitForSelector('p:has-text("Loading...")', { state: 'hidden', timeout: 10000 });
 
-    // Check for system status card
-    const statusCard = page.locator('text=/System Status/i').locator('..');
-    await expect(statusCard).toBeVisible();
+    // Check for system status indicator - new design uses Badge component with text
+    // StatusDot shows connected/disconnected, Badge shows ACTIVE/DELAYED/OFFLINE
+    const statusIndicators = ['ACTIVE', 'DELAYED', 'OFFLINE', 'connected', 'disconnected'];
+    let foundStatus = false;
 
-    // There should be an emoji indicator (🟢, 🟡, 🔴, or ⚪)
-    const emojiIndicators = ['🟢', '🟡', '🔴', '⚪'];
-    let foundEmoji = false;
-
-    for (const emoji of emojiIndicators) {
-      if (await page.locator(`text=${emoji}`).isVisible().catch(() => false)) {
-        foundEmoji = true;
+    for (const status of statusIndicators) {
+      if (await page.locator(`text=${status}`).isVisible().catch(() => false)) {
+        foundStatus = true;
         break;
       }
     }
 
-    expect(foundEmoji).toBeTruthy();
+    expect(foundStatus).toBeTruthy();
   });
 
   test('should be responsive', async ({ page }) => {

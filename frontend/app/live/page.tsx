@@ -1,19 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiClient, Position, AccountInfo, SystemStatus } from '../../utils/api';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import { apiClient, Position, AccountInfo as ApiAccountInfo, SystemStatus } from '../../utils/api';
+import { PageContainer, PageHeader, StatsGrid } from '../../components/layout';
+import { Card, CardTitle, Button, Badge, StatusDot, Skeleton } from '../../components/ui';
+import { AccountSummary, PositionsTable, PLDisplay } from '../../components/trading';
+import type { AccountInfo } from '../../components/trading';
+import type { PositionRow } from '../../components/trading';
+import { formatCurrency, formatPercent } from '../../lib/utils';
 
 export default function LiveTradingPage() {
   const [positions, setPositions] = useState<Position[]>([]);
-  const [accountInfo, setAccountInfo] = useState<AccountInfo | null>(null);
+  const [accountInfo, setAccountInfo] = useState<ApiAccountInfo | null>(null);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isBackendOffline, setIsBackendOffline] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  // Fetch data function
   const fetchData = async () => {
     try {
       setError(null);
@@ -37,283 +41,174 @@ export default function LiveTradingPage() {
     }
   };
 
-  // Retry function
   const handleRetry = () => {
     setLoading(true);
     setError(null);
     fetchData();
   };
 
-  // Initial fetch and 5-second auto-refresh
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 5000); // 5-second refresh
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  // Format currency
-  const formatCurrency = (value: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
-
-  // Format percentage
-  const formatPercent = (value: number): string => {
-    return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-  };
-
-  // Get color for P&L
-  const getPnlColor = (value: number): string => {
-    if (value > 0) return 'text-green-600';
-    if (value < 0) return 'text-red-600';
-    return 'text-gray-600';
-  };
-
-  // Get system status indicator
-  const getStatusIndicator = (status: string | undefined): { color: string; emoji: string } => {
-    switch (status) {
-      case 'active':
-        return { color: 'bg-green-500', emoji: '🟢' };
-      case 'delayed':
-        return { color: 'bg-yellow-500', emoji: '🟡' };
-      case 'offline':
-        return { color: 'bg-red-500', emoji: '🔴' };
-      default:
-        return { color: 'bg-gray-500', emoji: '⚪' };
-    }
-  };
-
-  // Calculate total exposure
+  // Calculate metrics
   const totalExposure = positions.reduce(
     (sum, pos) => sum + pos.current_price * pos.quantity,
     0
   );
 
-  // Calculate current drawdown (placeholder, would need historical data)
-  const currentDrawdown = accountInfo
-    ? ((accountInfo.equity - accountInfo.equity) / accountInfo.equity) * 100
-    : 0;
+  // Convert positions to table format
+  const positionRows: PositionRow[] = positions.map((pos) => ({
+    symbol: pos.symbol,
+    side: pos.quantity > 0 ? 'long' : 'short',
+    quantity: Math.abs(pos.quantity),
+    entryPrice: pos.entry_price,
+    currentPrice: pos.current_price,
+    pnl: pos.pnl,
+    pnlPercent: pos.pnl_percent,
+    marketValue: pos.current_price * pos.quantity,
+  }));
 
-  const statusIndicator = getStatusIndicator(systemStatus?.status);
+  // Convert account info to component format
+  const accountData: AccountInfo | null = accountInfo
+    ? {
+        equity: accountInfo.equity,
+        cash: accountInfo.cash,
+        buyingPower: accountInfo.buying_power,
+        dailyPnl: accountInfo.daily_pnl,
+        totalPnl: accountInfo.total_pnl,
+        totalExposure: accountInfo.equity > 0 ? (totalExposure / accountInfo.equity) * 100 : 0,
+      }
+    : null;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <LoadingSpinner size="lg" message="Loading live data..." />
-      </div>
+      <PageContainer>
+        <PageHeader title="Live Trading" subtitle="Loading..." />
+        <StatsGrid columns={4} className="mb-8">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <Skeleton variant="text" width="60%" className="mb-2" />
+              <Skeleton variant="title" width="80%" />
+            </Card>
+          ))}
+        </StatsGrid>
+        <Card>
+          <Skeleton variant="title" className="mb-4" />
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} variant="text" />
+            ))}
+          </div>
+        </Card>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 page-container">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6 page-header">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Live Trading</h1>
-          <p className="text-gray-600">
-            Last updated: {lastUpdate.toLocaleTimeString()}
-          </p>
-        </div>
-
-        {/* Backend Offline Indicator */}
-        {isBackendOffline && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <span className="text-2xl mr-3">🔴</span>
-                <div>
-                  <p className="text-red-800 font-semibold">Backend Offline</p>
-                  <p className="text-red-600 text-sm">{error}</p>
-                </div>
-              </div>
-              <button
-                onClick={handleRetry}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-              >
-                Retry Connection
-              </button>
-            </div>
+    <PageContainer>
+      <PageHeader
+        title="Live Trading"
+        subtitle={`Last updated: ${lastUpdate.toLocaleTimeString()}`}
+        actions={
+          <div className="flex items-center gap-3">
+            <StatusDot
+              status={systemStatus?.status === 'active' ? 'connected' : 'disconnected'}
+              showLabel
+              label={systemStatus?.status || 'Unknown'}
+            />
           </div>
-        )}
+        }
+      />
 
-        {/* Error Banner (for non-offline errors) */}
-        {error && !isBackendOffline && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <p className="text-yellow-800">⚠️ {error}</p>
-              <button
-                onClick={handleRetry}
-                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-medium"
-              >
-                Retry
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* System Heartbeat & Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 stats-grid">
-          {/* System Status */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
+      {/* Error Banner */}
+      {isBackendOffline && (
+        <Card variant="highlighted" className="mb-6 border-l-4 border-loss-500">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <StatusDot status="error" size="lg" />
               <div>
-                <p className="text-sm text-gray-600 mb-1">System Status</p>
-                <p className="text-lg font-semibold text-gray-900 capitalize">
-                  {systemStatus?.status || 'Unknown'}
-                </p>
+                <p className="text-loss-500 font-medium">Backend Offline</p>
+                <p className="text-text-400 text-sm">{error}</p>
               </div>
-              <div className="text-3xl">{statusIndicator.emoji}</div>
             </div>
+            <Button variant="danger" onClick={handleRetry}>
+              Retry Connection
+            </Button>
           </div>
+        </Card>
+      )}
 
-          {/* Daily P&L */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-sm text-gray-600 mb-1">Daily P&L</p>
-            <p className={`text-2xl font-bold ${getPnlColor(accountInfo?.daily_pnl || 0)}`}>
-              {formatCurrency(accountInfo?.daily_pnl || 0)}
-            </p>
+      {/* Quick Stats */}
+      <StatsGrid columns={4} className="mb-8">
+        <Card>
+          <span className="text-sm text-text-400 block mb-1">System Status</span>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant={
+                systemStatus?.status === 'active'
+                  ? 'success'
+                  : systemStatus?.status === 'delayed'
+                  ? 'warning'
+                  : 'error'
+              }
+              size="md"
+            >
+              {(systemStatus?.status || 'Unknown').toUpperCase()}
+            </Badge>
           </div>
+        </Card>
 
-          {/* Current Drawdown */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-sm text-gray-600 mb-1">Current Drawdown</p>
-            <p className={`text-2xl font-bold ${getPnlColor(-Math.abs(currentDrawdown))}`}>
-              {formatPercent(currentDrawdown)}
-            </p>
-          </div>
+        <Card>
+          <span className="text-sm text-text-400 block mb-1">Daily P&L</span>
+          <PLDisplay
+            value={accountInfo?.daily_pnl || 0}
+            size="lg"
+            showPercent={false}
+          />
+        </Card>
 
-          {/* Total Exposure */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-sm text-gray-600 mb-1">Total Exposure</p>
-            <p className="text-2xl font-bold text-gray-900">
-              {formatCurrency(totalExposure)}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {accountInfo?.equity
-                ? `${((totalExposure / accountInfo.equity) * 100).toFixed(1)}% of equity`
-                : ''}
-            </p>
-          </div>
-        </div>
-
-        {/* Open Positions Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Open Positions ({positions.length})
-            </h2>
-          </div>
-
-          {positions.length === 0 ? (
-            <div className="p-12 text-center">
-              <p className="text-gray-500 text-lg">No open positions</p>
-              <p className="text-gray-400 text-sm mt-2">
-                Positions will appear here when trades are executed
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto table-container">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Symbol
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Quantity
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Entry Price
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Current Price
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      P&L
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      P&L %
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Market Value
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {positions.map((position, index) => (
-                    <tr key={`${position.symbol}-${index}`} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-gray-900">
-                          {position.symbol}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {position.quantity}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatCurrency(position.entry_price)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatCurrency(position.current_price)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`text-sm font-semibold ${getPnlColor(position.pnl)}`}>
-                          {formatCurrency(position.pnl)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`text-sm font-semibold ${getPnlColor(position.pnl_percent)}`}>
-                          {formatPercent(position.pnl_percent)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatCurrency(position.current_price * position.quantity)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        <Card>
+          <span className="text-sm text-text-400 block mb-1">Total Exposure</span>
+          <span className="text-xl font-semibold text-text-900 font-mono tabular-nums">
+            {formatCurrency(totalExposure)}
+          </span>
+          {accountInfo?.equity && (
+            <span className="text-xs text-text-400 block mt-1">
+              {formatPercent((totalExposure / accountInfo.equity) * 100)} of equity
+            </span>
           )}
-        </div>
+        </Card>
 
-        {/* Account Info Summary */}
-        {accountInfo && (
-          <div className="mt-6 bg-white rounded-lg shadow p-6 card card-padding">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Summary</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stats-grid">
-              <div>
-                <p className="text-sm text-gray-600">Equity</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {formatCurrency(accountInfo.equity)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Cash</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {formatCurrency(accountInfo.cash)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Buying Power</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {formatCurrency(accountInfo.buying_power)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total P&L</p>
-                <p className={`text-lg font-semibold ${getPnlColor(accountInfo.total_pnl)}`}>
-                  {formatCurrency(accountInfo.total_pnl)}
-                </p>
-              </div>
-            </div>
+        <Card>
+          <span className="text-sm text-text-400 block mb-1">Total P&L</span>
+          <PLDisplay
+            value={accountInfo?.total_pnl || 0}
+            size="lg"
+            showPercent={false}
+          />
+        </Card>
+      </StatsGrid>
+
+      {/* Positions Table */}
+      <Card noPadding className="mb-8">
+        <div className="px-5 py-4 border-b border-panel-500">
+          <div className="flex items-center justify-between">
+            <CardTitle>Open Positions ({positions.length})</CardTitle>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+        <PositionsTable positions={positionRows} />
+      </Card>
+
+      {/* Account Summary */}
+      {accountData && (
+        <div>
+          <h2 className="text-xl font-semibold text-text-900 mb-4">Account Summary</h2>
+          <AccountSummary account={accountData} />
+        </div>
+      )}
+    </PageContainer>
   );
 }

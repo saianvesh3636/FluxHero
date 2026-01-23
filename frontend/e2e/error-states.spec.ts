@@ -1,6 +1,13 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Error States', () => {
+  // Disable WebSocket connections to prevent hitting the real backend
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as { __PLAYWRIGHT_TEST__?: boolean }).__PLAYWRIGHT_TEST__ = true;
+    });
+  });
+
   test('should show backend offline indicator on /live page', async ({ page }) => {
     // Mock all API endpoints to fail completely (network error)
     await page.route('/api/**', async (route) => {
@@ -137,15 +144,15 @@ test.describe('Error States', () => {
     await page.waitForTimeout(6000);
 
     // Should show some kind of error state or still be loading
-    const hasErrorBanner = await page.locator('.bg-red-50, .bg-red-900, .bg-yellow-50').first().isVisible().catch(() => false);
+    const hasErrorBanner = await page.locator('.bg-red-50, .bg-red-900, .bg-yellow-50, .bg-loss-500\\/10').first().isVisible().catch(() => false);
     const hasRetryButton = await page.locator('button').filter({ hasText: /retry/i }).first().isVisible().catch(() => false);
-    const isLoading = await page.locator('text=Loading live data...').isVisible().catch(() => false);
-    const hasErrorEmoji = await page.locator('text=🔴').first().isVisible().catch(() => false);
+    const isLoading = await page.locator('text=Loading...').isVisible().catch(() => false);
+    const hasOfflineText = await page.locator('text=/offline/i').first().isVisible().catch(() => false);
 
-    expect(hasErrorBanner || hasRetryButton || isLoading || hasErrorEmoji).toBeTruthy();
+    expect(hasErrorBanner || hasRetryButton || isLoading || hasOfflineText).toBeTruthy();
   });
 
-  test('should show loading spinner while fetching data', async ({ page }) => {
+  test('should show loading state while fetching data', async ({ page }) => {
     // Mock API with delay to simulate loading
     await page.route('/api/status', async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -182,13 +189,13 @@ test.describe('Error States', () => {
 
     const navigationPromise = page.goto('/live');
 
-    // Should show loading spinner initially
-    const loadingSpinner = page.locator('text=Loading live data...');
-    await expect(loadingSpinner).toBeVisible({ timeout: 1000 });
+    // Should show loading state initially (new design uses "Loading..." in subtitle)
+    const loadingText = page.locator('text=Loading...');
+    await expect(loadingText).toBeVisible({ timeout: 2000 });
 
     await navigationPromise;
 
-    // After data loads, loading spinner should disappear
-    await expect(loadingSpinner).not.toBeVisible({ timeout: 5000 });
+    // After data loads, loading text should disappear
+    await expect(loadingText).not.toBeVisible({ timeout: 5000 });
   });
 });
