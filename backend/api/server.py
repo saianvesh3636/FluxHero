@@ -30,6 +30,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -53,15 +54,24 @@ from backend.storage.sqlite_store import (
     TradeStatus,
 )
 
+if TYPE_CHECKING:
+    from backend.execution.brokers.paper_broker import PaperBroker
+
 # ============================================================================
 # Logger Configuration (using loguru)
 # ============================================================================
 
+
 # Intercept standard logging and route to loguru
 class InterceptHandler(logging.Handler):
     def emit(self, record):
-        level = logger.level(record.levelname).name if record.levelname in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL") else record.levelno
+        level = (
+            logger.level(record.levelname).name
+            if record.levelname in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+            else record.levelno
+        )
         logger.opt(depth=6, exception=record.exc_info).log(level, record.getMessage())
+
 
 # Setup: intercept uvicorn/fastapi logs
 logging.basicConfig(handlers=[InterceptHandler()], level=logging.DEBUG, force=True)
@@ -932,12 +942,14 @@ async def run_backtest(config: BacktestRequest):
             )
         else:
             # Fallback for sync context
-            data = asyncio.run(provider.fetch_historical_data(
-                symbol=symbol,
-                start_date=config.start_date,
-                end_date=config.end_date,
-                interval="1d",
-            ))
+            data = asyncio.run(
+                provider.fetch_historical_data(
+                    symbol=symbol,
+                    start_date=config.start_date,
+                    end_date=config.end_date,
+                    interval="1d",
+                )
+            )
 
         bars = data.bars
         timestamps_float = data.timestamps
@@ -1010,9 +1022,7 @@ async def run_backtest(config: BacktestRequest):
     # Extract equity curve and trades from BacktestState
     equity_curve = np.array(state.equity_curve, dtype=np.float64)
     trades_pnl = np.array([t.pnl for t in state.trades], dtype=np.float64)
-    trades_holding_periods = np.array(
-        [t.holding_bars for t in state.trades], dtype=np.int32
-    )
+    trades_holding_periods = np.array([t.holding_bars for t in state.trades], dtype=np.int32)
 
     # Calculate performance metrics with correct signature
     metrics = PerformanceMetrics.calculate_all_metrics(
@@ -1048,7 +1058,9 @@ async def run_backtest(config: BacktestRequest):
         total_return_pct=metrics["total_return_pct"],
         sharpe_ratio=metrics["sharpe_ratio"],
         max_drawdown=max_drawdown_dollars,
-        max_drawdown_pct=abs(metrics["max_drawdown_pct"]),  # Convert negative to positive for display
+        max_drawdown_pct=abs(
+            metrics["max_drawdown_pct"]
+        ),  # Convert negative to positive for display
         win_rate=metrics["win_rate"],
         num_trades=metrics["total_trades"],
         avg_win_loss_ratio=metrics["avg_win_loss_ratio"],
@@ -1470,7 +1482,7 @@ async def websocket_prices(websocket: WebSocket):
                 "WebSocket: Starting CSV replay mode",
                 extra={
                     "symbols": list(app_state.test_data.keys()),
-                    "rows_per_symbol": {k: len(v) for k, v in app_state.test_data.items()}
+                    "rows_per_symbol": {k: len(v) for k, v in app_state.test_data.items()},
                 },
             )
 
@@ -1830,6 +1842,67 @@ class BrokerHealthResponse(BaseModel):
     latency_ms: float | None = None
     last_heartbeat: str | None = None
     error_message: str | None = None
+
+
+# ============================================================================
+# Paper Trading Pydantic Models
+# ============================================================================
+
+
+class PaperPositionResponse(BaseModel):
+    """Response model for a paper trading position."""
+
+    symbol: str
+    qty: int
+    entry_price: float
+    current_price: float
+    market_value: float
+    unrealized_pnl: float
+    cost_basis: float
+
+
+class PaperAccountResponse(BaseModel):
+    """Response model for paper trading account information."""
+
+    account_id: str
+    balance: float
+    buying_power: float
+    equity: float
+    cash: float
+    positions_value: float
+    realized_pnl: float
+    unrealized_pnl: float
+    positions: list[PaperPositionResponse]
+
+
+class PaperTradeResponse(BaseModel):
+    """Response model for a paper trade."""
+
+    trade_id: str
+    order_id: str
+    symbol: str
+    side: str  # "BUY" or "SELL"
+    qty: int
+    price: float
+    slippage: float
+    timestamp: str
+    realized_pnl: float
+
+
+class PaperTradeHistoryResponse(BaseModel):
+    """Response model for paper trade history."""
+
+    trades: list[PaperTradeResponse]
+    total_count: int
+
+
+class PaperResetResponse(BaseModel):
+    """Response model for paper account reset."""
+
+    message: str
+    account_id: str
+    initial_balance: float
+    timestamp: str
 
 
 # Storage key prefix for broker configs
@@ -2222,6 +2295,196 @@ async def check_broker_health(broker_id: str):
             await broker.disconnect()
         except Exception:
             pass
+
+
+# ============================================================================
+# Paper Trading Endpoints
+# ============================================================================
+
+# Global paper broker instance (lazy initialized)
+_paper_broker: "PaperBroker | None" = None
+
+
+async def _get_paper_broker() -> "PaperBroker":
+    """
+    Get or create the paper broker instance.
+
+    Returns:
+        Initialized PaperBroker instance
+
+    Raises:
+        HTTPException: If paper broker fails to initialize
+    """
+    global _paper_broker
+
+    if _paper_broker is not None and _paper_broker._connected:
+        return _paper_broker
+
+    from backend.core.config import get_settings
+    from backend.execution.brokers.paper_broker import PaperBroker
+
+    settings = get_settings()
+
+    # Use database path from app_state if available, otherwise default
+    db_path = "data/system.db"
+    if app_state.sqlite_store is not None:
+        db_path = app_state.sqlite_store.db_path
+
+    _paper_broker = PaperBroker(
+        initial_balance=settings.paper_initial_balance,
+        db_path=db_path,
+        slippage_bps=settings.paper_slippage_bps,
+        use_price_provider=False,  # Disable for API testing, can enable with config
+        mock_price=settings.paper_mock_price,
+        price_cache_ttl=settings.paper_price_cache_ttl,
+    )
+
+    connected = await _paper_broker.connect()
+    if not connected:
+        raise HTTPException(status_code=503, detail="Failed to initialize paper broker")
+
+    return _paper_broker
+
+
+@app.get("/api/paper/account", response_model=PaperAccountResponse)
+async def get_paper_account():
+    """
+    Get paper trading account information.
+
+    Returns current account balance, buying power, equity, positions,
+    and P&L metrics. This endpoint uses the same response format as
+    live broker account endpoints for UI compatibility.
+
+    Returns:
+        PaperAccountResponse: Account balance, positions, and P&L data
+    """
+    try:
+        paper_broker = await _get_paper_broker()
+
+        # Get account info
+        account = await paper_broker.get_account()
+
+        # Get positions
+        positions = await paper_broker.get_positions()
+
+        # Get P&L
+        realized_pnl = await paper_broker.get_realized_pnl()
+        unrealized_pnl = await paper_broker.get_unrealized_pnl()
+
+        # Build position responses
+        position_responses = [
+            PaperPositionResponse(
+                symbol=pos.symbol,
+                qty=pos.qty,
+                entry_price=pos.entry_price,
+                current_price=pos.current_price,
+                market_value=pos.market_value,
+                unrealized_pnl=pos.unrealized_pnl,
+                cost_basis=pos.entry_price * pos.qty,
+            )
+            for pos in positions
+        ]
+
+        app_state.update_timestamp()
+
+        return PaperAccountResponse(
+            account_id=account.account_id,
+            balance=account.balance,
+            buying_power=account.buying_power,
+            equity=account.equity,
+            cash=account.cash,
+            positions_value=account.positions_value,
+            realized_pnl=realized_pnl,
+            unrealized_pnl=unrealized_pnl,
+            positions=position_responses,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get paper account: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get paper account: {str(e)}")
+
+
+@app.post("/api/paper/reset", response_model=PaperResetResponse)
+async def reset_paper_account():
+    """
+    Reset paper trading account to initial state.
+
+    Clears all positions, orders, and trade history, then restores
+    the account to the initial $100,000 balance.
+
+    Returns:
+        PaperResetResponse: Confirmation with reset details
+    """
+    try:
+        paper_broker = await _get_paper_broker()
+
+        # Reset the account
+        await paper_broker.reset_account()
+
+        app_state.update_timestamp()
+
+        return PaperResetResponse(
+            message="Paper account reset successfully",
+            account_id="PAPER-001",
+            initial_balance=paper_broker.initial_balance,
+            timestamp=datetime.now().isoformat(),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to reset paper account: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to reset paper account: {str(e)}")
+
+
+@app.get("/api/paper/trades", response_model=PaperTradeHistoryResponse)
+async def get_paper_trades():
+    """
+    Get paper trading trade history.
+
+    Returns all executed paper trades with fill details, slippage
+    information, and realized P&L. Uses a format compatible with
+    live broker trade history for UI consistency.
+
+    Returns:
+        PaperTradeHistoryResponse: List of paper trades
+    """
+    try:
+        paper_broker = await _get_paper_broker()
+
+        # Get trades
+        trades = await paper_broker.get_trades()
+
+        # Build trade responses
+        trade_responses = [
+            PaperTradeResponse(
+                trade_id=trade.trade_id,
+                order_id=trade.order_id,
+                symbol=trade.symbol,
+                side=trade.side.name,  # Convert OrderSide enum to string
+                qty=trade.qty,
+                price=trade.price,
+                slippage=trade.slippage,
+                timestamp=datetime.fromtimestamp(trade.timestamp).isoformat(),
+                realized_pnl=trade.realized_pnl,
+            )
+            for trade in trades
+        ]
+
+        app_state.update_timestamp()
+
+        return PaperTradeHistoryResponse(
+            trades=trade_responses,
+            total_count=len(trade_responses),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get paper trades: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get paper trades: {str(e)}")
 
 
 # ============================================================================

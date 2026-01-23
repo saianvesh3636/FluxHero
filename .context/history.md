@@ -1988,3 +1988,43 @@ Implemented the PaperBroker class as the first task of Phase B (Paper Trading Sy
    - set_price and update_prices methods
 
 **Result:** Paper broker now fetches realistic market prices from YahooFinance with caching and configurable fallbacks. 61 paper trading tests pass.
+
+---
+
+## 2026-01-23: Add paper trading API endpoints (Phase B)
+
+**Task:** Add paper trading API endpoints
+
+**Files changed:**
+- `backend/api/server.py` - Added Pydantic models and endpoints for paper trading
+- `tests/unit/test_paper_trading_api.py` - New test file with 22 tests
+
+**What was done:**
+
+1. **Added Pydantic response models** (`server.py`):
+   - `PaperPositionResponse` - Position info with symbol, qty, prices, P&L
+   - `PaperAccountResponse` - Full account state with balance, positions, P&L
+   - `PaperTradeResponse` - Trade info with ID, side, price, slippage
+   - `PaperTradeHistoryResponse` - List of trades with total count
+   - `PaperResetResponse` - Reset confirmation with timestamp
+
+2. **Added API endpoints** (`server.py`):
+   - `GET /api/paper/account` - Returns paper account balance, positions, P&L
+   - `POST /api/paper/reset` - Resets paper account to initial $100,000 state
+   - `GET /api/paper/trades` - Returns paper trade history with fill details
+
+3. **Added helper function** (`_get_paper_broker`):
+   - Lazy-initializes singleton paper broker instance
+   - Uses settings from `backend/core/config.py` (paper_slippage_bps, etc.)
+   - Shares database with main app via `app_state.sqlite_store`
+
+4. **Added comprehensive tests** (22 tests):
+   - Initial account state verification
+   - Response structure validation
+   - Reset functionality
+   - Trade history retrieval
+   - Error handling (broker errors return 500)
+   - Mock broker integration tests
+   - Pydantic model validation tests
+
+**Result:** Paper trading API endpoints fully implemented with same response format as live broker for UI compatibility. 22 new tests pass.
