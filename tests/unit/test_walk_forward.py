@@ -23,6 +23,7 @@ from backend.backtesting.walk_forward import (
     WalkForwardResult,
     WalkForwardWindow,
     WalkForwardWindowResult,
+    aggregate_walk_forward_results,
     check_date_gaps,
     generate_walk_forward_windows,
     run_walk_forward_backtest,
@@ -864,3 +865,445 @@ class TestRunWalkForwardBacktest:
 
         # Default initial capital should be used
         assert result.window_results[0].initial_equity == 100000.0
+
+
+class TestAggregateWalkForwardResults:
+    """Test aggregate_walk_forward_results function (R9.4.3)."""
+
+    def test_aggregate_empty_results(self):
+        """Test aggregation with no window results."""
+        config = BacktestConfig(initial_capital=100000.0)
+        result = WalkForwardResult(
+            window_results=[],
+            total_windows=0,
+            profitable_windows=0,
+            config=config,
+        )
+
+        aggregate = aggregate_walk_forward_results(result)
+
+        assert aggregate.total_windows == 0
+        assert aggregate.total_trades == 0
+        assert aggregate.aggregate_sharpe == 0.0
+        assert aggregate.aggregate_max_drawdown_pct == 0.0
+        assert aggregate.aggregate_win_rate == 0.0
+        assert aggregate.pass_rate == 0.0
+        assert aggregate.passes_walk_forward_test is False
+        assert aggregate.initial_capital == 100000.0
+        assert aggregate.final_capital == 100000.0
+
+    def test_aggregate_single_window(self):
+        """Test aggregation with single window result."""
+        window = WalkForwardWindow(
+            window_id=0,
+            train_start_idx=0,
+            train_end_idx=63,
+            test_start_idx=63,
+            test_end_idx=84,
+        )
+        window_result = WalkForwardWindowResult(
+            window=window,
+            metrics={
+                "sharpe_ratio": 1.5,
+                "winning_trades": 3,
+                "losing_trades": 2,
+            },
+            initial_equity=100000.0,
+            final_equity=105000.0,
+            equity_curve=[100000.0, 102000.0, 104000.0, 105000.0],
+            is_profitable=True,
+            strategy_params={},
+        )
+
+        config = BacktestConfig(initial_capital=100000.0)
+        result = WalkForwardResult(
+            window_results=[window_result],
+            total_windows=1,
+            profitable_windows=1,
+            config=config,
+        )
+
+        aggregate = aggregate_walk_forward_results(result)
+
+        assert aggregate.total_windows == 1
+        assert aggregate.total_profitable_windows == 1
+        assert aggregate.pass_rate == 1.0
+        assert aggregate.passes_walk_forward_test is True
+        assert aggregate.initial_capital == 100000.0
+        assert aggregate.final_capital == 105000.0
+        assert aggregate.total_return_pct == pytest.approx(5.0, rel=0.01)
+        # Combined equity curve should match single window
+        assert aggregate.combined_equity_curve == [100000.0, 102000.0, 104000.0, 105000.0]
+
+    def test_aggregate_multiple_windows(self):
+        """Test aggregation with multiple window results."""
+        # Create three windows with different results
+        windows = []
+        window_results = []
+
+        # Window 0: Profitable
+        windows.append(
+            WalkForwardWindow(
+                window_id=0,
+                train_start_idx=0,
+                train_end_idx=63,
+                test_start_idx=63,
+                test_end_idx=84,
+            )
+        )
+        window_results.append(
+            WalkForwardWindowResult(
+                window=windows[0],
+                metrics={"winning_trades": 2, "losing_trades": 1},
+                initial_equity=100000.0,
+                final_equity=105000.0,
+                equity_curve=[100000.0, 102000.0, 105000.0],
+                is_profitable=True,
+                strategy_params={},
+            )
+        )
+
+        # Window 1: Also profitable
+        windows.append(
+            WalkForwardWindow(
+                window_id=1,
+                train_start_idx=84,
+                train_end_idx=147,
+                test_start_idx=147,
+                test_end_idx=168,
+            )
+        )
+        window_results.append(
+            WalkForwardWindowResult(
+                window=windows[1],
+                metrics={"winning_trades": 3, "losing_trades": 1},
+                initial_equity=105000.0,
+                final_equity=110000.0,
+                equity_curve=[105000.0, 107000.0, 110000.0],
+                is_profitable=True,
+                strategy_params={},
+            )
+        )
+
+        # Window 2: Loss
+        windows.append(
+            WalkForwardWindow(
+                window_id=2,
+                train_start_idx=168,
+                train_end_idx=231,
+                test_start_idx=231,
+                test_end_idx=252,
+            )
+        )
+        window_results.append(
+            WalkForwardWindowResult(
+                window=windows[2],
+                metrics={"winning_trades": 1, "losing_trades": 3},
+                initial_equity=110000.0,
+                final_equity=108000.0,
+                equity_curve=[110000.0, 109000.0, 108000.0],
+                is_profitable=False,
+                strategy_params={},
+            )
+        )
+
+        config = BacktestConfig(initial_capital=100000.0)
+        result = WalkForwardResult(
+            window_results=window_results,
+            total_windows=3,
+            profitable_windows=2,
+            config=config,
+        )
+
+        aggregate = aggregate_walk_forward_results(result)
+
+        assert aggregate.total_windows == 3
+        assert aggregate.total_profitable_windows == 2
+        assert aggregate.pass_rate == pytest.approx(2 / 3, rel=0.01)
+        # 66.7% > 60% threshold
+        assert aggregate.passes_walk_forward_test is True
+        assert aggregate.initial_capital == 100000.0
+        assert aggregate.final_capital == 108000.0
+        assert aggregate.total_return_pct == pytest.approx(8.0, rel=0.01)
+
+        # Combined equity curve should concatenate (skipping junction duplicates)
+        # Window 0: [100000, 102000, 105000]
+        # Window 1: [105000, 107000, 110000] -> skip first (105000)
+        # Window 2: [110000, 109000, 108000] -> skip first (110000)
+        expected_curve = [
+            100000.0,
+            102000.0,
+            105000.0,
+            107000.0,
+            110000.0,
+            109000.0,
+            108000.0,
+        ]
+        assert aggregate.combined_equity_curve == expected_curve
+
+        # Total trades from all windows
+        assert aggregate.total_trades == (2 + 1) + (3 + 1) + (1 + 3)  # 11 trades
+
+    def test_aggregate_win_rate_calculation(self):
+        """Test that aggregate win rate is calculated correctly across windows."""
+        window = WalkForwardWindow(
+            window_id=0,
+            train_start_idx=0,
+            train_end_idx=63,
+            test_start_idx=63,
+            test_end_idx=84,
+        )
+        # 4 wins, 1 loss = 80% win rate
+        window_result = WalkForwardWindowResult(
+            window=window,
+            metrics={"winning_trades": 4, "losing_trades": 1},
+            initial_equity=100000.0,
+            final_equity=105000.0,
+            equity_curve=[100000.0, 105000.0],
+            is_profitable=True,
+            strategy_params={},
+        )
+
+        config = BacktestConfig(initial_capital=100000.0)
+        result = WalkForwardResult(
+            window_results=[window_result],
+            total_windows=1,
+            profitable_windows=1,
+            config=config,
+        )
+
+        aggregate = aggregate_walk_forward_results(result)
+
+        # 4 wins, 1 loss = 80%
+        assert aggregate.aggregate_win_rate == pytest.approx(0.8, rel=0.01)
+        assert aggregate.total_trades == 5
+
+    def test_aggregate_pass_threshold_custom(self):
+        """Test custom pass threshold."""
+        window = WalkForwardWindow(
+            window_id=0,
+            train_start_idx=0,
+            train_end_idx=63,
+            test_start_idx=63,
+            test_end_idx=84,
+        )
+        window_result = WalkForwardWindowResult(
+            window=window,
+            metrics={},
+            initial_equity=100000.0,
+            final_equity=95000.0,
+            equity_curve=[100000.0, 95000.0],
+            is_profitable=False,
+            strategy_params={},
+        )
+
+        config = BacktestConfig(initial_capital=100000.0)
+        result = WalkForwardResult(
+            window_results=[window_result],
+            total_windows=2,  # 1 profitable out of 2 = 50%
+            profitable_windows=1,
+            config=config,
+        )
+
+        # With default 60% threshold, should fail
+        aggregate = aggregate_walk_forward_results(result, pass_threshold=0.6)
+        assert aggregate.passes_walk_forward_test is False
+
+        # With 40% threshold, should pass
+        aggregate = aggregate_walk_forward_results(result, pass_threshold=0.4)
+        assert aggregate.passes_walk_forward_test is True
+
+    def test_aggregate_per_window_returns(self):
+        """Test that per-window returns are calculated correctly."""
+        window = WalkForwardWindow(
+            window_id=0,
+            train_start_idx=0,
+            train_end_idx=63,
+            test_start_idx=63,
+            test_end_idx=84,
+        )
+        window_result = WalkForwardWindowResult(
+            window=window,
+            metrics={},
+            initial_equity=100000.0,
+            final_equity=110000.0,  # 10% return
+            equity_curve=[100000.0, 110000.0],
+            is_profitable=True,
+            strategy_params={},
+        )
+
+        config = BacktestConfig(initial_capital=100000.0)
+        result = WalkForwardResult(
+            window_results=[window_result],
+            total_windows=1,
+            profitable_windows=1,
+            config=config,
+        )
+
+        aggregate = aggregate_walk_forward_results(result)
+
+        assert len(aggregate.per_window_returns) == 1
+        assert aggregate.per_window_returns[0] == pytest.approx(10.0, rel=0.01)
+
+    def test_aggregate_with_run_walk_forward(self):
+        """Integration test: aggregate results from actual walk-forward run."""
+        # Generate data with uptrend to ensure profitable windows
+        bars = generate_synthetic_bars(168, trend=0.003)
+
+        result = run_walk_forward_backtest(
+            bars=bars,
+            strategy_factory=simple_strategy_factory,
+            train_bars=63,
+            test_bars=21,
+        )
+
+        aggregate = aggregate_walk_forward_results(result)
+
+        # Verify aggregate contains all window data
+        assert aggregate.total_windows == result.total_windows
+        assert aggregate.total_profitable_windows == result.profitable_windows
+        assert aggregate.pass_rate == result.pass_rate
+        assert aggregate.initial_capital == result.config.initial_capital
+
+        # Combined equity curve should have entries
+        assert len(aggregate.combined_equity_curve) > 0
+
+        # Final capital should match last equity value
+        assert aggregate.final_capital == aggregate.combined_equity_curve[-1]
+
+        # Per-window returns should match window count
+        assert len(aggregate.per_window_returns) == result.total_windows
+
+    def test_aggregate_max_drawdown(self):
+        """Test that aggregate max drawdown is calculated from combined curve."""
+        # Create windows with a drawdown pattern
+        window0 = WalkForwardWindow(
+            window_id=0,
+            train_start_idx=0,
+            train_end_idx=63,
+            test_start_idx=63,
+            test_end_idx=84,
+        )
+        window1 = WalkForwardWindow(
+            window_id=1,
+            train_start_idx=84,
+            train_end_idx=147,
+            test_start_idx=147,
+            test_end_idx=168,
+        )
+
+        # Window 0: Goes up
+        window_result0 = WalkForwardWindowResult(
+            window=window0,
+            metrics={},
+            initial_equity=100000.0,
+            final_equity=110000.0,  # Peak
+            equity_curve=[100000.0, 105000.0, 110000.0],
+            is_profitable=True,
+            strategy_params={},
+        )
+
+        # Window 1: Goes down from peak
+        window_result1 = WalkForwardWindowResult(
+            window=window1,
+            metrics={},
+            initial_equity=110000.0,
+            final_equity=99000.0,  # 10% drawdown from peak
+            equity_curve=[110000.0, 105000.0, 99000.0],
+            is_profitable=False,
+            strategy_params={},
+        )
+
+        config = BacktestConfig(initial_capital=100000.0)
+        result = WalkForwardResult(
+            window_results=[window_result0, window_result1],
+            total_windows=2,
+            profitable_windows=1,
+            config=config,
+        )
+
+        aggregate = aggregate_walk_forward_results(result)
+
+        # Combined curve: [100000, 105000, 110000, 105000, 99000]
+        # Max drawdown: from 110000 to 99000 = -10%
+        assert aggregate.aggregate_max_drawdown_pct == pytest.approx(-10.0, rel=0.1)
+
+    def test_aggregate_sharpe_calculation(self):
+        """Test that aggregate Sharpe is calculated from combined equity curve."""
+        # Create simple window with known equity progression
+        window = WalkForwardWindow(
+            window_id=0,
+            train_start_idx=0,
+            train_end_idx=63,
+            test_start_idx=63,
+            test_end_idx=84,
+        )
+        # Equity curve with consistent daily returns
+        equity_curve = [100000.0 * (1.001**i) for i in range(21)]  # ~0.1% daily return
+
+        window_result = WalkForwardWindowResult(
+            window=window,
+            metrics={},
+            initial_equity=equity_curve[0],
+            final_equity=equity_curve[-1],
+            equity_curve=equity_curve,
+            is_profitable=True,
+            strategy_params={},
+        )
+
+        config = BacktestConfig(initial_capital=100000.0, risk_free_rate=0.04)
+        result = WalkForwardResult(
+            window_results=[window_result],
+            total_windows=1,
+            profitable_windows=1,
+            config=config,
+        )
+
+        aggregate = aggregate_walk_forward_results(result)
+
+        # Sharpe should be positive for consistent positive returns
+        assert aggregate.aggregate_sharpe > 0
+
+    def test_aggregate_dataclass_fields(self):
+        """Test that AggregateWalkForwardMetrics has all required fields."""
+        window = WalkForwardWindow(
+            window_id=0,
+            train_start_idx=0,
+            train_end_idx=63,
+            test_start_idx=63,
+            test_end_idx=84,
+        )
+        window_result = WalkForwardWindowResult(
+            window=window,
+            metrics={},
+            initial_equity=100000.0,
+            final_equity=105000.0,
+            equity_curve=[100000.0, 105000.0],
+            is_profitable=True,
+            strategy_params={},
+        )
+
+        config = BacktestConfig(initial_capital=100000.0)
+        result = WalkForwardResult(
+            window_results=[window_result],
+            total_windows=1,
+            profitable_windows=1,
+            config=config,
+        )
+
+        aggregate = aggregate_walk_forward_results(result)
+
+        # Verify all expected fields exist
+        assert hasattr(aggregate, "combined_equity_curve")
+        assert hasattr(aggregate, "aggregate_sharpe")
+        assert hasattr(aggregate, "aggregate_max_drawdown_pct")
+        assert hasattr(aggregate, "aggregate_win_rate")
+        assert hasattr(aggregate, "total_trades")
+        assert hasattr(aggregate, "total_profitable_windows")
+        assert hasattr(aggregate, "total_windows")
+        assert hasattr(aggregate, "pass_rate")
+        assert hasattr(aggregate, "passes_walk_forward_test")
+        assert hasattr(aggregate, "initial_capital")
+        assert hasattr(aggregate, "final_capital")
+        assert hasattr(aggregate, "total_return_pct")
+        assert hasattr(aggregate, "per_window_returns")

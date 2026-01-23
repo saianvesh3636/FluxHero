@@ -1087,3 +1087,65 @@
 - Uses existing BacktestEngine and PerformanceMetrics for execution and metrics
 
 **Result:** Phase 18 Task 2 complete. Rolling window execution enables walk-forward backtesting with optional parameter optimization per window.
+
+---
+
+## 2026-01-23: Implement results aggregation (Phase 18)
+
+**Task:** Implement results aggregation (backend/backtesting/walk_forward.py)
+
+**Files Changed:**
+- `backend/backtesting/walk_forward.py` - Added AggregateWalkForwardMetrics dataclass and aggregate_walk_forward_results() function
+- `tests/unit/test_walk_forward.py` - Added TestAggregateWalkForwardResults class (12 tests)
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Added `AggregateWalkForwardMetrics` dataclass to `backend/backtesting/walk_forward.py`:
+   - `combined_equity_curve`: Concatenated equity values from all test periods
+   - `aggregate_sharpe`: Sharpe ratio calculated from combined equity curve
+   - `aggregate_max_drawdown_pct`: Maximum drawdown across combined equity curve
+   - `aggregate_win_rate`: Win rate across all trades from all windows
+   - `total_trades`: Total number of trades across all windows
+   - `total_profitable_windows`: Number of windows with positive returns
+   - `total_windows`: Total number of windows tested
+   - `pass_rate`: Percentage of profitable windows (0.0 to 1.0)
+   - `passes_walk_forward_test`: True if pass_rate >= pass_threshold (default 60%)
+   - `initial_capital`: Starting capital
+   - `final_capital`: Ending capital after all windows
+   - `total_return_pct`: Total return percentage
+   - `per_window_returns`: List of return percentages for each window
+
+2. Created `aggregate_walk_forward_results()` function:
+   - Combines equity curves from all test periods (skipping junction duplicates)
+   - Calculates aggregate Sharpe ratio from combined equity curve
+   - Calculates aggregate max drawdown from combined equity curve
+   - Calculates aggregate win rate from all trades across all windows
+   - Counts profitable windows and calculates pass rate
+   - Determines if strategy passes walk-forward test (>60% profitable windows by default)
+   - Supports configurable pass_threshold parameter
+   - Handles edge cases (empty results, single window)
+   - Logs summary of aggregate metrics
+
+3. Created comprehensive test suite (12 tests) in `TestAggregateWalkForwardResults`:
+   - test_aggregate_empty_results: Empty window results handled correctly
+   - test_aggregate_single_window: Single window aggregation works
+   - test_aggregate_multiple_windows: Multiple windows with equity curve concatenation
+   - test_aggregate_win_rate_calculation: Win rate calculated across all windows
+   - test_aggregate_pass_threshold_custom: Custom pass threshold works
+   - test_aggregate_per_window_returns: Per-window returns calculated correctly
+   - test_aggregate_with_run_walk_forward: Integration test with actual walk-forward run
+   - test_aggregate_max_drawdown: Max drawdown calculated from combined curve
+   - test_aggregate_sharpe_calculation: Sharpe calculated from combined curve
+   - test_aggregate_dataclass_fields: All required fields present
+
+4. All 55 tests pass (45 existing + 10 new)
+5. All linting checks pass (ruff)
+
+**Technical Details:**
+- Combined equity curve skips junction duplicates (last point of window N = first point of window N+1)
+- Uses existing metric functions (calculate_returns, calculate_sharpe_ratio, calculate_max_drawdown, calculate_win_rate)
+- Trade P&Ls reconstructed from win/loss counts if trades_pnl not available in metrics dict
+- Pass threshold configurable via pass_threshold parameter (default 0.6 = 60%)
+
+**Result:** Phase 18 Task 3 complete. Results aggregation enables comprehensive analysis of walk-forward performance with aggregate metrics and pass/fail determination.

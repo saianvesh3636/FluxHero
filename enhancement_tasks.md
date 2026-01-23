@@ -10,7 +10,7 @@ Each task is on a single line for ralphy.sh compatibility.
 
 - [x] Implement rolling window execution (backend/backtesting/walk_forward.py) - create run_walk_forward_backtest() orchestrator that executes backtest on each test window sequentially, optionally re-optimizes strategy params on train window, tracks results per window. Ref: R9.4.2
 
-- [ ] Implement results aggregation (backend/backtesting/walk_forward.py) - create aggregate_walk_forward_results() to combine equity curves from all test periods, calculate aggregate Sharpe/drawdown/win_rate, count profitable windows. Ref: R9.4.3
+- [x] Implement results aggregation (backend/backtesting/walk_forward.py) - create aggregate_walk_forward_results() to combine equity curves from all test periods, calculate aggregate Sharpe/drawdown/win_rate, count profitable windows. Ref: R9.4.3
 
 - [ ] Implement pass rate calculation (backend/backtesting/walk_forward.py) - calculate percentage of profitable test windows (final equity > initial), strategy passes if >60% profitable, add passes_walk_forward_test boolean. Ref: R9.4.4
 

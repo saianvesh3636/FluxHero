@@ -619,3 +619,224 @@ def run_walk_forward_backtest(
     )
 
     return result
+
+
+@dataclass
+class AggregateWalkForwardMetrics:
+    """Aggregated metrics from walk-forward testing.
+
+    Attributes:
+        combined_equity_curve: Concatenated equity values from all test periods
+        aggregate_sharpe: Sharpe ratio calculated from combined equity curve
+        aggregate_max_drawdown_pct: Maximum drawdown across combined equity curve
+        aggregate_win_rate: Win rate across all trades from all windows
+        total_trades: Total number of trades across all windows
+        total_profitable_windows: Number of windows with positive returns
+        total_windows: Total number of windows tested
+        pass_rate: Percentage of profitable windows (0.0 to 1.0)
+        passes_walk_forward_test: True if pass_rate > 0.6 (60% threshold)
+        initial_capital: Starting capital
+        final_capital: Ending capital after all windows
+        total_return_pct: Total return percentage
+        per_window_returns: List of return percentages for each window
+    """
+
+    combined_equity_curve: list[float]
+    aggregate_sharpe: float
+    aggregate_max_drawdown_pct: float
+    aggregate_win_rate: float
+    total_trades: int
+    total_profitable_windows: int
+    total_windows: int
+    pass_rate: float
+    passes_walk_forward_test: bool
+    initial_capital: float
+    final_capital: float
+    total_return_pct: float
+    per_window_returns: list[float]
+
+
+def aggregate_walk_forward_results(
+    result: WalkForwardResult,
+    pass_threshold: float = 0.6,
+) -> AggregateWalkForwardMetrics:
+    """
+    Aggregate results from walk-forward testing across all windows.
+
+    Combines equity curves from all test periods and calculates aggregate
+    performance metrics to evaluate overall strategy robustness.
+
+    Parameters
+    ----------
+    result : WalkForwardResult
+        Complete walk-forward results containing all window results
+    pass_threshold : float
+        Minimum pass rate required for strategy to pass (default: 0.6 = 60%)
+
+    Returns
+    -------
+    AggregateWalkForwardMetrics
+        Aggregated metrics including:
+        - Combined equity curve from all test periods
+        - Aggregate Sharpe ratio
+        - Aggregate max drawdown
+        - Aggregate win rate across all trades
+        - Pass rate and pass/fail status
+
+    Examples
+    --------
+    >>> result = run_walk_forward_backtest(bars, strategy_factory)
+    >>> aggregate = aggregate_walk_forward_results(result)
+    >>> print(f"Pass rate: {aggregate.pass_rate:.1%}")
+    >>> print(f"Passes test: {aggregate.passes_walk_forward_test}")
+    >>> print(f"Aggregate Sharpe: {aggregate.aggregate_sharpe:.2f}")
+
+    Notes
+    -----
+    The combined equity curve is constructed by normalizing each window's
+    equity to start at the ending value of the previous window, creating
+    a continuous capital growth curve.
+
+    Reference: FLUXHERO_REQUIREMENTS.md R9.4.3
+    """
+    from backend.backtesting.metrics import (
+        calculate_max_drawdown,
+        calculate_returns,
+        calculate_sharpe_ratio,
+        calculate_win_rate,
+    )
+
+    if not result.window_results:
+        return AggregateWalkForwardMetrics(
+            combined_equity_curve=[result.config.initial_capital],
+            aggregate_sharpe=0.0,
+            aggregate_max_drawdown_pct=0.0,
+            aggregate_win_rate=0.0,
+            total_trades=0,
+            total_profitable_windows=0,
+            total_windows=0,
+            pass_rate=0.0,
+            passes_walk_forward_test=False,
+            initial_capital=result.config.initial_capital,
+            final_capital=result.config.initial_capital,
+            total_return_pct=0.0,
+            per_window_returns=[],
+        )
+
+    # Combine equity curves from all windows
+    # Each window's equity curve is scaled to continue from the previous window's end
+    combined_equity: list[float] = []
+    all_trades_pnl: list[float] = []
+    per_window_returns: list[float] = []
+
+    for i, window_result in enumerate(result.window_results):
+        # Calculate per-window return
+        if window_result.initial_equity > 0:
+            window_return = (
+                (window_result.final_equity - window_result.initial_equity)
+                / window_result.initial_equity
+            ) * 100.0
+        else:
+            window_return = 0.0
+        per_window_returns.append(window_return)
+
+        # Add equity curve points
+        # For first window, include all points
+        # For subsequent windows, skip the first point (which equals previous final)
+        equity_curve = window_result.equity_curve
+        if i == 0:
+            combined_equity.extend(equity_curve)
+        else:
+            # Skip first point to avoid duplicating the junction point
+            if len(equity_curve) > 1:
+                combined_equity.extend(equity_curve[1:])
+            elif len(equity_curve) == 1:
+                # Only one point, still add it if different from last
+                if combined_equity and equity_curve[0] != combined_equity[-1]:
+                    combined_equity.extend(equity_curve)
+
+        # Collect trade P&Ls from window metrics
+        if "trades_pnl" in window_result.metrics:
+            all_trades_pnl.extend(window_result.metrics["trades_pnl"])
+        # Alternative: count from win/loss counts if trades_pnl not available
+        elif "winning_trades" in window_result.metrics and "losing_trades" in window_result.metrics:
+            # Reconstruct P&Ls for win rate calculation (only signs matter)
+            wins = window_result.metrics.get("winning_trades", 0)
+            losses = window_result.metrics.get("losing_trades", 0)
+            all_trades_pnl.extend([1.0] * wins)  # Positive for wins
+            all_trades_pnl.extend([-1.0] * losses)  # Negative for losses
+
+    # Convert to numpy arrays for metric calculations
+    combined_equity_arr = np.array(combined_equity, dtype=np.float64)
+    trades_pnl_arr = np.array(all_trades_pnl, dtype=np.float64)
+
+    # Calculate aggregate metrics
+    # Sharpe ratio from combined equity curve
+    if len(combined_equity_arr) > 1:
+        returns = calculate_returns(combined_equity_arr)
+        aggregate_sharpe = calculate_sharpe_ratio(
+            returns,
+            risk_free_rate=result.config.risk_free_rate,
+            periods_per_year=252,
+        )
+    else:
+        aggregate_sharpe = 0.0
+
+    # Max drawdown from combined equity curve
+    if len(combined_equity_arr) > 0:
+        max_dd_pct, _, _ = calculate_max_drawdown(combined_equity_arr)
+        aggregate_max_drawdown = max_dd_pct
+    else:
+        aggregate_max_drawdown = 0.0
+
+    # Win rate from all trades
+    if len(trades_pnl_arr) > 0:
+        aggregate_win_rate = calculate_win_rate(trades_pnl_arr)
+    else:
+        aggregate_win_rate = 0.0
+
+    # Calculate totals
+    total_trades = len(all_trades_pnl)
+    total_profitable_windows = result.profitable_windows
+    total_windows = result.total_windows
+
+    # Pass rate
+    pass_rate = result.pass_rate
+
+    # Initial and final capital
+    initial_capital = result.config.initial_capital
+    final_capital = combined_equity[-1] if combined_equity else initial_capital
+
+    # Total return
+    if initial_capital > 0:
+        total_return_pct = ((final_capital - initial_capital) / initial_capital) * 100.0
+    else:
+        total_return_pct = 0.0
+
+    # Determine if strategy passes walk-forward test
+    passes_test = pass_rate >= pass_threshold
+
+    logger.info(
+        f"Aggregate walk-forward metrics: "
+        f"Sharpe={aggregate_sharpe:.2f}, "
+        f"MaxDD={aggregate_max_drawdown:.2f}%, "
+        f"WinRate={aggregate_win_rate:.2%}, "
+        f"PassRate={pass_rate:.1%}, "
+        f"Passes={'YES' if passes_test else 'NO'}"
+    )
+
+    return AggregateWalkForwardMetrics(
+        combined_equity_curve=combined_equity,
+        aggregate_sharpe=aggregate_sharpe,
+        aggregate_max_drawdown_pct=aggregate_max_drawdown,
+        aggregate_win_rate=aggregate_win_rate,
+        total_trades=total_trades,
+        total_profitable_windows=total_profitable_windows,
+        total_windows=total_windows,
+        pass_rate=pass_rate,
+        passes_walk_forward_test=passes_test,
+        initial_capital=initial_capital,
+        final_capital=final_capital,
+        total_return_pct=total_return_pct,
+        per_window_returns=per_window_returns,
+    )
