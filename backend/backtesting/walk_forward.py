@@ -8,16 +8,26 @@ and evaluating out-of-sample performance.
 Features:
 - WalkForwardWindow dataclass with train/test indices and dates
 - Window generation with configurable train/test periods
+- Rolling window execution with optional parameter re-optimization
 - Edge case handling (insufficient data, uneven final window, date gaps)
 
 Reference:
 - FLUXHERO_REQUIREMENTS.md R9.4 Walk-Forward Testing
 """
 
-from dataclasses import dataclass
+import logging
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
+import numpy as np
 from numpy.typing import NDArray
+
+from backend.backtesting.engine import BacktestConfig, BacktestEngine, BacktestState
+from backend.backtesting.metrics import PerformanceMetrics
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -303,3 +313,309 @@ def check_date_gaps(
             gaps.append((i, i + 1, gap_days))
 
     return gaps
+
+
+@dataclass
+class WalkForwardWindowResult:
+    """Result from a single walk-forward test window.
+
+    Attributes:
+        window: The walk-forward window configuration
+        metrics: Performance metrics from the test period
+        initial_equity: Starting equity for this window
+        final_equity: Ending equity for this window
+        equity_curve: Equity values during test period
+        is_profitable: True if final_equity > initial_equity
+        strategy_params: Strategy parameters used (may differ if re-optimized)
+    """
+
+    window: WalkForwardWindow
+    metrics: dict[str, Any]
+    initial_equity: float
+    final_equity: float
+    equity_curve: list[float]
+    is_profitable: bool
+    strategy_params: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class WalkForwardResult:
+    """Complete result from walk-forward backtest.
+
+    Attributes:
+        window_results: Results for each individual window
+        total_windows: Total number of windows tested
+        profitable_windows: Number of profitable windows
+        config: Backtest configuration used
+    """
+
+    window_results: list[WalkForwardWindowResult]
+    total_windows: int
+    profitable_windows: int
+    config: BacktestConfig
+
+    @property
+    def pass_rate(self) -> float:
+        """Percentage of profitable windows (0.0 to 1.0)."""
+        if self.total_windows == 0:
+            return 0.0
+        return self.profitable_windows / self.total_windows
+
+
+StrategyFactory = Callable[[NDArray, float, dict[str, Any]], Callable]
+"""Type alias for strategy factory function.
+
+A strategy factory takes (bars, initial_capital, params) and returns
+a strategy function compatible with BacktestEngine.run().
+"""
+
+OptimizerFunc = Callable[[NDArray, BacktestConfig], dict[str, Any]]
+"""Type alias for parameter optimizer function.
+
+An optimizer takes (train_bars, config) and returns optimized strategy parameters.
+"""
+
+
+def run_walk_forward_backtest(
+    bars: NDArray,
+    strategy_factory: StrategyFactory,
+    config: BacktestConfig | None = None,
+    train_bars: int = 63,
+    test_bars: int = 21,
+    timestamps: NDArray | None = None,
+    volumes: NDArray | None = None,
+    symbol: str = "SPY",
+    initial_params: dict[str, Any] | None = None,
+    optimizer: OptimizerFunc | None = None,
+    min_test_bars: int | None = None,
+) -> WalkForwardResult:
+    """
+    Run walk-forward backtest across multiple train/test windows.
+
+    Executes backtest on each test window sequentially. Optionally re-optimizes
+    strategy parameters on each train window before testing.
+
+    Parameters
+    ----------
+    bars : NDArray
+        OHLCV data, shape (N, 5) where columns are [open, high, low, close, volume]
+    strategy_factory : StrategyFactory
+        Factory function that creates a strategy function.
+        Signature: (bars, initial_capital, params) -> strategy_func
+        The returned strategy_func should be compatible with BacktestEngine.run()
+    config : BacktestConfig, optional
+        Backtest configuration. If None, uses default config.
+    train_bars : int
+        Number of bars for training period (default: 63 = ~3 months)
+    test_bars : int
+        Number of bars for testing period (default: 21 = ~1 month)
+    timestamps : NDArray, optional
+        Timestamps for each bar (for trade logging and date tracking)
+    volumes : NDArray, optional
+        Volume data if not included in bars array
+    symbol : str
+        Trading symbol (default: 'SPY')
+    initial_params : dict, optional
+        Initial strategy parameters. Used for all windows if no optimizer provided.
+    optimizer : OptimizerFunc, optional
+        Function to optimize strategy parameters on train data.
+        If provided, called on each train window to get optimized parameters.
+        Signature: (train_bars, config) -> optimized_params
+    min_test_bars : int, optional
+        Minimum bars required for final test period. Default is test_bars // 2.
+
+    Returns
+    -------
+    WalkForwardResult
+        Complete walk-forward results with per-window metrics
+
+    Raises
+    ------
+    InsufficientDataError
+        If not enough bars for at least one walk-forward window
+    ValueError
+        If train_bars or test_bars is not positive
+
+    Examples
+    --------
+    >>> # Basic walk-forward without optimization
+    >>> def my_strategy_factory(bars, capital, params):
+    ...     strategy = MyStrategy(bars, capital, **params)
+    ...     return strategy.get_orders
+    ...
+    >>> result = run_walk_forward_backtest(
+    ...     bars=price_data,
+    ...     strategy_factory=my_strategy_factory,
+    ...     initial_params={"risk_pct": 0.01}
+    ... )
+    >>> print(f"Pass rate: {result.pass_rate:.1%}")
+
+    >>> # Walk-forward with parameter optimization
+    >>> def optimize_params(train_bars, config):
+    ...     # Run optimization on train data
+    ...     best_params = optimize_on_data(train_bars)
+    ...     return best_params
+    ...
+    >>> result = run_walk_forward_backtest(
+    ...     bars=price_data,
+    ...     strategy_factory=my_strategy_factory,
+    ...     optimizer=optimize_params
+    ... )
+    """
+    # Use default config if not provided
+    if config is None:
+        config = BacktestConfig()
+
+    # Use empty params if not provided
+    if initial_params is None:
+        initial_params = {}
+
+    n_bars = len(bars)
+
+    # Generate walk-forward windows
+    windows = generate_walk_forward_windows(
+        n_bars=n_bars,
+        train_bars=train_bars,
+        test_bars=test_bars,
+        timestamps=timestamps,
+        min_test_bars=min_test_bars,
+    )
+
+    logger.info(
+        f"Starting walk-forward backtest: {len(windows)} windows, "
+        f"train={train_bars} bars, test={test_bars} bars"
+    )
+
+    # Validate no data leakage
+    validate_no_data_leakage(windows)
+
+    window_results: list[WalkForwardWindowResult] = []
+    profitable_count = 0
+
+    # Track cumulative capital across windows
+    current_capital = config.initial_capital
+
+    for window in windows:
+        logger.debug(f"Processing window {window.window_id}: {window}")
+
+        # Extract train data for this window
+        train_data = bars[window.train_start_idx : window.train_end_idx]
+
+        # Determine strategy parameters for this window
+        if optimizer is not None:
+            # Re-optimize on train data
+            logger.debug(f"Optimizing parameters on train window {window.window_id}")
+            params = optimizer(train_data, config)
+        else:
+            # Use initial/previous parameters
+            params = initial_params.copy()
+
+        # Extract test data for this window
+        test_data = bars[window.test_start_idx : window.test_end_idx]
+        test_timestamps = None
+        if timestamps is not None:
+            test_timestamps = timestamps[window.test_start_idx : window.test_end_idx]
+        test_volumes = None
+        if volumes is not None:
+            test_volumes = volumes[window.test_start_idx : window.test_end_idx]
+
+        # Create strategy using factory with test data
+        # Strategy needs full context up to test period for indicator warmup
+        # Include train data + test data for proper indicator calculation
+        full_window_data = bars[window.train_start_idx : window.test_end_idx]
+        strategy_func = strategy_factory(full_window_data, current_capital, params)
+
+        # Create a wrapper that adjusts indices for the test-only portion
+        test_offset = window.train_end_idx - window.train_start_idx
+
+        def create_test_wrapper(orig_func: Callable, offset: int) -> Callable:
+            """Create wrapper that maps test indices to full window indices."""
+
+            def wrapper(test_bars: NDArray, idx: int, position: Any) -> list:
+                # Map test index to full window index
+                full_idx = idx + offset
+                return orig_func(full_window_data, full_idx, position)
+
+            return wrapper
+
+        test_strategy_func = create_test_wrapper(strategy_func, test_offset)
+
+        # Run backtest on test period
+        window_config = BacktestConfig(
+            initial_capital=current_capital,
+            commission_per_share=config.commission_per_share,
+            slippage_pct=config.slippage_pct,
+            impact_threshold=config.impact_threshold,
+            impact_penalty_pct=config.impact_penalty_pct,
+            risk_free_rate=config.risk_free_rate,
+            max_position_size=config.max_position_size,
+            enable_sanity_checks=config.enable_sanity_checks,
+        )
+
+        engine = BacktestEngine(window_config)
+        state: BacktestState = engine.run(
+            bars=test_data,
+            strategy_func=test_strategy_func,
+            symbol=symbol,
+            timestamps=test_timestamps,
+            volumes=test_volumes,
+        )
+
+        # Calculate metrics for this window
+        trades_pnl = np.array([t.pnl for t in state.trades]) if state.trades else np.array([])
+        trades_holding = (
+            np.array([t.holding_bars for t in state.trades]) if state.trades else np.array([])
+        )
+
+        metrics = PerformanceMetrics.calculate_all_metrics(
+            equity_curve=np.array(state.equity_curve),
+            trades_pnl=trades_pnl,
+            trades_holding_periods=trades_holding,
+            initial_capital=current_capital,
+            risk_free_rate=config.risk_free_rate,
+            enable_sanity_checks=config.enable_sanity_checks,
+        )
+
+        # Determine profitability
+        final_equity = state.equity_curve[-1] if state.equity_curve else current_capital
+        is_profitable = final_equity > current_capital
+
+        if is_profitable:
+            profitable_count += 1
+
+        # Create window result
+        window_result = WalkForwardWindowResult(
+            window=window,
+            metrics=metrics,
+            initial_equity=current_capital,
+            final_equity=final_equity,
+            equity_curve=state.equity_curve.copy(),
+            is_profitable=is_profitable,
+            strategy_params=params.copy(),
+        )
+        window_results.append(window_result)
+
+        logger.info(
+            f"Window {window.window_id}: "
+            f"${current_capital:,.2f} -> ${final_equity:,.2f} "
+            f"({'profitable' if is_profitable else 'loss'}), "
+            f"{len(state.trades)} trades, Sharpe={metrics['sharpe_ratio']:.2f}"
+        )
+
+        # Update capital for next window (carry forward)
+        current_capital = final_equity
+
+    # Create final result
+    result = WalkForwardResult(
+        window_results=window_results,
+        total_windows=len(windows),
+        profitable_windows=profitable_count,
+        config=config,
+    )
+
+    logger.info(
+        f"Walk-forward complete: {result.profitable_windows}/{result.total_windows} "
+        f"profitable ({result.pass_rate:.1%})"
+    )
+
+    return result

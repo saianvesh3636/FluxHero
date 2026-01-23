@@ -1018,3 +1018,72 @@
 - Timestamps supported: Converts Unix epoch to datetime for date extraction
 
 **Result:** Phase 18 Task 1 complete. Walk-forward module provides foundation for out-of-sample strategy validation with proper train/test window generation.
+
+---
+
+## 2026-01-23: Implement rolling window execution (Phase 18)
+
+**Task:** Implement rolling window execution (backend/backtesting/walk_forward.py)
+
+**Files Changed:**
+- `backend/backtesting/walk_forward.py` - Added run_walk_forward_backtest(), WalkForwardWindowResult, WalkForwardResult, type aliases
+- `tests/unit/test_walk_forward.py` - Added 17 new tests for rolling window execution
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Added new dataclasses to `backend/backtesting/walk_forward.py`:
+   - **WalkForwardWindowResult:** Contains window, metrics dict, initial/final equity, equity_curve, is_profitable flag, strategy_params
+   - **WalkForwardResult:** Contains window_results list, total_windows, profitable_windows, config; includes pass_rate property
+
+2. Added type aliases:
+   - **StrategyFactory:** `Callable[[NDArray, float, dict], Callable]` - Creates strategy function from bars, capital, params
+   - **OptimizerFunc:** `Callable[[NDArray, BacktestConfig], dict]` - Optimizes params on train data
+
+3. Created `run_walk_forward_backtest()` orchestrator function:
+   - Generates windows using existing generate_walk_forward_windows()
+   - Validates no data leakage between windows
+   - For each window:
+     - Extracts train data for optional parameter optimization
+     - Calls optimizer if provided to get optimized params
+     - Creates strategy using factory with full window data (train+test for indicator warmup)
+     - Wraps strategy function to map test indices to full window indices
+     - Runs backtest on test period using BacktestEngine
+     - Calculates metrics using PerformanceMetrics
+     - Tracks profitability (final_equity > initial_equity)
+   - Carries capital forward between windows
+   - Returns WalkForwardResult with all window results and pass rate
+
+4. Created comprehensive test suite (17 new tests) in `tests/unit/test_walk_forward.py`:
+   - **TestWalkForwardWindowResult** (1 test): Dataclass creation
+   - **TestWalkForwardResult** (4 tests): pass_rate calculation for all/none/partial/zero windows
+   - **TestRunWalkForwardBacktest** (12 tests):
+     - test_basic_walk_forward: 3 windows with simple strategy
+     - test_walk_forward_with_custom_config: Custom capital and commissions
+     - test_walk_forward_with_initial_params: Strategy parameters passed through
+     - test_walk_forward_with_optimizer: Parameter optimization on each window
+     - test_walk_forward_insufficient_data: Error handling
+     - test_walk_forward_capital_carry_forward: Capital flows between windows
+     - test_walk_forward_profitability_tracking: is_profitable flag accuracy
+     - test_walk_forward_with_timestamps: Date extraction
+     - test_walk_forward_single_window: Minimal case
+     - test_walk_forward_equity_curve_per_window: Equity curves captured
+     - test_walk_forward_metrics_calculation: All expected metrics present
+     - test_walk_forward_default_config: Default BacktestConfig used
+
+5. Helper functions for tests:
+   - generate_synthetic_bars(): Creates realistic OHLCV data with configurable trend/volatility
+   - simple_strategy_factory(): Buy-and-hold strategy for testing
+   - alternating_strategy_factory(): Configurable profit/loss strategy
+
+6. All 45 tests pass (28 existing + 17 new)
+7. All linting checks pass (ruff)
+
+**Technical Details:**
+- Strategy factory receives full window data (train+test) for indicator warmup
+- Test wrapper maps test-period indices to full-window indices for strategy function
+- Capital carries forward: window N's final equity becomes window N+1's initial equity
+- Optimizer is optional; if not provided, initial_params used for all windows
+- Uses existing BacktestEngine and PerformanceMetrics for execution and metrics
+
+**Result:** Phase 18 Task 2 complete. Rolling window execution enables walk-forward backtesting with optional parameter optimization per window.

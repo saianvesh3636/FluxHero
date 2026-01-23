@@ -5,21 +5,27 @@ Tests cover:
 - WalkForwardWindow dataclass
 - Window generation with various data lengths
 - No data leakage validation
+- Rolling window execution (run_walk_forward_backtest)
 - Edge cases (insufficient data, uneven final window, date gaps)
 
-Reference: FLUXHERO_REQUIREMENTS.md R9.4.1
+Reference: FLUXHERO_REQUIREMENTS.md R9.4.1, R9.4.2
 """
 
 from datetime import datetime
+from typing import Any
 
 import numpy as np
 import pytest
 
+from backend.backtesting.engine import BacktestConfig, Order, Position
 from backend.backtesting.walk_forward import (
     InsufficientDataError,
+    WalkForwardResult,
     WalkForwardWindow,
+    WalkForwardWindowResult,
     check_date_gaps,
     generate_walk_forward_windows,
+    run_walk_forward_backtest,
     validate_no_data_leakage,
 )
 
@@ -171,7 +177,7 @@ class TestGenerateWalkForwardWindows:
 
         # Verify all windows are sequential
         for i in range(1, len(windows)):
-            assert windows[i].train_start_idx == windows[i-1].test_end_idx
+            assert windows[i].train_start_idx == windows[i - 1].test_end_idx
 
     def test_insufficient_data(self):
         """Test error when insufficient data for even one window."""
@@ -343,11 +349,15 @@ class TestCheckDateGaps:
     def test_detect_large_gap(self):
         """Test detection of gap larger than threshold."""
         # Data with a 10-day gap
-        timestamps = np.array([
-            0, 86400, 172800,  # Days 0, 1, 2
-            172800 + 10 * 86400,  # Day 12 (10-day gap)
-            172800 + 11 * 86400,  # Day 13
-        ])
+        timestamps = np.array(
+            [
+                0,
+                86400,
+                172800,  # Days 0, 1, 2
+                172800 + 10 * 86400,  # Day 12 (10-day gap)
+                172800 + 11 * 86400,  # Day 13
+            ]
+        )
         gaps = check_date_gaps(timestamps, max_gap_days=5)
 
         assert len(gaps) == 1
@@ -359,13 +369,18 @@ class TestCheckDateGaps:
         """Test detection of multiple gaps."""
         # Data with two gaps
         day = 86400
-        timestamps = np.array([
-            0, day, 2*day,  # Days 0-2
-            10*day,  # Day 10 (8-day gap)
-            11*day, 12*day,  # Days 11-12
-            25*day,  # Day 25 (13-day gap)
-            26*day,
-        ])
+        timestamps = np.array(
+            [
+                0,
+                day,
+                2 * day,  # Days 0-2
+                10 * day,  # Day 10 (8-day gap)
+                11 * day,
+                12 * day,  # Days 11-12
+                25 * day,  # Day 25 (13-day gap)
+                26 * day,
+            ]
+        )
         gaps = check_date_gaps(timestamps, max_gap_days=5)
 
         assert len(gaps) == 2
@@ -383,7 +398,7 @@ class TestCheckDateGaps:
     def test_custom_max_gap(self):
         """Test custom max_gap_days threshold."""
         day = 86400
-        timestamps = np.array([0, day, 2*day, 6*day, 7*day])  # 4-day gap at index 2
+        timestamps = np.array([0, day, 2 * day, 6 * day, 7 * day])  # 4-day gap at index 2
 
         # With max_gap_days=3, detect the 4-day gap
         gaps = check_date_gaps(timestamps, max_gap_days=3)
@@ -392,3 +407,460 @@ class TestCheckDateGaps:
         # With max_gap_days=5, 4-day gap is acceptable
         gaps = check_date_gaps(timestamps, max_gap_days=5)
         assert len(gaps) == 0
+
+
+# =============================================================================
+# Helper functions for walk-forward execution tests
+# =============================================================================
+
+
+def generate_synthetic_bars(
+    n_bars: int,
+    base_price: float = 100.0,
+    volatility: float = 0.02,
+    trend: float = 0.0001,
+    seed: int = 42,
+) -> np.ndarray:
+    """Generate synthetic OHLCV bar data for testing.
+
+    Creates realistic price data with configurable trend and volatility.
+
+    Parameters
+    ----------
+    n_bars : int
+        Number of bars to generate
+    base_price : float
+        Starting price level
+    volatility : float
+        Daily volatility (fraction, e.g. 0.02 = 2%)
+    trend : float
+        Daily trend (fraction, e.g. 0.0001 = 0.01% per day)
+    seed : int
+        Random seed for reproducibility
+
+    Returns
+    -------
+    np.ndarray
+        OHLCV array of shape (n_bars, 5)
+    """
+    rng = np.random.default_rng(seed)
+
+    # Generate close prices with trend and random walk
+    returns = rng.normal(trend, volatility, n_bars)
+    prices = base_price * np.exp(np.cumsum(returns))
+
+    # Generate OHLC from close prices
+    opens = np.roll(prices, 1)
+    opens[0] = base_price
+
+    # High/Low based on volatility
+    intraday_vol = volatility * 0.5
+    highs = np.maximum(opens, prices) * (1 + rng.uniform(0, intraday_vol, n_bars))
+    lows = np.minimum(opens, prices) * (1 - rng.uniform(0, intraday_vol, n_bars))
+
+    # Volume
+    base_volume = 1_000_000
+    volumes = rng.uniform(0.5, 1.5, n_bars) * base_volume
+
+    bars = np.column_stack([opens, highs, lows, prices, volumes])
+    return bars
+
+
+def simple_strategy_factory(
+    bars: np.ndarray,
+    initial_capital: float,
+    params: dict[str, Any],
+) -> callable:
+    """Create a simple buy-and-hold strategy for testing.
+
+    This strategy buys on the first bar and holds throughout the test.
+    """
+    bought = False
+
+    def get_orders(
+        all_bars: np.ndarray,
+        current_idx: int,
+        position: Position | None,
+    ) -> list[Order]:
+        nonlocal bought
+        from backend.backtesting.engine import OrderSide, OrderType
+
+        if not bought and position is None:
+            bought = True
+            # Buy 100 shares on first bar
+            return [
+                Order(
+                    bar_index=current_idx,
+                    symbol="TEST",
+                    side=OrderSide.BUY,
+                    shares=100,
+                    order_type=OrderType.MARKET,
+                )
+            ]
+        return []
+
+    return get_orders
+
+
+def alternating_strategy_factory(
+    bars: np.ndarray,
+    initial_capital: float,
+    params: dict[str, Any],
+) -> callable:
+    """Create a strategy that alternates between profitable and losing windows.
+
+    Uses params["make_profit"] to determine behavior.
+    """
+    traded = False
+
+    def get_orders(
+        all_bars: np.ndarray,
+        current_idx: int,
+        position: Position | None,
+    ) -> list[Order]:
+        nonlocal traded
+        from backend.backtesting.engine import OrderSide, OrderType
+
+        make_profit = params.get("make_profit", True)
+
+        if not traded and position is None:
+            traded = True
+            # Buy shares - profit/loss depends on market direction
+            shares = 100 if make_profit else 1  # Small position for losses
+            return [
+                Order(
+                    bar_index=current_idx,
+                    symbol="TEST",
+                    side=OrderSide.BUY,
+                    shares=shares,
+                    order_type=OrderType.MARKET,
+                )
+            ]
+        return []
+
+    return get_orders
+
+
+class TestWalkForwardWindowResult:
+    """Test WalkForwardWindowResult dataclass."""
+
+    def test_window_result_creation(self):
+        """Test basic window result creation."""
+        window = WalkForwardWindow(
+            window_id=0,
+            train_start_idx=0,
+            train_end_idx=63,
+            test_start_idx=63,
+            test_end_idx=84,
+        )
+        result = WalkForwardWindowResult(
+            window=window,
+            metrics={"sharpe_ratio": 1.5, "total_return_pct": 5.0},
+            initial_equity=100000.0,
+            final_equity=105000.0,
+            equity_curve=[100000.0, 102000.0, 105000.0],
+            is_profitable=True,
+            strategy_params={"risk_pct": 0.01},
+        )
+
+        assert result.window.window_id == 0
+        assert result.is_profitable is True
+        assert result.initial_equity == 100000.0
+        assert result.final_equity == 105000.0
+        assert result.metrics["sharpe_ratio"] == 1.5
+
+
+class TestWalkForwardResult:
+    """Test WalkForwardResult dataclass."""
+
+    def test_pass_rate_all_profitable(self):
+        """Test pass rate when all windows are profitable."""
+        config = BacktestConfig()
+        result = WalkForwardResult(
+            window_results=[],
+            total_windows=3,
+            profitable_windows=3,
+            config=config,
+        )
+        assert result.pass_rate == 1.0
+
+    def test_pass_rate_none_profitable(self):
+        """Test pass rate when no windows are profitable."""
+        config = BacktestConfig()
+        result = WalkForwardResult(
+            window_results=[],
+            total_windows=3,
+            profitable_windows=0,
+            config=config,
+        )
+        assert result.pass_rate == 0.0
+
+    def test_pass_rate_partial(self):
+        """Test pass rate with partial profitability."""
+        config = BacktestConfig()
+        result = WalkForwardResult(
+            window_results=[],
+            total_windows=4,
+            profitable_windows=3,
+            config=config,
+        )
+        assert result.pass_rate == 0.75
+
+    def test_pass_rate_zero_windows(self):
+        """Test pass rate with zero windows."""
+        config = BacktestConfig()
+        result = WalkForwardResult(
+            window_results=[],
+            total_windows=0,
+            profitable_windows=0,
+            config=config,
+        )
+        assert result.pass_rate == 0.0
+
+
+class TestRunWalkForwardBacktest:
+    """Test run_walk_forward_backtest function."""
+
+    def test_basic_walk_forward(self):
+        """Test basic walk-forward execution without optimization."""
+        # Generate 252 bars (1 year) - should create 3 windows
+        bars = generate_synthetic_bars(252, trend=0.0002)  # Slight uptrend
+
+        result = run_walk_forward_backtest(
+            bars=bars,
+            strategy_factory=simple_strategy_factory,
+            train_bars=63,
+            test_bars=21,
+            symbol="TEST",
+        )
+
+        # Should have 3 windows
+        assert result.total_windows == 3
+        assert len(result.window_results) == 3
+
+        # Each window should have metrics
+        for wr in result.window_results:
+            assert "sharpe_ratio" in wr.metrics
+            assert "total_return_pct" in wr.metrics
+            assert wr.initial_equity > 0
+            assert wr.final_equity > 0
+            assert len(wr.equity_curve) > 0
+
+    def test_walk_forward_with_custom_config(self):
+        """Test walk-forward with custom backtest config."""
+        bars = generate_synthetic_bars(168, trend=0.0001)  # 2 windows
+
+        config = BacktestConfig(
+            initial_capital=50000.0,
+            commission_per_share=0.01,
+            slippage_pct=0.0002,
+        )
+
+        result = run_walk_forward_backtest(
+            bars=bars,
+            strategy_factory=simple_strategy_factory,
+            config=config,
+            train_bars=63,
+            test_bars=21,
+        )
+
+        assert result.total_windows == 2
+        # First window should start with configured capital
+        assert result.window_results[0].initial_equity == 50000.0
+
+    def test_walk_forward_with_initial_params(self):
+        """Test walk-forward with initial strategy parameters."""
+        bars = generate_synthetic_bars(84)  # 1 window
+
+        initial_params = {"risk_pct": 0.02, "mode": "aggressive"}
+
+        result = run_walk_forward_backtest(
+            bars=bars,
+            strategy_factory=simple_strategy_factory,
+            train_bars=63,
+            test_bars=21,
+            initial_params=initial_params,
+        )
+
+        assert result.total_windows == 1
+        # Parameters should be passed through
+        assert result.window_results[0].strategy_params == initial_params
+
+    def test_walk_forward_with_optimizer(self):
+        """Test walk-forward with parameter optimization."""
+        bars = generate_synthetic_bars(168)  # 2 windows
+
+        optimization_calls = []
+
+        def mock_optimizer(
+            train_bars: np.ndarray,
+            config: BacktestConfig,
+        ) -> dict[str, Any]:
+            # Track optimizer calls
+            optimization_calls.append(len(train_bars))
+            return {"optimized": True, "train_size": len(train_bars)}
+
+        result = run_walk_forward_backtest(
+            bars=bars,
+            strategy_factory=simple_strategy_factory,
+            train_bars=63,
+            test_bars=21,
+            optimizer=mock_optimizer,
+        )
+
+        # Optimizer should be called for each window
+        assert len(optimization_calls) == 2
+        assert all(size == 63 for size in optimization_calls)
+
+        # Each window should have optimized params
+        for wr in result.window_results:
+            assert wr.strategy_params.get("optimized") is True
+
+    def test_walk_forward_insufficient_data(self):
+        """Test error when insufficient data."""
+        bars = generate_synthetic_bars(70)  # Less than 63 + 10 (min test)
+
+        with pytest.raises(InsufficientDataError):
+            run_walk_forward_backtest(
+                bars=bars,
+                strategy_factory=simple_strategy_factory,
+                train_bars=63,
+                test_bars=21,
+            )
+
+    def test_walk_forward_capital_carry_forward(self):
+        """Test that capital carries forward between windows."""
+        # Use uptrending data to ensure profits
+        bars = generate_synthetic_bars(168, trend=0.003)  # Strong uptrend
+
+        result = run_walk_forward_backtest(
+            bars=bars,
+            strategy_factory=simple_strategy_factory,
+            train_bars=63,
+            test_bars=21,
+        )
+
+        # Second window should start with first window's final equity
+        if len(result.window_results) >= 2:
+            first_final = result.window_results[0].final_equity
+            second_initial = result.window_results[1].initial_equity
+            assert second_initial == pytest.approx(first_final, rel=0.001)
+
+    def test_walk_forward_profitability_tracking(self):
+        """Test that profitability is tracked correctly."""
+        # Generate trending data where buy-and-hold should profit
+        bars = generate_synthetic_bars(168, trend=0.005)  # Very strong uptrend
+
+        result = run_walk_forward_backtest(
+            bars=bars,
+            strategy_factory=simple_strategy_factory,
+            train_bars=63,
+            test_bars=21,
+        )
+
+        # With strong uptrend, windows should be profitable
+        for wr in result.window_results:
+            if wr.final_equity > wr.initial_equity:
+                assert wr.is_profitable == True  # noqa: E712 - numpy bool comparison
+            else:
+                assert wr.is_profitable == False  # noqa: E712 - numpy bool comparison
+
+        # profitable_windows should match count
+        profitable_count = sum(1 for wr in result.window_results if wr.is_profitable)
+        assert result.profitable_windows == profitable_count
+
+    def test_walk_forward_with_timestamps(self):
+        """Test walk-forward with timestamps provided."""
+        n_bars = 168
+        bars = generate_synthetic_bars(n_bars)
+
+        # Generate timestamps
+        base_ts = datetime(2023, 1, 1).timestamp()
+        timestamps = np.array([base_ts + i * 86400 for i in range(n_bars)])
+
+        result = run_walk_forward_backtest(
+            bars=bars,
+            strategy_factory=simple_strategy_factory,
+            train_bars=63,
+            test_bars=21,
+            timestamps=timestamps,
+        )
+
+        # Windows should have dates
+        for wr in result.window_results:
+            assert wr.window.train_start_date is not None
+            assert wr.window.test_end_date is not None
+
+    def test_walk_forward_single_window(self):
+        """Test walk-forward with exactly one window."""
+        bars = generate_synthetic_bars(84)  # Exactly 63 + 21
+
+        result = run_walk_forward_backtest(
+            bars=bars,
+            strategy_factory=simple_strategy_factory,
+            train_bars=63,
+            test_bars=21,
+        )
+
+        assert result.total_windows == 1
+        assert result.window_results[0].window.window_id == 0
+        assert result.window_results[0].window.train_size == 63
+        assert result.window_results[0].window.test_size == 21
+
+    def test_walk_forward_equity_curve_per_window(self):
+        """Test that equity curves are captured per window."""
+        bars = generate_synthetic_bars(84)
+
+        result = run_walk_forward_backtest(
+            bars=bars,
+            strategy_factory=simple_strategy_factory,
+            train_bars=63,
+            test_bars=21,
+        )
+
+        # Equity curve should have entries for test period
+        wr = result.window_results[0]
+        assert len(wr.equity_curve) == 21  # Test period length
+        # Curve should start with initial equity
+        assert wr.equity_curve[0] == pytest.approx(wr.initial_equity, rel=0.01)
+
+    def test_walk_forward_metrics_calculation(self):
+        """Test that metrics are calculated for each window."""
+        bars = generate_synthetic_bars(84, trend=0.001)
+
+        result = run_walk_forward_backtest(
+            bars=bars,
+            strategy_factory=simple_strategy_factory,
+            train_bars=63,
+            test_bars=21,
+        )
+
+        wr = result.window_results[0]
+        metrics = wr.metrics
+
+        # All standard metrics should be present
+        expected_keys = [
+            "sharpe_ratio",
+            "max_drawdown_pct",
+            "win_rate",
+            "total_return_pct",
+            "total_trades",
+            "initial_capital",
+            "final_equity",
+        ]
+        for key in expected_keys:
+            assert key in metrics, f"Missing metric: {key}"
+
+    def test_walk_forward_default_config(self):
+        """Test that default config is used when not provided."""
+        bars = generate_synthetic_bars(84)
+
+        result = run_walk_forward_backtest(
+            bars=bars,
+            strategy_factory=simple_strategy_factory,
+            train_bars=63,
+            test_bars=21,
+        )
+
+        # Default initial capital should be used
+        assert result.window_results[0].initial_equity == 100000.0
