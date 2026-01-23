@@ -203,6 +203,89 @@ class SymbolSearchResponse(BaseModel):
     results: list[SymbolValidationResponse]
 
 
+class WalkForwardRequest(BaseModel):
+    """Walk-forward backtest configuration request.
+
+    Walk-forward testing divides historical data into train/test windows
+    to validate strategy robustness out-of-sample.
+
+    Reference: FLUXHERO_REQUIREMENTS.md R9.4
+    """
+
+    symbol: str = Field(..., description="Symbol to backtest (e.g., SPY)")
+    start_date: str = Field(..., description="Start date (YYYY-MM-DD)")
+    end_date: str = Field(..., description="End date (YYYY-MM-DD)")
+    initial_capital: float = Field(default=10000.0, description="Starting capital")
+    commission_per_share: float = Field(default=0.005, description="Commission per share")
+    slippage_pct: float = Field(default=0.0001, description="Slippage percentage (0.01%)")
+    train_bars: int = Field(default=63, description="Training period bars (~3 months)")
+    test_bars: int = Field(default=21, description="Test period bars (~1 month)")
+    strategy_mode: str = Field(default="DUAL", description="TREND, MEAN_REVERSION, or DUAL")
+    pass_threshold: float = Field(
+        default=0.6,
+        description="Pass rate threshold (strategy passes if >threshold profitable windows)",
+    )
+
+
+class WalkForwardWindowMetrics(BaseModel):
+    """Metrics for a single walk-forward test window."""
+
+    window_id: int
+    train_start_date: str | None = None
+    train_end_date: str | None = None
+    test_start_date: str | None = None
+    test_end_date: str | None = None
+    initial_equity: float
+    final_equity: float
+    return_pct: float
+    sharpe_ratio: float
+    max_drawdown_pct: float
+    win_rate: float
+    num_trades: int
+    is_profitable: bool
+
+
+class WalkForwardResponse(BaseModel):
+    """Walk-forward backtest results response.
+
+    Contains aggregate metrics and per-window details to evaluate
+    strategy robustness across multiple out-of-sample periods.
+
+    Reference: FLUXHERO_REQUIREMENTS.md R9.4
+    """
+
+    symbol: str
+    start_date: str
+    end_date: str
+    initial_capital: float
+    final_capital: float
+    total_return_pct: float
+
+    # Walk-forward specific metrics
+    total_windows: int
+    profitable_windows: int
+    pass_rate: float
+    passes_walk_forward_test: bool
+    pass_threshold: float
+
+    # Aggregate metrics across all windows
+    aggregate_sharpe: float
+    aggregate_max_drawdown_pct: float
+    aggregate_win_rate: float
+    total_trades: int
+
+    # Per-window results
+    window_results: list[WalkForwardWindowMetrics]
+
+    # Combined equity curve from all test periods
+    combined_equity_curve: list[float]
+    timestamps: list[str]
+
+    # Configuration used
+    train_bars: int
+    test_bars: int
+
+
 # ============================================================================
 # Global State Management
 # ============================================================================
@@ -873,6 +956,252 @@ async def run_backtest(config: BacktestRequest):
         success_criteria_met=success_criteria_met,
         equity_curve=equity_curve.tolist(),
         timestamps=timestamps_list,
+    )
+
+
+@app.post("/api/backtest/walk-forward", response_model=WalkForwardResponse)
+async def run_walk_forward_backtest(config: WalkForwardRequest):
+    """
+    Execute a walk-forward backtest with the provided configuration.
+
+    Walk-forward testing divides historical data into consecutive train/test
+    windows to validate strategy performance out-of-sample. The strategy is
+    optionally re-optimized on each training window before being tested.
+
+    Default configuration:
+    - 3-month training period (63 trading days)
+    - 1-month testing period (21 trading days)
+    - Strategy passes if >60% of test windows are profitable
+
+    Args:
+        config: Walk-forward configuration (symbol, dates, capital, window sizes)
+
+    Returns:
+        WalkForwardResponse: Per-window metrics and aggregate results
+
+    Reference: FLUXHERO_REQUIREMENTS.md R9.4
+    """
+    from backend.backtesting.walk_forward import InsufficientDataError as WFInsufficientDataError
+    from backend.backtesting.walk_forward import aggregate_walk_forward_results
+    from backend.backtesting.walk_forward import run_walk_forward_backtest as wf_run_backtest
+    from backend.data.provider import (
+        DataProviderError,
+        DateRangeError,
+        InsufficientDataError,
+        SymbolNotFoundError,
+        get_provider,
+    )
+    from backend.strategy.backtest_strategy import DualModeBacktestStrategy
+
+    # Parse and validate dates
+    try:
+        start_dt = datetime.strptime(config.start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(config.end_date, "%Y-%m-%d")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid date format: {e}")
+
+    num_days = (end_dt - start_dt).days
+    if num_days <= 0:
+        raise HTTPException(status_code=400, detail="End date must be after start date")
+
+    # Validate window parameters
+    if config.train_bars <= 0:
+        raise HTTPException(status_code=400, detail="train_bars must be positive")
+    if config.test_bars <= 0:
+        raise HTTPException(status_code=400, detail="test_bars must be positive")
+    if not 0.0 <= config.pass_threshold <= 1.0:
+        raise HTTPException(status_code=400, detail="pass_threshold must be between 0 and 1")
+
+    symbol = config.symbol.upper().strip()
+    if not symbol:
+        raise HTTPException(status_code=400, detail="Symbol cannot be empty")
+
+    # Fetch real data from data provider
+    try:
+        provider = get_provider()
+        data = await provider.fetch_historical_data(
+            symbol=symbol,
+            start_date=config.start_date,
+            end_date=config.end_date,
+            interval="1d",
+        )
+        bars = data.bars
+        timestamps_float = data.timestamps
+        timestamps_list = data.dates
+        logger.info(f"Fetched {len(bars)} bars from {data.provider} for {symbol}")
+
+    except SymbolNotFoundError as e:
+        logger.warning(f"Symbol not found: {symbol} - {e}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Symbol '{symbol}' not found. Please verify the ticker symbol is correct.",
+        )
+
+    except DateRangeError as e:
+        logger.warning(f"Date range error for {symbol}: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+    except InsufficientDataError as e:
+        logger.warning(f"Insufficient data for {symbol}: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient data for {symbol}: found {e.bars_found} trading days, "
+            f"need at least {e.bars_required}. Try a longer date range.",
+        )
+
+    except DataProviderError as e:
+        logger.error(f"Data provider error for {symbol}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching data for {symbol}: {e}",
+        )
+
+    # Check minimum data for walk-forward testing
+    min_bars_required = config.train_bars + (config.test_bars // 2)
+    if len(bars) < min_bars_required:
+        min_test = config.test_bars // 2
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient data for walk-forward: got {len(bars)} bars, "
+            f"need at least {min_bars_required} (train={config.train_bars} + min_test={min_test}). "
+            "Try a longer date range.",
+        )
+
+    # Create BacktestConfig
+    bt_config = BacktestConfig(
+        initial_capital=config.initial_capital,
+        commission_per_share=config.commission_per_share,
+        slippage_pct=config.slippage_pct,
+    )
+
+    # Create strategy factory for walk-forward
+    def strategy_factory(
+        window_bars: np.ndarray,
+        capital: float,
+        params: dict,
+    ):
+        """Factory function to create strategy instances for each window."""
+        strategy = DualModeBacktestStrategy(
+            bars=window_bars,
+            initial_capital=capital,
+            strategy_mode=params.get("strategy_mode", config.strategy_mode),
+        )
+        return strategy.get_orders
+
+    # Run walk-forward backtest
+    try:
+        wf_result = wf_run_backtest(
+            bars=bars,
+            strategy_factory=strategy_factory,
+            config=bt_config,
+            train_bars=config.train_bars,
+            test_bars=config.test_bars,
+            timestamps=timestamps_float,
+            symbol=symbol,
+            initial_params={"strategy_mode": config.strategy_mode},
+        )
+    except WFInsufficientDataError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient data for walk-forward testing: {e}",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Aggregate results
+    aggregate = aggregate_walk_forward_results(wf_result, pass_threshold=config.pass_threshold)
+
+    # Convert window results to response format
+    window_metrics: list[WalkForwardWindowMetrics] = []
+    for wr in wf_result.window_results:
+        # Calculate return percentage for this window
+        if wr.initial_equity > 0:
+            return_pct = ((wr.final_equity - wr.initial_equity) / wr.initial_equity) * 100
+        else:
+            return_pct = 0.0
+
+        window_metrics.append(
+            WalkForwardWindowMetrics(
+                window_id=wr.window.window_id,
+                train_start_date=(
+                    wr.window.train_start_date.strftime("%Y-%m-%d")
+                    if wr.window.train_start_date
+                    else None
+                ),
+                train_end_date=(
+                    wr.window.train_end_date.strftime("%Y-%m-%d")
+                    if wr.window.train_end_date
+                    else None
+                ),
+                test_start_date=(
+                    wr.window.test_start_date.strftime("%Y-%m-%d")
+                    if wr.window.test_start_date
+                    else None
+                ),
+                test_end_date=(
+                    wr.window.test_end_date.strftime("%Y-%m-%d")
+                    if wr.window.test_end_date
+                    else None
+                ),
+                initial_equity=wr.initial_equity,
+                final_equity=wr.final_equity,
+                return_pct=return_pct,
+                sharpe_ratio=wr.metrics.get("sharpe_ratio", 0.0),
+                max_drawdown_pct=abs(wr.metrics.get("max_drawdown_pct", 0.0)),
+                win_rate=wr.metrics.get("win_rate", 0.0),
+                num_trades=wr.metrics.get("total_trades", 0),
+                is_profitable=wr.is_profitable,
+            )
+        )
+
+    # Build timestamps for combined equity curve
+    # For simplicity, generate sequential timestamps based on test window dates
+    combined_timestamps: list[str] = []
+    ts_idx = 0
+    for wr in wf_result.window_results:
+        test_start_idx = wr.window.test_start_idx
+        window_ts_count = len(wr.equity_curve)
+        # First window includes all points, subsequent windows skip first
+        if ts_idx == 0:
+            for i in range(window_ts_count):
+                bar_idx = test_start_idx + i
+                if bar_idx < len(timestamps_list):
+                    combined_timestamps.append(timestamps_list[bar_idx])
+                else:
+                    combined_timestamps.append("")
+        else:
+            # Skip first point (junction point)
+            for i in range(1, window_ts_count):
+                bar_idx = test_start_idx + i
+                if bar_idx < len(timestamps_list):
+                    combined_timestamps.append(timestamps_list[bar_idx])
+                else:
+                    combined_timestamps.append("")
+        ts_idx += 1
+
+    app_state.update_timestamp()
+
+    return WalkForwardResponse(
+        symbol=symbol,
+        start_date=config.start_date,
+        end_date=config.end_date,
+        initial_capital=config.initial_capital,
+        final_capital=aggregate.final_capital,
+        total_return_pct=aggregate.total_return_pct,
+        total_windows=aggregate.total_windows,
+        profitable_windows=aggregate.total_profitable_windows,
+        pass_rate=aggregate.pass_rate,
+        passes_walk_forward_test=aggregate.passes_walk_forward_test,
+        pass_threshold=config.pass_threshold,
+        aggregate_sharpe=aggregate.aggregate_sharpe,
+        aggregate_max_drawdown_pct=abs(aggregate.aggregate_max_drawdown_pct),
+        aggregate_win_rate=aggregate.aggregate_win_rate,
+        total_trades=aggregate.total_trades,
+        window_results=window_metrics,
+        combined_equity_curve=aggregate.combined_equity_curve,
+        timestamps=combined_timestamps,
+        train_bars=config.train_bars,
+        test_bars=config.test_bars,
     )
 
 

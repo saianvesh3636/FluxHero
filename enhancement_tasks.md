@@ -14,7 +14,7 @@ Each task is on a single line for ralphy.sh compatibility.
 
 - [x] Implement pass rate calculation (backend/backtesting/walk_forward.py) - calculate percentage of profitable test windows (final equity > initial), strategy passes if >60% profitable, add passes_walk_forward_test boolean. Ref: R9.4.4
 
-- [ ] Create walk-forward API endpoint (backend/api/server.py) - add WalkForwardRequest/WalkForwardResponse Pydantic models, create POST /api/backtest/walk-forward endpoint with per-window metrics in response.
+- [x] Create walk-forward API endpoint (backend/api/server.py) - add WalkForwardRequest/WalkForwardResponse Pydantic models, create POST /api/backtest/walk-forward endpoint with per-window metrics in response.
 
 - [ ] Add walk-forward frontend page (frontend/app/walk-forward/page.tsx) - create form for walk-forward config, display per-window results table, show pass/fail status, visualize equity curves per window.
 

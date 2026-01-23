@@ -1195,3 +1195,54 @@
 - Dedicated functions allow independent use outside aggregate_walk_forward_results()
 
 **Result:** Phase 18 Task 4 complete. Pass rate calculation implemented with strict >60% threshold per R9.4.4.
+
+---
+
+## 2026-01-23: Create walk-forward API endpoint (Phase 18)
+
+**Task:** Create walk-forward API endpoint (backend/api/server.py)
+
+**Files Changed:**
+- `backend/api/server.py` - Added WalkForwardRequest, WalkForwardWindowMetrics, WalkForwardResponse Pydantic models and POST /api/backtest/walk-forward endpoint
+- `tests/unit/test_api_server.py` - Added 8 tests for walk-forward endpoint
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Added Pydantic request/response models to `backend/api/server.py`:
+   - **WalkForwardRequest:** symbol, start_date, end_date, initial_capital, commission_per_share, slippage_pct, train_bars, test_bars, strategy_mode, pass_threshold
+   - **WalkForwardWindowMetrics:** Per-window metrics (window_id, dates, equity, return_pct, sharpe, drawdown, win_rate, num_trades, is_profitable)
+   - **WalkForwardResponse:** Complete response with aggregate metrics, pass rate, per-window results, combined equity curve, timestamps
+
+2. Created `POST /api/backtest/walk-forward` endpoint:
+   - Validates dates and configuration parameters (train_bars, test_bars, pass_threshold)
+   - Fetches historical data using data provider
+   - Validates minimum data requirements for walk-forward testing
+   - Creates strategy factory using DualModeBacktestStrategy
+   - Executes walk-forward backtest using run_walk_forward_backtest()
+   - Aggregates results using aggregate_walk_forward_results()
+   - Converts window results to response format with proper date formatting
+   - Builds combined timestamps for equity curve visualization
+   - Returns comprehensive response with all metrics
+
+3. Created comprehensive test suite (8 tests) in `tests/unit/test_api_server.py`:
+   - test_run_walk_forward_invalid_dates: Invalid date format error
+   - test_run_walk_forward_end_before_start: End before start error
+   - test_run_walk_forward_invalid_train_bars: Zero/negative train_bars error
+   - test_run_walk_forward_invalid_test_bars: Zero/negative test_bars error
+   - test_run_walk_forward_invalid_pass_threshold: Out of range [0,1] error
+   - test_run_walk_forward_empty_symbol: Empty symbol error
+   - test_run_walk_forward_request_model_defaults: Model defaults verified
+   - test_walk_forward_response_model_structure: Response structure verified
+
+4. All 8 walk-forward tests pass
+5. All linting checks pass (pre-existing F401 and E501 issues unrelated to new code)
+
+**Technical Details:**
+- Endpoint mirrors existing /api/backtest structure for consistency
+- Uses DualModeBacktestStrategy via factory pattern
+- Timestamps generated from test window indices for equity curve
+- Error handling for symbol not found, date range errors, insufficient data
+- Pass threshold defaults to 0.6 (60%) per R9.4.4
+
+**Result:** Phase 18 Task 5 complete. Walk-forward API endpoint enables frontend to execute walk-forward backtests with per-window metrics.

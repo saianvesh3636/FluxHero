@@ -450,6 +450,175 @@ def test_run_backtest_end_before_start(client):
 
 
 # ============================================================================
+# Walk-Forward Backtest Endpoint Tests
+# ============================================================================
+
+
+def test_run_walk_forward_invalid_dates(client):
+    """Test walk-forward backtest with invalid date format"""
+    wf_config = {
+        "symbol": "SPY",
+        "start_date": "invalid-date",
+        "end_date": "2024-12-31",
+        "initial_capital": 10000.0,
+    }
+
+    response = client.post("/api/backtest/walk-forward", json=wf_config)
+    assert response.status_code == 400
+    assert "Invalid date format" in response.json()["detail"]
+
+
+def test_run_walk_forward_end_before_start(client):
+    """Test walk-forward backtest with end date before start date"""
+    wf_config = {
+        "symbol": "SPY",
+        "start_date": "2024-12-31",
+        "end_date": "2024-01-01",
+        "initial_capital": 10000.0,
+    }
+
+    response = client.post("/api/backtest/walk-forward", json=wf_config)
+    assert response.status_code == 400
+    assert "End date must be after start date" in response.json()["detail"]
+
+
+def test_run_walk_forward_invalid_train_bars(client):
+    """Test walk-forward backtest with invalid train_bars"""
+    wf_config = {
+        "symbol": "SPY",
+        "start_date": "2020-01-01",
+        "end_date": "2024-12-31",
+        "initial_capital": 10000.0,
+        "train_bars": 0,
+    }
+
+    response = client.post("/api/backtest/walk-forward", json=wf_config)
+    assert response.status_code == 400
+    assert "train_bars must be positive" in response.json()["detail"]
+
+
+def test_run_walk_forward_invalid_test_bars(client):
+    """Test walk-forward backtest with invalid test_bars"""
+    wf_config = {
+        "symbol": "SPY",
+        "start_date": "2020-01-01",
+        "end_date": "2024-12-31",
+        "initial_capital": 10000.0,
+        "test_bars": -1,
+    }
+
+    response = client.post("/api/backtest/walk-forward", json=wf_config)
+    assert response.status_code == 400
+    assert "test_bars must be positive" in response.json()["detail"]
+
+
+def test_run_walk_forward_invalid_pass_threshold(client):
+    """Test walk-forward backtest with invalid pass_threshold"""
+    wf_config = {
+        "symbol": "SPY",
+        "start_date": "2020-01-01",
+        "end_date": "2024-12-31",
+        "initial_capital": 10000.0,
+        "pass_threshold": 1.5,
+    }
+
+    response = client.post("/api/backtest/walk-forward", json=wf_config)
+    assert response.status_code == 400
+    assert "pass_threshold must be between 0 and 1" in response.json()["detail"]
+
+
+def test_run_walk_forward_empty_symbol(client):
+    """Test walk-forward backtest with empty symbol"""
+    wf_config = {
+        "symbol": "  ",
+        "start_date": "2020-01-01",
+        "end_date": "2024-12-31",
+        "initial_capital": 10000.0,
+    }
+
+    response = client.post("/api/backtest/walk-forward", json=wf_config)
+    assert response.status_code == 400
+    assert "Symbol cannot be empty" in response.json()["detail"]
+
+
+def test_run_walk_forward_request_model_defaults():
+    """Test WalkForwardRequest model has correct defaults"""
+    from backend.api.server import WalkForwardRequest
+
+    # Create with minimal required fields
+    request = WalkForwardRequest(
+        symbol="SPY",
+        start_date="2020-01-01",
+        end_date="2024-12-31",
+    )
+
+    # Check defaults
+    assert request.initial_capital == 10000.0
+    assert request.commission_per_share == 0.005
+    assert request.slippage_pct == 0.0001
+    assert request.train_bars == 63
+    assert request.test_bars == 21
+    assert request.strategy_mode == "DUAL"
+    assert request.pass_threshold == 0.6
+
+
+def test_walk_forward_response_model_structure():
+    """Test WalkForwardResponse model structure"""
+    from backend.api.server import WalkForwardResponse, WalkForwardWindowMetrics
+
+    # Create a sample window metric
+    window = WalkForwardWindowMetrics(
+        window_id=0,
+        train_start_date="2020-01-01",
+        train_end_date="2020-03-31",
+        test_start_date="2020-04-01",
+        test_end_date="2020-04-30",
+        initial_equity=10000.0,
+        final_equity=10500.0,
+        return_pct=5.0,
+        sharpe_ratio=1.5,
+        max_drawdown_pct=2.0,
+        win_rate=0.55,
+        num_trades=10,
+        is_profitable=True,
+    )
+
+    # Create response
+    response = WalkForwardResponse(
+        symbol="SPY",
+        start_date="2020-01-01",
+        end_date="2021-12-31",
+        initial_capital=10000.0,
+        final_capital=12000.0,
+        total_return_pct=20.0,
+        total_windows=5,
+        profitable_windows=4,
+        pass_rate=0.8,
+        passes_walk_forward_test=True,
+        pass_threshold=0.6,
+        aggregate_sharpe=1.2,
+        aggregate_max_drawdown_pct=8.0,
+        aggregate_win_rate=0.52,
+        total_trades=50,
+        window_results=[window],
+        combined_equity_curve=[10000.0, 10500.0, 11000.0, 12000.0],
+        timestamps=["2020-04-01", "2020-04-15", "2020-04-30", "2020-05-15"],
+        train_bars=63,
+        test_bars=21,
+    )
+
+    # Verify structure
+    assert response.symbol == "SPY"
+    assert response.total_windows == 5
+    assert response.profitable_windows == 4
+    assert response.pass_rate == 0.8
+    assert response.passes_walk_forward_test is True
+    assert len(response.window_results) == 1
+    assert response.window_results[0].window_id == 0
+    assert response.window_results[0].is_profitable is True
+
+
+# ============================================================================
 # WebSocket Endpoint Tests
 # ============================================================================
 
