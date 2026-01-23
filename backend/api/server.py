@@ -45,10 +45,6 @@ from backend.api.rate_limit import RateLimitMiddleware
 from backend.backtesting.engine import (
     BacktestConfig,
     BacktestEngine,
-    Order,
-    OrderSide,
-    OrderType,
-    Position,
 )
 from backend.backtesting.metrics import PerformanceMetrics
 from backend.core.config import get_settings
@@ -1781,6 +1777,451 @@ async def health_check():
         "data_feed_active": app_state.data_feed_active,
         "total_requests": app_state.request_count,
     }
+
+
+# ============================================================================
+# Broker Management Endpoints
+# ============================================================================
+
+
+class BrokerConfigRequest(BaseModel):
+    """Request model for adding a broker configuration."""
+
+    broker_type: str = Field(..., description="Type of broker (e.g., 'alpaca')")
+    name: str = Field(
+        ..., min_length=1, max_length=100, description="Display name for broker config"
+    )
+    api_key: str = Field(..., min_length=1, description="Broker API key")
+    api_secret: str = Field(..., min_length=1, description="Broker API secret")
+    base_url: str | None = Field(
+        default=None,
+        description="Optional API base URL (defaults to paper trading URL)",
+    )
+
+
+class BrokerConfigResponse(BaseModel):
+    """Response model for broker configuration (without secrets)."""
+
+    id: str
+    broker_type: str
+    name: str
+    api_key_masked: str
+    base_url: str
+    is_connected: bool = False
+    created_at: str
+    updated_at: str
+
+
+class BrokerListResponse(BaseModel):
+    """Response model for listing brokers."""
+
+    brokers: list[BrokerConfigResponse]
+    total: int
+
+
+class BrokerHealthResponse(BaseModel):
+    """Response model for broker health check."""
+
+    id: str
+    name: str
+    broker_type: str
+    is_connected: bool
+    is_authenticated: bool
+    latency_ms: float | None = None
+    last_heartbeat: str | None = None
+    error_message: str | None = None
+
+
+# Storage key prefix for broker configs
+BROKER_CONFIG_PREFIX = "broker_config:"
+
+
+def _get_broker_storage_key(broker_id: str) -> str:
+    """Get the storage key for a broker config."""
+    return f"{BROKER_CONFIG_PREFIX}{broker_id}"
+
+
+def _generate_broker_id() -> str:
+    """Generate a unique broker ID."""
+    import uuid
+
+    return str(uuid.uuid4())[:8]
+
+
+async def _get_all_broker_configs(store: SQLiteStore) -> list[dict]:
+    """
+    Get all broker configurations from storage.
+
+    Returns:
+        List of broker config dictionaries
+    """
+    import json
+
+    all_settings = await store.get_all_settings()
+    configs = []
+
+    for key, value in all_settings.items():
+        if key.startswith(BROKER_CONFIG_PREFIX):
+            try:
+                config = json.loads(value)
+                configs.append(config)
+            except json.JSONDecodeError:
+                logger.warning(f"Invalid broker config JSON for key: {key}")
+
+    return configs
+
+
+async def _get_broker_config(store: SQLiteStore, broker_id: str) -> dict | None:
+    """
+    Get a specific broker configuration by ID.
+
+    Args:
+        store: SQLite store instance
+        broker_id: Broker configuration ID
+
+    Returns:
+        Broker config dict or None if not found
+    """
+    import json
+
+    key = _get_broker_storage_key(broker_id)
+    value = await store.get_setting(key)
+
+    if value is None:
+        return None
+
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        logger.warning(f"Invalid broker config JSON for ID: {broker_id}")
+        return None
+
+
+async def _save_broker_config(store: SQLiteStore, config: dict) -> None:
+    """
+    Save a broker configuration to storage.
+
+    Args:
+        store: SQLite store instance
+        config: Broker config dictionary
+    """
+    import json
+
+    key = _get_broker_storage_key(config["id"])
+    await store.set_setting(key, json.dumps(config), f"Broker config: {config['name']}")
+
+
+async def _delete_broker_config(store: SQLiteStore, broker_id: str) -> bool:
+    """
+    Delete a broker configuration from storage.
+
+    Args:
+        store: SQLite store instance
+        broker_id: Broker configuration ID
+
+    Returns:
+        True if deleted, False if not found
+    """
+    key = _get_broker_storage_key(broker_id)
+    existing = await store.get_setting(key)
+
+    if existing is None:
+        return False
+
+    # Delete by setting to empty value and then using raw SQL
+    # Since SQLiteStore doesn't have delete_setting, we'll use set_setting with a marker
+    # Actually, let's add a proper delete - for now we'll mark as deleted
+    # Better approach: just store empty JSON which we filter out
+    conn = store._get_connection()
+    conn.execute("DELETE FROM settings WHERE key = ?", (key,))
+    conn.commit()
+    return True
+
+
+@app.get("/api/brokers", response_model=BrokerListResponse)
+async def list_brokers():
+    """
+    List all configured brokers.
+
+    Returns configured brokers with masked credentials.
+    Does not include full API keys/secrets for security.
+
+    Returns:
+        BrokerListResponse with list of broker configurations
+    """
+    from backend.execution.broker_credentials import mask_credential
+
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    configs = await _get_all_broker_configs(app_state.sqlite_store)
+
+    brokers = []
+    for config in configs:
+        brokers.append(
+            BrokerConfigResponse(
+                id=config["id"],
+                broker_type=config["broker_type"],
+                name=config["name"],
+                api_key_masked=mask_credential(config.get("api_key_masked", "****")),
+                base_url=config.get("base_url", ""),
+                is_connected=False,  # Will be updated by health check
+                created_at=config.get("created_at", ""),
+                updated_at=config.get("updated_at", ""),
+            )
+        )
+
+    app_state.update_timestamp()
+
+    return BrokerListResponse(
+        brokers=brokers,
+        total=len(brokers),
+    )
+
+
+@app.post("/api/brokers", response_model=BrokerConfigResponse, status_code=201)
+async def add_broker(config: BrokerConfigRequest):
+    """
+    Add a new broker configuration.
+
+    Validates the broker config using Pydantic models and stores
+    credentials encrypted with AES-256-GCM.
+
+    Args:
+        config: Broker configuration with credentials
+
+    Returns:
+        BrokerConfigResponse with the created broker config (credentials masked)
+
+    Raises:
+        400: Invalid broker type or config
+        503: Database not initialized
+    """
+    from backend.execution.broker_credentials import encrypt_credential, mask_credential
+    from backend.execution.broker_factory import BROKER_CONFIG_MODELS
+
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    # Validate broker type
+    if config.broker_type not in BROKER_CONFIG_MODELS:
+        supported = list(BROKER_CONFIG_MODELS.keys())
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown broker type: '{config.broker_type}'. Supported types: {supported}",
+        )
+
+    # Validate config using Pydantic model
+    config_model = BROKER_CONFIG_MODELS[config.broker_type]
+    try:
+        # Build config dict for validation
+        validation_config = {
+            "api_key": config.api_key,
+            "api_secret": config.api_secret,
+        }
+        if config.base_url:
+            validation_config["base_url"] = config.base_url
+
+        validated = config_model(**validation_config)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid broker configuration: {e}",
+        )
+
+    # Generate unique ID
+    broker_id = _generate_broker_id()
+    now = datetime.now().isoformat()
+
+    # Encrypt credentials
+    try:
+        encrypted_api_key = encrypt_credential(config.api_key)
+        encrypted_api_secret = encrypt_credential(config.api_secret)
+    except Exception as e:
+        logger.error(f"Failed to encrypt credentials: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to encrypt credentials",
+        )
+
+    # Build stored config (credentials encrypted, original masked for display)
+    stored_config = {
+        "id": broker_id,
+        "broker_type": config.broker_type,
+        "name": config.name,
+        "api_key_encrypted": encrypted_api_key,
+        "api_secret_encrypted": encrypted_api_secret,
+        "api_key_masked": mask_credential(config.api_key),
+        "base_url": config.base_url or validated.base_url,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    # Save to storage
+    await _save_broker_config(app_state.sqlite_store, stored_config)
+
+    logger.info(
+        "Broker configuration added",
+        extra={"broker_id": broker_id, "broker_type": config.broker_type, "name": config.name},
+    )
+
+    app_state.update_timestamp()
+
+    return BrokerConfigResponse(
+        id=broker_id,
+        broker_type=config.broker_type,
+        name=config.name,
+        api_key_masked=stored_config["api_key_masked"],
+        base_url=stored_config["base_url"],
+        is_connected=False,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+@app.delete("/api/brokers/{broker_id}", status_code=204)
+async def delete_broker(broker_id: str):
+    """
+    Delete a broker configuration.
+
+    Removes the broker configuration from storage. This does not
+    affect any active broker connections.
+
+    Args:
+        broker_id: Unique broker configuration ID
+
+    Raises:
+        404: Broker not found
+        503: Database not initialized
+    """
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    # Check if broker exists
+    config = await _get_broker_config(app_state.sqlite_store, broker_id)
+    if config is None:
+        raise HTTPException(status_code=404, detail=f"Broker not found: {broker_id}")
+
+    # Delete from storage
+    deleted = await _delete_broker_config(app_state.sqlite_store, broker_id)
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Broker not found: {broker_id}")
+
+    logger.info(
+        "Broker configuration deleted",
+        extra={"broker_id": broker_id, "name": config.get("name", "unknown")},
+    )
+
+    app_state.update_timestamp()
+
+    # Return 204 No Content (handled by status_code=204)
+    return Response(status_code=204)
+
+
+@app.get("/api/brokers/{broker_id}/health", response_model=BrokerHealthResponse)
+async def check_broker_health(broker_id: str):
+    """
+    Check the health of a broker connection.
+
+    Attempts to connect to the broker and verify authentication.
+    Returns connection status, latency, and any error messages.
+
+    Args:
+        broker_id: Unique broker configuration ID
+
+    Returns:
+        BrokerHealthResponse with connection health details
+
+    Raises:
+        404: Broker not found
+        503: Database not initialized
+    """
+    from backend.execution.broker_credentials import decrypt_credential
+    from backend.execution.broker_factory import BrokerFactory, BrokerFactoryError
+
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    # Get broker config
+    config = await _get_broker_config(app_state.sqlite_store, broker_id)
+    if config is None:
+        raise HTTPException(status_code=404, detail=f"Broker not found: {broker_id}")
+
+    # Decrypt credentials
+    try:
+        api_key = decrypt_credential(config["api_key_encrypted"])
+        api_secret = decrypt_credential(config["api_secret_encrypted"])
+    except Exception as e:
+        logger.error(f"Failed to decrypt credentials for broker {broker_id}: {e}")
+        return BrokerHealthResponse(
+            id=broker_id,
+            name=config.get("name", "unknown"),
+            broker_type=config.get("broker_type", "unknown"),
+            is_connected=False,
+            is_authenticated=False,
+            error_message="Failed to decrypt credentials",
+        )
+
+    # Create broker instance (don't cache for health checks)
+    try:
+        factory = BrokerFactory()
+        broker = factory.create_broker(
+            broker_type=config["broker_type"],
+            config={
+                "api_key": api_key,
+                "api_secret": api_secret,
+                "base_url": config.get("base_url"),
+            },
+            use_cache=False,  # Don't cache health check instances
+        )
+    except BrokerFactoryError as e:
+        logger.error(f"Failed to create broker instance: {e}")
+        return BrokerHealthResponse(
+            id=broker_id,
+            name=config.get("name", "unknown"),
+            broker_type=config.get("broker_type", "unknown"),
+            is_connected=False,
+            is_authenticated=False,
+            error_message=str(e),
+        )
+
+    # Perform health check
+    try:
+        health = await broker.health_check()
+
+        app_state.update_timestamp()
+
+        return BrokerHealthResponse(
+            id=broker_id,
+            name=config.get("name", "unknown"),
+            broker_type=config.get("broker_type", "unknown"),
+            is_connected=health.is_connected,
+            is_authenticated=health.is_authenticated,
+            latency_ms=health.latency_ms,
+            last_heartbeat=(
+                datetime.fromtimestamp(health.last_heartbeat).isoformat()
+                if health.last_heartbeat
+                else None
+            ),
+            error_message=health.error_message,
+        )
+    except Exception as e:
+        logger.error(f"Health check failed for broker {broker_id}: {e}")
+        return BrokerHealthResponse(
+            id=broker_id,
+            name=config.get("name", "unknown"),
+            broker_type=config.get("broker_type", "unknown"),
+            is_connected=False,
+            is_authenticated=False,
+            error_message=f"Health check failed: {str(e)}",
+        )
+    finally:
+        # Clean up broker connection
+        try:
+            await broker.disconnect()
+        except Exception:
+            pass
 
 
 # ============================================================================

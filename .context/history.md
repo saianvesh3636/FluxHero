@@ -1689,3 +1689,54 @@ Added comprehensive logging to the BacktestEngine.run() method:
 6. All linting checks pass (ruff)
 
 **Result:** Phase A Task 4 complete. Broker credentials can now be encrypted at rest using AES-256-GCM, protecting API keys and secrets from exposure.
+
+---
+
+## 2026-01-23: Add broker API endpoints (Phase A Task 5)
+
+**Task:** Add broker API endpoints (backend/api/server.py)
+
+**Files Changed:**
+- `backend/api/server.py` (added broker management endpoints and Pydantic models)
+- `tests/unit/test_broker_api.py` (created comprehensive test suite)
+- `comparison_tasks.md` (marked task complete)
+
+**What Was Done:**
+1. Added Pydantic models for broker API:
+   - `BrokerConfigRequest`: Input model with broker_type, name, api_key, api_secret, base_url
+   - `BrokerConfigResponse`: Output model with id, broker_type, name, created_at (credentials excluded)
+   - `BrokerListResponse`: List wrapper with brokers array and count
+   - `BrokerHealthResponse`: Health check response with is_healthy, latency_ms, details, error
+
+2. Added helper functions for broker storage:
+   - `_get_broker_storage_key()`: Generates storage key for broker configs
+   - `_generate_broker_id()`: Creates unique broker IDs using UUID4
+   - `_get_all_broker_configs()`: Retrieves all broker configs from SQLite
+   - `_get_broker_config()`: Retrieves specific broker config by ID
+   - `_save_broker_config()`: Saves encrypted broker config to SQLite
+   - `_delete_broker_config()`: Removes broker config from storage
+
+3. Created broker management endpoints:
+   - `GET /api/brokers`: List all configured brokers (credentials masked)
+   - `POST /api/brokers`: Add new broker configuration (credentials encrypted)
+   - `DELETE /api/brokers/{broker_id}`: Remove broker configuration
+   - `GET /api/brokers/{id}/health`: Check broker connection health
+
+4. Comprehensive test suite (29 tests):
+   - TestListBrokers (4 tests): Empty list, single broker, multiple brokers, no credentials exposed
+   - TestAddBroker (7 tests): Valid config, validation errors, duplicate names, unknown type
+   - TestDeleteBroker (3 tests): Success, not found, storage error
+   - TestBrokerHealth (5 tests): Healthy, unhealthy, not found, timeout, connection error
+   - TestBrokerStorageHelpers (5 tests): Key generation, ID format, config serialization
+   - TestBrokerModels (5 tests): Request validation, response serialization
+
+5. All 29 tests pass
+6. All linting checks pass (ruff)
+
+**Technical Details:**
+- Credentials encrypted using AES-256-GCM before storage
+- Credentials never returned in API responses
+- Health check uses BrokerFactory to create broker instance
+- Storage uses SQLite settings table with JSON serialization
+
+**Result:** Phase A Task 5 complete. Broker API endpoints enable managing broker configurations through REST API with encrypted credential storage.

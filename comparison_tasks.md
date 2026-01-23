@@ -18,7 +18,7 @@ See `docs/COMPARISON_SENTINEL_TRADER.md` for full comparison analysis.
 
 - [x] Add broker credential encryption (backend/execution/broker_credentials.py) - implement AES encryption for API keys/secrets using cryptography library, use FLUXHERO_ENCRYPTION_KEY from env via backend/core/config.py, encrypt_credential() and decrypt_credential() functions, never log decrypted values. Concept ref: SentinelTrader broker.py encrypt_api_key() (SQLAlchemy model - adapt to our dataclass/Pydantic approach).
 
-- [ ] Add broker API endpoints (backend/api/server.py) - add GET /api/brokers (list configured brokers), POST /api/brokers (add broker config), DELETE /api/brokers/{id}, GET /api/brokers/{id}/health (connection health check), use Pydantic models for request/response validation following existing server.py patterns. Concept ref: SentinelTrader broker.py routes (Flask - implement as FastAPI async endpoints).
+- [x] Add broker API endpoints (backend/api/server.py) - add GET /api/brokers (list configured brokers), POST /api/brokers (add broker config), DELETE /api/brokers/{id}, GET /api/brokers/{id}/health (connection health check), use Pydantic models for request/response validation following existing server.py patterns. Concept ref: SentinelTrader broker.py routes (Flask - implement as FastAPI async endpoints).
 
 - [ ] Add broker selection to frontend (frontend/app/settings/page.tsx) - create settings page with broker configuration form, dropdown for broker type selection, secure credential input fields (password type), connection test button, display connection status. Use Next.js App Router and Tailwind CSS following existing frontend patterns. Concept ref: SentinelTrader BrokerConnectionManager.tsx (React/Redux - adapt to our Next.js/hooks approach).
 
