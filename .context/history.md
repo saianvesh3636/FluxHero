@@ -750,3 +750,58 @@
 - Total trades requires exact match (detects signal generation changes)
 
 **Result:** Phase 24 Task 6 complete. Golden test suite catches unintended changes in backtest behavior by comparing against pre-computed baseline metrics.
+
+---
+
+## 2026-01-23: Add benchmark comparison tests (Phase 24)
+
+**Task:** Add benchmark comparison (tests/regression/test_benchmark_comparison.py)
+
+**Files Changed:**
+- `tests/regression/test_benchmark_comparison.py` - Created benchmark comparison test suite
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Created `tests/regression/test_benchmark_comparison.py` with comprehensive benchmark comparison tests:
+   - Compares strategy returns vs buy-and-hold benchmark
+   - Compares strategy returns vs SPY price return (without costs)
+   - Flags significant underperformance via warnings (not hard failures)
+   - Tests across multiple time periods (126, 252, 504 days)
+
+2. Implemented `calculate_buy_and_hold_return()` function:
+   - Calculates shares bought with initial capital
+   - Accounts for commission costs on entry and exit
+   - Computes total return, price return, and max drawdown
+   - Builds equity curve for the buy-and-hold period
+
+3. Test coverage (9 tests in 3 classes):
+   - **TestBenchmarkComparison** (5 tests):
+     - test_strategy_vs_buy_and_hold_return: Flags >10% underperformance
+     - test_strategy_vs_spy_price_return: Flags >12% underperformance
+     - test_strategy_max_drawdown_reasonable: Compares risk profiles
+     - test_strategy_generates_alpha: Reports positive/negative alpha
+     - test_risk_adjusted_performance: Return/drawdown ratio comparison
+   - **TestBenchmarkComparisonExtended** (3 tests):
+     - test_strategy_across_time_periods[126]: 6-month comparison
+     - test_strategy_across_time_periods[252]: 1-year comparison
+     - test_strategy_across_time_periods[504]: 2-year comparison
+   - **TestBenchmarkReporting** (1 test):
+     - test_generate_comparison_report: Report format validation
+
+4. Design decisions:
+   - Tests use `warnings.warn()` to flag underperformance (not `assert`)
+   - This allows visibility into performance without blocking CI/CD
+   - Appropriate because buy-and-hold often outperforms in bull markets
+   - Warnings appear in pytest output for review
+
+5. All 9 tests pass
+6. All linting checks pass (ruff)
+
+**Technical Details:**
+- Underperformance threshold: 10% for buy-and-hold, 12% for price return
+- Thresholds adjust by time period (15% for <200 days, 10% for <400 days, 8% for >400 days)
+- Includes `generate_comparison_report()` for formatted output
+- Can be run standalone with `python test_benchmark_comparison.py` for report
+
+**Result:** Phase 24 Task 7 complete. Benchmark comparison tests flag when strategy significantly underperforms buy-and-hold, providing visibility into relative performance.

@@ -104,7 +104,7 @@ Each task is on a single line for ralphy.sh compatibility.
 
 - [x] Create golden test suite (tests/regression/test_golden_results.py) - run backtest on SPY 2020-2024 with fixed seed, store expected metrics in JSON, compare new runs against golden results, alert on >1% deviation.
 
-- [ ] Add benchmark comparison (tests/regression/test_benchmark_comparison.py) - compare strategy returns vs buy-and-hold, compare vs SPY total return, flag if significantly underperforming.
+- [x] Add benchmark comparison (tests/regression/test_benchmark_comparison.py) - compare strategy returns vs buy-and-hold, compare vs SPY total return, flag if significantly underperforming.
 
 - [ ] Create assumptions document (docs/ASSUMPTIONS.md) - document simple vs log returns choice, commission model ($0.005/share), slippage model (0.01%), fill assumptions (next-bar open), position sizing risk model.
 
