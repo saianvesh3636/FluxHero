@@ -2028,3 +2028,47 @@ Implemented the PaperBroker class as the first task of Phase B (Paper Trading Sy
    - Pydantic model validation tests
 
 **Result:** Paper trading API endpoints fully implemented with same response format as live broker for UI compatibility. 22 new tests pass.
+
+---
+
+## 2026-01-23 - Add paper/live trading mode toggle to frontend (Phase B)
+
+**Task:** Add paper/live toggle to frontend (frontend/components/TradingModeToggle.tsx)
+
+**Files changed:**
+- `frontend/components/TradingModeToggle.tsx` (new) - Toggle component with confirmation dialog
+- `frontend/utils/api.ts` (modified) - Added paper trading API methods and interfaces
+- `frontend/components/__tests__/TradingModeToggle.test.tsx` (new) - 19 unit tests
+
+**What was done:**
+
+1. **Created TradingModeToggle component** (`TradingModeToggle.tsx`):
+   - Toggle buttons for switching between paper (green) and live (red) modes
+   - Prominent visual indicator with pulsing dot and colored label
+   - Confirmation dialog when switching to live mode (warns about real money)
+   - Persists mode selection in localStorage (`fluxhero_trading_mode`)
+   - Loading skeleton while localStorage is read
+   - `onModeChange` callback prop for parent components
+   - Exported `useTradingMode` hook for programmatic access
+
+2. **Added paper trading API methods** (`api.ts`):
+   - `getPaperAccount()` - Get paper account info (balance, positions, P&L)
+   - `resetPaperAccount()` - Reset paper account to initial $100,000
+   - `getPaperTrades()` - Get paper trade history
+   - Added TypeScript interfaces: `PaperAccountResponse`, `PaperPosition`, `PaperTrade`, `PaperTradeHistoryResponse`, `PaperResetResponse`
+
+3. **Added comprehensive tests** (19 tests):
+   - Default paper mode rendering
+   - localStorage persistence (load/save)
+   - Direct switch to paper mode (no confirmation)
+   - Confirmation dialog for live mode
+   - Confirm/cancel live mode switch
+   - Backdrop click closes dialog
+   - Visual indicators (green/red colors)
+   - Mode label display
+   - Clicking current mode does nothing
+   - Invalid localStorage defaults to paper
+   - className prop support
+   - useTradingMode hook tests
+
+**Result:** Paper/live trading mode toggle implemented with localStorage persistence and confirmation dialog for live mode. 19 new tests pass.

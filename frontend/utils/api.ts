@@ -632,6 +632,33 @@ class ApiClient {
   async getBrokerHealth(brokerId: string): Promise<BrokerHealthResponse> {
     return this.fetchJson<BrokerHealthResponse>(`${API_BASE_URL}/brokers/${brokerId}/health`);
   }
+
+  // ============================================================================
+  // Paper Trading Methods
+  // ============================================================================
+
+  /**
+   * Get paper trading account information
+   */
+  async getPaperAccount(): Promise<PaperAccountResponse> {
+    return this.fetchJson<PaperAccountResponse>(`${API_BASE_URL}/paper/account`);
+  }
+
+  /**
+   * Reset paper trading account to initial state
+   */
+  async resetPaperAccount(): Promise<PaperResetResponse> {
+    return this.fetchJson<PaperResetResponse>(`${API_BASE_URL}/paper/reset`, {
+      method: 'POST',
+    });
+  }
+
+  /**
+   * Get paper trading trade history
+   */
+  async getPaperTrades(): Promise<PaperTradeHistoryResponse> {
+    return this.fetchJson<PaperTradeHistoryResponse>(`${API_BASE_URL}/paper/trades`);
+  }
 }
 
 export const apiClient = new ApiClient();
@@ -712,4 +739,69 @@ export interface BrokerHealthResponse {
   latency_ms: number | null;
   last_heartbeat: string | null;
   error_message: string | null;
+}
+
+// ============================================================================
+// Paper Trading Interfaces
+// ============================================================================
+
+/**
+ * Paper trading position
+ */
+export interface PaperPosition {
+  symbol: string;
+  qty: number;
+  entry_price: number;
+  current_price: number;
+  market_value: number;
+  unrealized_pnl: number;
+  cost_basis: number;
+}
+
+/**
+ * Paper trading account response
+ */
+export interface PaperAccountResponse {
+  account_id: string;
+  balance: number;
+  buying_power: number;
+  equity: number;
+  cash: number;
+  positions_value: number;
+  realized_pnl: number;
+  unrealized_pnl: number;
+  positions: PaperPosition[];
+}
+
+/**
+ * Paper trade record
+ */
+export interface PaperTrade {
+  trade_id: string;
+  order_id: string;
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  qty: number;
+  price: number;
+  slippage: number;
+  timestamp: string;
+  realized_pnl: number;
+}
+
+/**
+ * Paper trade history response
+ */
+export interface PaperTradeHistoryResponse {
+  trades: PaperTrade[];
+  total_count: number;
+}
+
+/**
+ * Paper account reset response
+ */
+export interface PaperResetResponse {
+  message: string;
+  account_id: string;
+  initial_balance: number;
+  timestamp: string;
 }

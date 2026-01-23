@@ -36,7 +36,7 @@ See `docs/COMPARISON_SENTINEL_TRADER.md` for full comparison analysis.
 
 - [x] Add paper trading API endpoints (backend/api/server.py) - add GET /api/paper/account (balance, positions), POST /api/paper/reset (reset to initial state), GET /api/paper/trades (paper trade history), return same Pydantic response models as live broker for UI compatibility. Follow existing FastAPI endpoint patterns in server.py.
 
-- [ ] Add paper/live toggle to frontend (frontend/components/TradingModeToggle.tsx) - create toggle component for paper vs live mode, prominent visual indicator (green for paper, red for live) using Tailwind classes, confirmation dialog when switching to live, persist selection in localStorage. Use React useState/useEffect hooks. Concept ref: SentinelTrader SystemBanner.tsx (React/Redux - adapt to our hooks-based approach).
+- [x] Add paper/live toggle to frontend (frontend/components/TradingModeToggle.tsx) - create toggle component for paper vs live mode, prominent visual indicator (green for paper, red for live) using Tailwind classes, confirmation dialog when switching to live, persist selection in localStorage. Use React useState/useEffect hooks. Concept ref: SentinelTrader SystemBanner.tsx (React/Redux - adapt to our hooks-based approach).
 
 - [ ] Create paper trading tests (tests/integration/test_paper_trading.py) - test account initialization with correct balance, test order placement updates positions, test slippage applied correctly, test P&L calculation accuracy, test account reset functionality. Use pytest with pytest-asyncio.
 
