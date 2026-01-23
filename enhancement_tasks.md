@@ -18,9 +18,9 @@ Each task is on a single line for ralphy.sh compatibility.
 
 - [ ] Add walk-forward frontend page (frontend/app/walk-forward/page.tsx) - create form for walk-forward config, display per-window results table, show pass/fail status, visualize equity curves per window.
 
-- [ ] Create walk-forward unit tests (tests/unit/test_walk_forward.py) - test window generation with 12-month synthetic data, verify no data leakage between windows, test 4-month minimal case, test 1+ year multiple windows, test edge cases.
+- [x] Create walk-forward unit tests (tests/unit/test_walk_forward.py) - test window generation with 12-month synthetic data, verify no data leakage between windows, test 4-month minimal case, test 1+ year multiple windows, test edge cases.
 
-- [ ] Create walk-forward integration tests (tests/integration/test_walk_forward_backtest.py) - run walk-forward on 1-year SPY data, verify pass rate calculation, compare metrics against known values.
+- [x] Create walk-forward integration tests (tests/integration/test_walk_forward_backtest.py) - run walk-forward on 1-year SPY data, verify pass rate calculation, compare metrics against known values.
 
 ---
 

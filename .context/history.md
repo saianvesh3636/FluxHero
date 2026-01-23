@@ -1246,3 +1246,50 @@
 - Pass threshold defaults to 0.6 (60%) per R9.4.4
 
 **Result:** Phase 18 Task 5 complete. Walk-forward API endpoint enables frontend to execute walk-forward backtests with per-window metrics.
+
+---
+
+## 2026-01-23: Create walk-forward integration tests (Phase 18)
+
+**Task:** Create walk-forward integration tests (tests/integration/test_walk_forward_backtest.py)
+
+**Files Changed:**
+- `tests/integration/test_walk_forward_backtest.py` - Created comprehensive integration test suite
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Created `tests/integration/test_walk_forward_backtest.py` with 13 integration tests across 3 test classes:
+
+   - **TestWalkForwardWithSPYData** (6 tests):
+     - test_walk_forward_completes_on_1_year_data: Full walk-forward on 252-bar SPY data
+     - test_walk_forward_windows_have_no_data_leakage: Validates R9.4.1 no-leakage requirement
+     - test_pass_rate_calculation_accuracy: Verifies pass rate matches expected values
+     - test_aggregate_metrics_match_known_baseline: Validates aggregate metrics are reasonable
+     - test_walk_forward_with_extended_data: Tests with 2 years (504 bars, 6 windows)
+     - test_walk_forward_capital_continuity: Verifies capital flows correctly between windows
+
+   - **TestWalkForwardPassRateIntegration** (4 tests):
+     - test_default_threshold_is_60_percent: Verifies DEFAULT_PASS_RATE_THRESHOLD
+     - test_exactly_60_percent_fails: Validates strict >60% requirement (R9.4.4)
+     - test_61_percent_passes: Verifies >60% passes
+     - test_aggregate_pass_determination: Integration with aggregate results
+
+   - **TestWalkForwardEdgeCases** (3 tests):
+     - test_minimum_viable_data: 84 bars = exactly 1 window
+     - test_walk_forward_with_strong_uptrend: Tests behavior with trending data
+     - test_walk_forward_with_strong_downtrend: Tests behavior with declining data
+
+2. Created `create_dual_mode_strategy_factory()` helper to wrap DualModeStrategy for walk-forward compatibility
+
+3. All 13 tests pass with parallel execution
+4. All linting checks pass (ruff)
+
+**Technical Details:**
+- Tests use DualModeStrategy (same as regular backtest) for realistic integration
+- Validates pass rate boundary: exactly 60% FAILS, >60% PASSES (strict greater-than per R9.4.4)
+- Tests verify capital continuity between windows
+- Tests validate no data leakage between train/test periods
+- Edge cases test minimum viable data and market condition extremes
+
+**Result:** Phase 18 Task 7 complete. Walk-forward integration tests validate the walk-forward module works correctly with real strategy and SPY data.
