@@ -52,7 +52,7 @@ See `docs/COMPARISON_SENTINEL_TRADER.md` for full comparison analysis.
 
 - [x] Create .dockerignore files (.dockerignore) - exclude node_modules, __pycache__, .venv, .git, .env (use .env.example), tests/, docs/, *.md, .pytest_cache, .mypy_cache, IDE configs (.vscode, .idea). Create separate backend and frontend .dockerignore if needed.
 
-- [ ] Add Docker commands to Makefile (Makefile) - add docker-build (docker compose build), docker-up (docker compose up -d), docker-down (docker compose down), docker-logs (docker compose logs -f), docker-shell-backend (docker compose exec backend bash), docker-clean (docker compose down -v --rmi all). Follow existing Makefile patterns.
+- [x] Add Docker commands to Makefile (Makefile) - add docker-build (docker compose build), docker-up (docker compose up -d), docker-down (docker compose down), docker-logs (docker compose logs -f), docker-shell-backend (docker compose exec backend bash), docker-clean (docker compose down -v --rmi all). Follow existing Makefile patterns.
 
 - [ ] Create docker environment template (docker/.env.docker.example) - document all required FLUXHERO_* env vars, set FLUXHERO_DB_PATH=/app/data/fluxhero.db, FLUXHERO_CACHE_DIR=/app/data/cache, FLUXHERO_LOG_FILE=/app/logs/fluxhero.log, API URLs for inter-service communication (http://backend:8000).
 

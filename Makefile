@@ -11,7 +11,8 @@
 
 .PHONY: help dev dev-backend dev-debug dev-frontend stop stop-backend stop-frontend \
         test test-unit test-integration test-parallel lint format typecheck \
-        install install-backend install-frontend clean logs
+        install install-backend install-frontend clean logs \
+        docker-build docker-up docker-down docker-logs docker-shell-backend docker-clean
 
 # Colors for terminal output
 CYAN := \033[0;36m
@@ -66,6 +67,14 @@ help:
 	@echo "  make install-backend  Install Python dependencies"
 	@echo "  make install-frontend Install Node.js dependencies"
 	@echo "  make clean            Remove generated files and caches"
+	@echo ""
+	@echo "$(GREEN)Docker:$(NC)"
+	@echo "  make docker-build     Build Docker images"
+	@echo "  make docker-up        Start containers in detached mode"
+	@echo "  make docker-down      Stop and remove containers"
+	@echo "  make docker-logs      Follow container logs"
+	@echo "  make docker-shell-backend  Open shell in backend container"
+	@echo "  make docker-clean     Remove containers, volumes, and images"
 	@echo ""
 	@echo "$(GREEN)Maintenance:$(NC)"
 	@echo "  make daily-reboot     Run daily maintenance script"
@@ -263,3 +272,38 @@ clean-all: clean
 	rm -rf $(VENV)
 	rm -rf frontend/node_modules frontend/.next
 	@echo "$(GREEN)Deep cleanup complete$(NC)"
+
+# ============================================================================
+# Docker
+# ============================================================================
+
+docker-build:
+	@echo "$(CYAN)Building Docker images...$(NC)"
+	docker compose build
+	@echo "$(GREEN)Docker images built successfully$(NC)"
+
+docker-up:
+	@echo "$(CYAN)Starting Docker containers...$(NC)"
+	docker compose up -d
+	@echo "$(GREEN)Containers started$(NC)"
+	@echo "  Backend:  http://localhost:$(BACKEND_PORT)"
+	@echo "  Frontend: http://localhost:$(FRONTEND_PORT)"
+	@echo "  API Docs: http://localhost:$(BACKEND_PORT)/docs"
+
+docker-down:
+	@echo "$(CYAN)Stopping Docker containers...$(NC)"
+	docker compose down
+	@echo "$(GREEN)Containers stopped$(NC)"
+
+docker-logs:
+	@echo "$(CYAN)Following Docker logs (Ctrl+C to exit)...$(NC)"
+	docker compose logs -f
+
+docker-shell-backend:
+	@echo "$(CYAN)Opening shell in backend container...$(NC)"
+	docker compose exec backend bash
+
+docker-clean:
+	@echo "$(CYAN)Removing containers, volumes, and images...$(NC)"
+	docker compose down -v --rmi all
+	@echo "$(GREEN)Docker cleanup complete$(NC)"

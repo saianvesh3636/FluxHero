@@ -2239,3 +2239,36 @@ Enhanced the .dockerignore file with comprehensive exclusion patterns as part of
 3. All 80 tests passed, linting passed
 
 **Result:** Docker build context properly filtered (Phase C, task 4 of 7).
+
+---
+
+## 2026-01-23 - Add Docker Commands to Makefile (Phase C)
+
+**Task**: Add Docker commands to Makefile (Makefile)
+**Files Changed**:
+- Makefile (added Docker targets section)
+- tests/integration/test_makefile_docker.py (new test file)
+- comparison_tasks.md (marked task complete)
+
+**Summary**:
+Added Docker commands to the Makefile as part of Phase C (Docker Deployment):
+
+1. **Updated Makefile** with new Docker targets:
+   - docker-build: Build Docker images using docker compose build
+   - docker-up: Start containers in detached mode with URL display
+   - docker-down: Stop and remove containers
+   - docker-logs: Follow container logs
+   - docker-shell-backend: Open bash shell in backend container
+   - docker-clean: Remove containers, volumes, and all images
+
+2. **Added help section** documenting all Docker commands
+
+3. **Created test file** with 11 tests validating:
+   - All targets declared as .PHONY
+   - Each target exists with correct commands
+   - Help section includes Docker documentation
+   - Color output used for consistency
+
+4. All 11 tests passed, linting passed
+
+**Result:** Docker workflow accessible via Makefile (Phase C, task 5 of 7).
