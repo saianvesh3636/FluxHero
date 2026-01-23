@@ -500,3 +500,43 @@
 
 **Result:** Phase 24 Task 1 complete. Metric validation suite catches calculation bugs by comparing against hand-verified expected values.
 
+
+---
+
+### 2026-01-23 - Create indicator validation suite (Phase 24.2)
+
+**Task:** Create indicator validation suite (tests/validation/test_indicator_calculations.py)
+
+**Files Changed:**
+- tests/validation/test_indicator_calculations.py (created)
+- enhancement_tasks.md (marked task complete)
+
+**What I Did:**
+1. Created comprehensive indicator validation test suite with 34 tests across 12 test classes:
+   - **TestCalculateEMAValidation** (6 tests): EMA period 3 & 10, alpha formula verification, trending behavior, edge cases
+   - **TestCalculateRSIValidation** (7 tests): Hand-calculated RSI, overbought/oversold patterns, neutral RSI=50, Wilder's smoothing
+   - **TestCalculateSMAValidation** (2 tests): Hand-calculated SMA, constant prices
+   - **TestCalculateTrueRangeValidation** (3 tests): TR hand-calculated, gap up/down scenarios
+   - **TestCalculateATRValidation** (1 test): ATR with Wilder's smoothing
+   - **TestCalculateBollingerBandsValidation** (2 tests): Bands hand-calculated, symmetry verification
+   - **TestCalculateEfficiencyRatioValidation** (4 tests): Perfect trend ER=1, ranging ER=0, partial trend, bounds [0,1]
+   - **TestCalculateKAMAValidation** (4 tests): ASC bounds, KAMA hand-calculated, trend responsiveness, bounds validation
+   - **TestKAMARegimeClassificationValidation** (3 tests): Trending/choppy/neutral regime detection
+   - **TestIndicatorEdgeCases** (2 tests): Single value and empty array handling for all indicators
+
+2. Test features:
+   - Every test includes step-by-step hand calculations in comments
+   - Validates alpha formula: α = 2/(period+1) matches pandas ewm(adjust=False)
+   - Tests RSI Wilder's smoothing: avg_gain[i] = (avg_gain[i-1] * (period-1) + gain[i]) / period
+   - Verifies KAMA adaptive behavior: responds faster in trends (ER~1), slower in chop (ER~0)
+   - Confirms regime thresholds: trending (ER>0.6), choppy (ER<0.3), neutral (between)
+
+3. All 34 tests pass with parallel execution
+4. All linting checks pass (ruff)
+
+**Technical Details:**
+- Tests validate: EMA, RSI, SMA, True Range, ATR, Bollinger Bands, Efficiency Ratio, KAMA, regime classification
+- Includes worked examples (e.g., RSI = 100 - 100/(1+RS), EMA[i] = price*α + EMA[i-1]*(1-α))
+- Edge cases: insufficient data returns NaN, empty arrays handled gracefully
+
+**Result:** Phase 24 Task 2 complete. Indicator validation suite catches calculation bugs by comparing against hand-verified expected values.

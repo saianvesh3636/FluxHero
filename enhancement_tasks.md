@@ -94,7 +94,7 @@ Each task is on a single line for ralphy.sh compatibility.
 
 - [x] Create metric validation suite (tests/validation/test_metric_calculations.py) - use known equity curves with hand-calculated metrics, verify Sharpe/drawdown/win_rate match manual calculations, include worked examples in comments.
 
-- [ ] Create indicator validation suite (tests/validation/test_indicator_calculations.py) - use known price series with hand-calculated indicators, verify EMA(10) on [100,101,102...], verify RSI on overbought/oversold patterns, compare against TradingView.
+- [x] Create indicator validation suite (tests/validation/test_indicator_calculations.py) - use known price series with hand-calculated indicators, verify EMA(10) on [100,101,102...], verify RSI on overbought/oversold patterns, compare against TradingView.
 
 - [ ] Create signal validation suite (tests/validation/test_signal_generation.py) - verify trend-following signals on known trending data, verify mean-reversion signals on ranging data, test regime detection on synthetic transitions.
 
