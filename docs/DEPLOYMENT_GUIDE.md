@@ -293,7 +293,7 @@ ssh root@YOUR_DROPLET_IP
 
 ```bash
 # Install linode-cli
-pip3 install linode-cli
+uv pip install linode-cli
 
 # Configure
 linode-cli configure
@@ -456,12 +456,14 @@ git clone https://github.com/YOUR_USERNAME/fluxhero.git
 
 cd fluxhero
 
+# Install uv (fast Python package manager)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # Setup backend
 cd backend
-python3.11 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
+uv venv .venv
+source .venv/bin/activate
+uv sync
 
 # Setup frontend
 cd ../frontend

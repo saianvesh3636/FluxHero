@@ -65,26 +65,30 @@ cd project
 
 ### 2. Backend Setup
 
-#### Create Python Virtual Environment
+#### Install uv (Python Package Manager)
+
+```bash
+# On macOS/Linux:
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# On Windows:
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+#### Create Virtual Environment and Install Dependencies
 
 ```bash
 # Navigate to the project root
 cd project
 
-# Create virtual environment
-python3 -m venv venv
+# Create venv and install all dependencies (one command)
+uv sync
 
-# Activate virtual environment
+# Activate virtual environment (for manual commands)
 # On macOS/Linux:
-source venv/bin/activate
+source .venv/bin/activate
 # On Windows:
-venv\Scripts\activate
-```
-
-#### Install Backend Dependencies
-
-```bash
-pip install -r requirements.txt
+.venv\Scripts\activate
 ```
 
 **Key Dependencies**:
@@ -526,8 +530,8 @@ python -m fluxhero.backend.storage.archive --days 30
    - Fix: Kill the process or use a different port
 
 2. **Missing dependencies**
-   - Check: `pip list | grep fastapi`
-   - Fix: `pip install -r requirements.txt`
+   - Check: `uv pip list | grep fastapi`
+   - Fix: `uv sync`
 
 3. **Python version too old**
    - Check: `python --version`
@@ -685,7 +689,7 @@ curl -X POST http://localhost:8000/api/risk/reset-kill-switch
 - Archive old data
 
 **Monthly Tasks**:
-- Update dependencies (`pip install --upgrade -r requirements.txt`)
+- Update dependencies (`uv sync --upgrade`)
 - Review and adjust strategy parameters
 - Analyze monthly performance report
 

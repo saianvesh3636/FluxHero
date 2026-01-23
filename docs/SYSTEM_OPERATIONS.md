@@ -245,7 +245,7 @@ python -c "from backend.storage.sqlite_store import SQLiteStore; store = SQLiteS
 
 **First Sunday of each month:**
 - [ ] Full system backup (database + config + logs)
-- [ ] Dependency security audit: `pip list --outdated`
+- [ ] Dependency security audit: `uv pip list --outdated`
 - [ ] Review and update risk parameters if needed
 - [ ] Performance attribution analysis (which strategies contributed to P&L)
 - [ ] Regime detection calibration check
@@ -466,7 +466,7 @@ uvicorn backend.api.server:app --host 0.0.0.0 --port 8000
 1. Clone repository: `git clone <repo_url>`
 2. Restore latest database backup
 3. Restore configuration files
-4. Install dependencies: `pip install -r requirements.txt`
+4. Install dependencies: `uv sync`
 5. Verify API credentials
 6. Run integration test: `pytest tests/integration/`
 7. Start system and verify status

@@ -23,7 +23,7 @@ NC := \033[0m # No Color
 # Configuration
 VENV := .venv
 PYTHON := $(VENV)/bin/python
-PIP := $(VENV)/bin/pip
+UV := uv
 UVICORN := $(VENV)/bin/uvicorn
 PYTEST := $(VENV)/bin/pytest
 RUFF := $(VENV)/bin/ruff
@@ -198,13 +198,8 @@ install: install-backend install-frontend
 	@echo "$(GREEN)All dependencies installed$(NC)"
 
 install-backend:
-	@echo "$(CYAN)Installing Python dependencies...$(NC)"
-	@if [ ! -d "$(VENV)" ]; then \
-		python3 -m venv $(VENV); \
-		echo "$(GREEN)Virtual environment created$(NC)"; \
-	fi
-	$(PIP) install --upgrade pip
-	$(PIP) install -r requirements.txt
+	@echo "$(CYAN)Installing Python dependencies with uv...$(NC)"
+	$(UV) sync
 	@echo "$(GREEN)Python dependencies installed$(NC)"
 
 install-frontend:

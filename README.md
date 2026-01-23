@@ -88,20 +88,23 @@ make install
 
 ### Option 2: Manual Installation
 
-#### Backend Setup (Python)
+#### Backend Setup (Python with uv)
 
 ```bash
-# Create virtual environment
-python3 -m venv .venv
+# Install uv (if not already installed)
+# On macOS/Linux:
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# On Windows:
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 
-# Activate virtual environment
+# Create virtual environment and install all dependencies
+uv sync
+
+# Activate virtual environment (for running commands manually)
 # On macOS/Linux:
 source .venv/bin/activate
 # On Windows:
 .venv\Scripts\activate
-
-# Install Python dependencies
-pip install -r requirements.txt
 
 # Verify installation
 python -c "import numba; import numpy; import pandas; print('Backend ready')"
@@ -372,8 +375,8 @@ project/
 │
 ├── .venv/                       # Python virtual environment
 ├── Makefile                     # Development commands
-├── requirements.txt             # Python dependencies
-├── pyproject.toml               # Python project config
+├── pyproject.toml               # Python project config & dependencies
+├── uv.lock                      # Locked Python dependencies (uv)
 ├── .env                         # Environment variables
 ├── .gitignore                   # Git ignore rules
 ├── FLUXHERO_REQUIREMENTS.md     # Feature specifications
@@ -431,11 +434,11 @@ Access the dashboard at http://localhost:3000 after starting the system.
 ### Backend Won't Start
 
 ```bash
-# Ensure virtual environment is activated
-source .venv/bin/activate
+# Reinstall dependencies and recreate virtual environment
+uv sync
 
-# Reinstall dependencies
-pip install -r requirements.txt
+# Or if venv already exists, just activate it
+source .venv/bin/activate
 ```
 
 ### Frontend Build Fails

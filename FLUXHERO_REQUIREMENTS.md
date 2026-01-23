@@ -742,7 +742,7 @@ Provide real-time visibility into system state, positions, and performance via a
 | Vercel (Frontend) | $0/mo | Free tier | Frontend hosting |
 
 ### Code Maintenance
-- **Python dependencies**: `pip freeze > requirements.txt` (version lock)
+- **Python dependencies**: `uv lock` (version lock via uv.lock)
 - **Update schedule**: Quarterly dependency updates (not automatic)
 - **Backup**: Daily export of trades table to CSV (stored in Git)
 - **Monitoring**: Email alerts on errors (via `smtplib`)

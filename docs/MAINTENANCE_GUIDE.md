@@ -56,13 +56,13 @@ This guide covers ongoing maintenance tasks for FluxHero in production. Regular 
 ```bash
 # Activate virtual environment
 cd /Users/anvesh/Developer/QuantTrading/project
-source venv/bin/activate
+source .venv/bin/activate
 
 # Check outdated packages
-pip list --outdated
+uv pip list --outdated
 
 # Check security vulnerabilities
-pip install pip-audit
+uv pip install pip-audit
 pip-audit
 ```
 
@@ -73,16 +73,16 @@ pip-audit
 1. **Create test environment**:
 ```bash
 # Clone production environment
-python -m venv venv_test
-source venv_test/bin/activate
-pip install -r requirements.txt
+uv venv .venv_test
+source .venv_test/bin/activate
+uv sync
 ```
 
 2. **Update non-critical packages**:
 ```bash
 # Update utilities and development tools (lowest risk)
-pip install --upgrade pytest pytest-asyncio pytest-cov ruff mypy
-pip install --upgrade python-dotenv pydantic pydantic-settings
+uv pip install --upgrade pytest pytest-asyncio pytest-cov ruff mypy
+uv pip install --upgrade python-dotenv pydantic pydantic-settings
 
 # Run tests
 pytest tests/ -v
@@ -91,7 +91,7 @@ pytest tests/ -v
 3. **Update data processing packages** (medium risk):
 ```bash
 # Update quantitative libraries
-pip install --upgrade quantstats scipy scikit-learn
+uv pip install --upgrade quantstats scipy scikit-learn
 
 # Test backtesting module
 pytest tests/backtesting/ -v
@@ -100,7 +100,7 @@ pytest tests/backtesting/ -v
 4. **Update core dependencies** (highest risk - test thoroughly):
 ```bash
 # Update performance-critical packages
-pip install --upgrade numba numpy pandas
+uv pip install --upgrade numba numpy pandas
 
 # Run full test suite
 pytest tests/ -v
@@ -110,7 +110,7 @@ pytest tests/computation/ --benchmark
 5. **Update web framework** (high risk):
 ```bash
 # Update API framework
-pip install --upgrade fastapi uvicorn httpx websockets
+uv pip install --upgrade fastapi uvicorn httpx websockets
 
 # Test API endpoints
 pytest tests/api/ -v
@@ -118,19 +118,19 @@ pytest tests/api/ -v
 
 6. **Freeze new versions**:
 ```bash
-pip freeze > requirements_new.txt
+uv pip freeze > requirements_new.txt
 
-# Compare versions
-diff requirements.txt requirements_new.txt
+# Compare versions (or use uv lock --upgrade for managed updates)
+uv lock --upgrade
 ```
 
 7. **Deploy to staging**:
 ```bash
 # On staging server
-scp requirements_new.txt user@staging:/path/to/fluxhero/
+scp pyproject.toml uv.lock user@staging:/path/to/fluxhero/
 ssh user@staging
 cd /path/to/fluxhero
-pip install -r requirements_new.txt
+uv sync
 systemctl restart fluxhero-backend
 ```
 
@@ -1008,7 +1008,7 @@ Subscribe to security advisories:
 echo "Checking for security updates..."
 
 # Python packages
-pip-audit --fix
+uv pip install pip-audit && pip-audit --fix
 
 # System packages
 sudo apt-get update
@@ -1059,10 +1059,11 @@ scp -r backup-server:/opt/fluxhero /opt/
 cd /opt/fluxhero
 ./scripts/restore_backup.sh /path/to/latest_backup.tar.gz
 
-# 5. Install Python dependencies
-python3.11 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+# 5. Install Python dependencies (using uv)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv venv .venv
+source .venv/bin/activate
+uv sync
 
 # 6. Install Node dependencies
 cd fluxhero/frontend
@@ -1142,11 +1143,11 @@ grep "WebSocket" logs/fluxhero.log | tail -20
 **Solutions**:
 ```bash
 # Compare dependency versions
-pip freeze > current_deps.txt
+uv pip freeze > current_deps.txt
 diff current_deps.txt known_good_deps.txt
 
 # Restore specific package version
-pip install pandas==2.2.0  # Example
+uv pip install pandas==2.2.0  # Example
 ```
 
 ### Emergency Procedures
@@ -1276,7 +1277,7 @@ Keep a maintenance log at `/opt/fluxhero/docs/maintenance_log.md`:
 sqlite3 /opt/fluxhero/data/trades.db "VACUUM; ANALYZE;"
 
 # Update dependencies
-pip list --outdated
+uv pip list --outdated
 npm outdated
 
 # View logs

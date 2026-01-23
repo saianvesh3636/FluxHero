@@ -881,8 +881,8 @@ Returns HTTP 429 with `Retry-After` header when exceeded.
 ### Development
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (using uv)
+uv sync
 
 # Copy environment file
 cp .env.example .env
