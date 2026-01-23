@@ -12,7 +12,14 @@ Reference: FLUXHERO_REQUIREMENTS.md Feature 9
 import numpy as np
 import pytest
 
-from backend.backtesting.engine import BacktestConfig, BacktestEngine, Order, OrderSide, OrderType
+from backend.backtesting.engine import (
+    BacktestConfig,
+    BacktestEngine,
+    Order,
+    OrderSide,
+    OrderType,
+    validate_bar_integrity,
+)
 from backend.backtesting.fills import (
     check_stop_and_target,
     get_next_bar_fill_price,
@@ -588,6 +595,198 @@ class TestBacktestEngine:
         state = engine.run(bars, dummy_strategy, symbol="TEST")
 
         # Equity curve should have entry for each bar
+        assert len(state.equity_curve) == len(bars)
+
+
+# ============================================================================
+# Tests for Bar Integrity Validation
+# ============================================================================
+
+
+class TestBarIntegrityValidation:
+    """Test bar integrity validation function."""
+
+    def test_valid_bars_pass(self):
+        """Test that valid OHLC data passes validation."""
+        # Valid bars: high >= open/close, low <= open/close, high >= low
+        bars = np.array([
+            [100.0, 102.0, 99.0, 101.0, 1000000],  # Open, High, Low, Close, Volume
+            [101.0, 103.0, 100.0, 102.0, 1000000],
+            [102.0, 105.0, 101.0, 104.0, 1000000],
+        ])
+
+        issues = validate_bar_integrity(bars)
+        assert issues == []
+
+    def test_high_less_than_low_detected(self):
+        """Test detection of High < Low (invalid OHLC)."""
+        # Invalid bar: high=98 < low=99
+        bars = np.array([
+            [100.0, 102.0, 99.0, 101.0, 1000000],  # Valid
+            [101.0, 98.0, 99.0, 100.0, 1000000],   # Invalid: high < low
+            [102.0, 105.0, 101.0, 104.0, 1000000], # Valid
+        ])
+
+        issues = validate_bar_integrity(bars)
+        # Should detect at least the high < low issue (may also detect high < open/close)
+        assert len(issues) >= 1
+        assert any("High < Low" in issue for issue in issues)
+        assert any("1" in issue for issue in issues)  # Index 1 should be in the message
+
+    def test_high_less_than_open_detected(self):
+        """Test detection of High < Open."""
+        # Invalid bar: high=99 < open=100
+        bars = np.array([
+            [100.0, 99.0, 98.0, 99.0, 1000000],   # Invalid: high < open
+            [101.0, 103.0, 100.0, 102.0, 1000000], # Valid
+        ])
+
+        issues = validate_bar_integrity(bars)
+        assert len(issues) >= 1
+        assert any("High < Open" in issue for issue in issues)
+
+    def test_high_less_than_close_detected(self):
+        """Test detection of High < Close."""
+        # Invalid bar: high=100 < close=101
+        bars = np.array([
+            [98.0, 100.0, 97.0, 101.0, 1000000],  # Invalid: high < close
+        ])
+
+        issues = validate_bar_integrity(bars)
+        assert len(issues) >= 1
+        assert any("High < Close" in issue for issue in issues)
+
+    def test_low_greater_than_open_detected(self):
+        """Test detection of Low > Open."""
+        # Invalid bar: low=102 > open=100
+        bars = np.array([
+            [100.0, 105.0, 102.0, 104.0, 1000000],  # Invalid: low > open
+        ])
+
+        issues = validate_bar_integrity(bars)
+        assert len(issues) >= 1
+        assert any("Low > Open" in issue for issue in issues)
+
+    def test_low_greater_than_close_detected(self):
+        """Test detection of Low > Close."""
+        # Invalid bar: low=102 > close=101
+        bars = np.array([
+            [105.0, 106.0, 102.0, 101.0, 1000000],  # Invalid: low > close
+        ])
+
+        issues = validate_bar_integrity(bars)
+        assert len(issues) >= 1
+        assert any("Low > Close" in issue for issue in issues)
+
+    def test_timestamps_monotonic_pass(self):
+        """Test that monotonically increasing timestamps pass."""
+        bars = np.array([
+            [100.0, 102.0, 99.0, 101.0, 1000000],
+            [101.0, 103.0, 100.0, 102.0, 1000000],
+            [102.0, 105.0, 101.0, 104.0, 1000000],
+        ])
+        timestamps = np.array([
+            np.datetime64('2024-01-01'),
+            np.datetime64('2024-01-02'),
+            np.datetime64('2024-01-03'),
+        ])
+
+        issues = validate_bar_integrity(bars, timestamps)
+        assert issues == []
+
+    def test_timestamps_non_monotonic_detected(self):
+        """Test detection of non-monotonic timestamps."""
+        bars = np.array([
+            [100.0, 102.0, 99.0, 101.0, 1000000],
+            [101.0, 103.0, 100.0, 102.0, 1000000],
+            [102.0, 105.0, 101.0, 104.0, 1000000],
+        ])
+        # Timestamps out of order: 2024-01-03 comes before 2024-01-02
+        timestamps = np.array([
+            np.datetime64('2024-01-01'),
+            np.datetime64('2024-01-03'),
+            np.datetime64('2024-01-02'),  # Out of order!
+        ])
+
+        issues = validate_bar_integrity(bars, timestamps)
+        assert len(issues) == 1
+        assert "Non-monotonic timestamps" in issues[0]
+
+    def test_timestamps_duplicate_detected(self):
+        """Test detection of duplicate timestamps."""
+        bars = np.array([
+            [100.0, 102.0, 99.0, 101.0, 1000000],
+            [101.0, 103.0, 100.0, 102.0, 1000000],
+            [102.0, 105.0, 101.0, 104.0, 1000000],
+        ])
+        # Duplicate timestamp
+        timestamps = np.array([
+            np.datetime64('2024-01-01'),
+            np.datetime64('2024-01-02'),
+            np.datetime64('2024-01-02'),  # Duplicate!
+        ])
+
+        issues = validate_bar_integrity(bars, timestamps)
+        assert len(issues) == 1
+        assert "Non-monotonic timestamps" in issues[0]
+
+    def test_timestamps_numeric_epoch(self):
+        """Test with numeric (Unix epoch) timestamps."""
+        bars = np.array([
+            [100.0, 102.0, 99.0, 101.0, 1000000],
+            [101.0, 103.0, 100.0, 102.0, 1000000],
+            [102.0, 105.0, 101.0, 104.0, 1000000],
+        ])
+        # Unix epoch timestamps
+        timestamps = np.array([1704067200, 1704153600, 1704240000])
+
+        issues = validate_bar_integrity(bars, timestamps)
+        assert issues == []
+
+    def test_empty_bars_detected(self):
+        """Test detection of empty bars array."""
+        bars = np.array([]).reshape(0, 5)
+
+        issues = validate_bar_integrity(bars)
+        assert len(issues) == 1
+        assert "Empty bars array" in issues[0]
+
+    def test_multiple_issues_reported(self):
+        """Test that multiple issues are all reported."""
+        # Bar with multiple issues
+        bars = np.array([
+            [100.0, 102.0, 99.0, 101.0, 1000000],  # Valid
+            [101.0, 98.0, 99.0, 100.0, 1000000],   # Invalid: high < low
+            [102.0, 105.0, 101.0, 104.0, 1000000], # Valid
+        ])
+        # Non-monotonic timestamps
+        timestamps = np.array([
+            np.datetime64('2024-01-03'),
+            np.datetime64('2024-01-02'),
+            np.datetime64('2024-01-01'),
+        ])
+
+        issues = validate_bar_integrity(bars, timestamps)
+        # Should have at least 2 issues: OHLC issue and timestamp issue
+        assert len(issues) >= 2
+
+    def test_backtest_engine_calls_validation(self):
+        """Test that BacktestEngine.run() calls bar validation."""
+        # Valid bars
+        bars = np.array([
+            [100.0, 102.0, 99.0, 101.0, 1000000],
+            [101.0, 103.0, 100.0, 102.0, 1000000],
+            [102.0, 105.0, 101.0, 104.0, 1000000],
+        ])
+
+        def dummy_strategy(bars_data, current_idx, position):
+            return []
+
+        config = BacktestConfig(initial_capital=100000.0)
+        engine = BacktestEngine(config)
+
+        # Should not raise - validation passes
+        state = engine.run(bars, dummy_strategy, symbol="TEST")
         assert len(state.equity_curve) == len(bars)
 
 

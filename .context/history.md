@@ -638,3 +638,56 @@
 
 **Result:** Phase 24 Task 4 complete. Data validation catches common data quality issues on load, preventing bad data from entering the backtesting pipeline.
 
+
+
+---
+
+## 2026-01-23: Add bar integrity checks (Phase 24)
+
+**Task:** Add bar integrity checks (backend/backtesting/engine.py)
+
+**Files Changed:**
+- `backend/backtesting/engine.py` - Added `validate_bar_integrity()` function and logging import
+- `tests/unit/test_backtesting_engine.py` - Added `TestBarIntegrityValidation` class with 13 tests
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Added `validate_bar_integrity()` function to `backend/backtesting/engine.py`:
+   - Checks High >= Low (fundamental OHLC constraint)
+   - Checks High >= Open and High >= Close
+   - Checks Low <= Open and Low <= Close
+   - Checks timestamps are monotonically increasing (if provided)
+   - Supports both datetime64 and numeric (Unix epoch) timestamps
+   - Logs warnings for all issues found
+   - Returns list of issue strings for programmatic use
+
+2. Integrated validation into `BacktestEngine.run()`:
+   - Called at the start of backtest before processing
+   - Issues are logged as warnings but don't block execution
+
+3. Created comprehensive test suite (13 tests) in `TestBarIntegrityValidation`:
+   - test_valid_bars_pass: Valid OHLC data passes validation
+   - test_high_less_than_low_detected: High < Low detection
+   - test_high_less_than_open_detected: High < Open detection
+   - test_high_less_than_close_detected: High < Close detection
+   - test_low_greater_than_open_detected: Low > Open detection
+   - test_low_greater_than_close_detected: Low > Close detection
+   - test_timestamps_monotonic_pass: Valid timestamps pass
+   - test_timestamps_non_monotonic_detected: Out-of-order timestamps detected
+   - test_timestamps_duplicate_detected: Duplicate timestamps detected
+   - test_timestamps_numeric_epoch: Unix epoch timestamps supported
+   - test_empty_bars_detected: Empty bars array detected
+   - test_multiple_issues_reported: Multiple issues all reported
+   - test_backtest_engine_calls_validation: Integration test
+
+4. All 49 backtesting engine tests pass
+5. All linting checks pass (ruff)
+
+**Technical Details:**
+- Validation is non-blocking (logs warnings, doesn't raise exceptions)
+- First 5 invalid indices are shown in warnings for debugging
+- Empty bars array is detected and reported
+- Both datetime64 and numeric timestamps are supported
+
+**Result:** Phase 24 Task 5 complete. Bar integrity checks catch suspicious OHLC data during backtest execution.

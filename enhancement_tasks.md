@@ -100,7 +100,7 @@ Each task is on a single line for ralphy.sh compatibility.
 
 - [x] Add data validation on load (backend/data/yahoo_provider.py) - check for NaN in OHLCV, negative prices, volume=0, high<low errors, gaps>5 days missing data.
 
-- [ ] Add bar integrity checks (backend/backtesting/engine.py) - verify open/high/low/close relationships valid, verify timestamps monotonically increasing, log warnings for suspicious data.
+- [x] Add bar integrity checks (backend/backtesting/engine.py) - verify open/high/low/close relationships valid, verify timestamps monotonically increasing, log warnings for suspicious data.
 
 - [ ] Create golden test suite (tests/regression/test_golden_results.py) - run backtest on SPY 2020-2024 with fixed seed, store expected metrics in JSON, compare new runs against golden results, alert on >1% deviation.
 

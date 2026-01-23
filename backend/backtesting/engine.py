@@ -17,6 +17,7 @@ Reference:
 - algorithmic-trading-guide.md → Backtesting & Transaction Costs
 """
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import IntEnum
@@ -24,6 +25,8 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
+
+logger = logging.getLogger(__name__)
 
 
 class OrderSide(IntEnum):
@@ -193,6 +196,107 @@ class BacktestState:
     peak_equity: float = 0.0
 
 
+def validate_bar_integrity(
+    bars: NDArray,
+    timestamps: NDArray | None = None,
+) -> list[str]:
+    """
+    Validate bar integrity for OHLC data.
+
+    Checks for:
+    - Valid OHLC relationships (High >= Low, High >= Open/Close, Low <= Open/Close)
+    - Monotonically increasing timestamps (if provided)
+    - Logs warnings for any suspicious data found
+
+    Parameters
+    ----------
+    bars : NDArray
+        OHLCV data, shape (N, 4+) where first 4 columns are [open, high, low, close]
+    timestamps : Optional[NDArray]
+        Timestamps for each bar (datetime64 or Unix epoch)
+
+    Returns
+    -------
+    list[str]
+        List of issues found (empty if data is valid)
+    """
+    issues: list[str] = []
+    n_bars = len(bars)
+
+    if n_bars == 0:
+        issues.append("Empty bars array provided")
+        logger.warning("Bar integrity check: Empty bars array provided")
+        return issues
+
+    # Extract OHLC
+    opens = bars[:, 0]
+    highs = bars[:, 1]
+    lows = bars[:, 2]
+    closes = bars[:, 3]
+
+    # Check 1: High >= Low (fundamental OHLC constraint)
+    invalid_hl = highs < lows
+    invalid_hl_count = np.sum(invalid_hl)
+    if invalid_hl_count > 0:
+        invalid_indices = np.where(invalid_hl)[0][:5]  # Show first 5
+        issue = f"High < Low on {invalid_hl_count} bars (indices: {list(invalid_indices)}...)"
+        issues.append(issue)
+        logger.warning(f"Bar integrity check: {issue}")
+
+    # Check 2: High >= Open and High >= Close
+    invalid_high_open = highs < opens
+    invalid_high_close = highs < closes
+    invalid_high = invalid_high_open | invalid_high_close
+    invalid_high_count = np.sum(invalid_high)
+    if invalid_high_count > 0:
+        invalid_indices = np.where(invalid_high)[0][:5]
+        issue = (
+            f"High < Open or High < Close on {invalid_high_count} bars "
+            f"(indices: {list(invalid_indices)}...)"
+        )
+        issues.append(issue)
+        logger.warning(f"Bar integrity check: {issue}")
+
+    # Check 3: Low <= Open and Low <= Close
+    invalid_low_open = lows > opens
+    invalid_low_close = lows > closes
+    invalid_low = invalid_low_open | invalid_low_close
+    invalid_low_count = np.sum(invalid_low)
+    if invalid_low_count > 0:
+        invalid_indices = np.where(invalid_low)[0][:5]
+        issue = (
+            f"Low > Open or Low > Close on {invalid_low_count} bars "
+            f"(indices: {list(invalid_indices)}...)"
+        )
+        issues.append(issue)
+        logger.warning(f"Bar integrity check: {issue}")
+
+    # Check 4: Timestamps monotonically increasing (if provided)
+    if timestamps is not None and len(timestamps) > 1:
+        # Handle different timestamp formats
+        if np.issubdtype(timestamps.dtype, np.datetime64):
+            # datetime64 can be compared directly
+            non_increasing = timestamps[1:] <= timestamps[:-1]
+        else:
+            # Assume numeric (Unix epoch or similar)
+            non_increasing = timestamps[1:] <= timestamps[:-1]
+
+        non_increasing_count = np.sum(non_increasing)
+        if non_increasing_count > 0:
+            non_increasing_indices = np.where(non_increasing)[0][:5]
+            issue = (
+                f"Non-monotonic timestamps at {non_increasing_count} positions "
+                f"(indices: {list(non_increasing_indices)}...)"
+            )
+            issues.append(issue)
+            logger.warning(f"Bar integrity check: {issue}")
+
+    if not issues:
+        logger.debug(f"Bar integrity check passed for {n_bars} bars")
+
+    return issues
+
+
 class BacktestEngine:
     """
     Backtesting engine orchestrator.
@@ -261,6 +365,9 @@ class BacktestEngine:
         BacktestState
             Final backtest state with all trades and equity curve
         """
+        # Validate bar integrity before running backtest
+        validate_bar_integrity(bars, timestamps)
+
         # Initialize state
         state = BacktestState(
             current_bar=0,
