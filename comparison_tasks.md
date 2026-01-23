@@ -56,7 +56,7 @@ See `docs/COMPARISON_SENTINEL_TRADER.md` for full comparison analysis.
 
 - [x] Create docker environment template (docker/.env.docker.example) - document all required FLUXHERO_* env vars, set FLUXHERO_DB_PATH=/app/data/fluxhero.db, FLUXHERO_CACHE_DIR=/app/data/cache, FLUXHERO_LOG_FILE=/app/logs/fluxhero.log, API URLs for inter-service communication (http://backend:8000).
 
-- [ ] Add Docker deployment docs (docs/DOCKER_DEPLOYMENT.md) - document build and run process with docker compose, explain volume mounts for data persistence, nginx reverse proxy setup for SSL/TLS, production vs development configs (FLUXHERO_ENV=production), troubleshooting common issues (permissions, networking).
+- [x] Add Docker deployment docs (docs/DOCKER_DEPLOYMENT.md) - document build and run process with docker compose, explain volume mounts for data persistence, nginx reverse proxy setup for SSL/TLS, production vs development configs (FLUXHERO_ENV=production), troubleshooting common issues (permissions, networking).
 
 ---
 
