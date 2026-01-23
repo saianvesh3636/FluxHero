@@ -17,6 +17,7 @@ Key validation approach:
 import numpy as np
 
 from backend.backtesting.metrics import (
+    MetricSanityError,
     PerformanceMetrics,
     calculate_annualized_return,
     calculate_avg_holding_period,
@@ -26,6 +27,7 @@ from backend.backtesting.metrics import (
     calculate_sharpe_ratio,
     calculate_total_return,
     calculate_win_rate,
+    validate_metric_sanity,
 )
 
 
@@ -687,3 +689,285 @@ class TestPerformanceMetricsIntegrationValidation:
         }
         criteria = PerformanceMetrics.check_success_criteria(above_metrics)
         assert criteria["all_criteria_met"] is True
+
+
+class TestMetricSanityChecksValidation:
+    """Validate metric sanity checks catch invalid values and log appropriately."""
+
+    def test_sanity_check_valid_metrics_pass(self):
+        """
+        Test that valid metrics pass all sanity checks.
+
+        Valid metrics have:
+        - Sharpe ratio in [-5, +5]
+        - Win rate in [0, 1]
+        - Max drawdown in [-100, 0]
+        - Non-negative ratios and counts
+        """
+
+        valid_metrics = {
+            "sharpe_ratio": 1.5,
+            "win_rate": 0.55,
+            "max_drawdown_pct": -15.0,
+            "avg_win_loss_ratio": 2.0,
+            "total_trades": 100,
+            "winning_trades": 55,
+            "losing_trades": 45,
+            "initial_capital": 10000.0,
+            "final_equity": 11000.0,
+            "total_return": 1000.0,
+            "annualized_return_pct": 25.0,
+            "avg_holding_period": 5.0,
+        }
+        violations = validate_metric_sanity(valid_metrics)
+        assert len(violations) == 0
+
+    def test_sanity_check_extreme_sharpe_ratio(self):
+        """
+        Test that extreme Sharpe ratios trigger warnings.
+
+        Sharpe ratios outside [-5, +5] are highly unusual and warrant investigation.
+        A Sharpe of 10 would indicate 10 standard deviations of excess return,
+        which is extremely unlikely in real trading.
+        """
+
+        # Extremely high Sharpe (suspicious)
+        high_sharpe_metrics = _create_valid_metrics()
+        high_sharpe_metrics["sharpe_ratio"] = 10.0
+        violations = validate_metric_sanity(high_sharpe_metrics)
+        assert any("Extreme Sharpe ratio" in v for v in violations)
+
+        # Extremely low Sharpe (suspicious)
+        low_sharpe_metrics = _create_valid_metrics()
+        low_sharpe_metrics["sharpe_ratio"] = -8.0
+        violations = validate_metric_sanity(low_sharpe_metrics)
+        assert any("Extreme Sharpe ratio" in v for v in violations)
+
+    def test_sanity_check_invalid_win_rate(self):
+        """
+        Test that invalid win rates are caught as critical errors.
+
+        Win rate must be a valid probability in [0, 1].
+        Values outside this range are mathematically impossible.
+        """
+
+        # Win rate > 1 (impossible)
+        high_win_rate = _create_valid_metrics()
+        high_win_rate["win_rate"] = 1.5
+        violations = validate_metric_sanity(high_win_rate)
+        assert any("Invalid win rate" in v for v in violations)
+
+        # Win rate < 0 (impossible)
+        low_win_rate = _create_valid_metrics()
+        low_win_rate["win_rate"] = -0.2
+        violations = validate_metric_sanity(low_win_rate)
+        assert any("Invalid win rate" in v for v in violations)
+
+        # Should raise when raise_on_critical=True
+        import pytest
+
+        with pytest.raises(MetricSanityError):
+            validate_metric_sanity(high_win_rate, raise_on_critical=True)
+
+    def test_sanity_check_invalid_max_drawdown(self):
+        """
+        Test that invalid max drawdown values are caught.
+
+        Max drawdown must be <= 0 (it's a loss measure)
+        and >= -100% (can't lose more than 100% of capital)
+        """
+
+        # Positive drawdown (impossible - drawdown is always negative or zero)
+        positive_dd = _create_valid_metrics()
+        positive_dd["max_drawdown_pct"] = 5.0
+        violations = validate_metric_sanity(positive_dd)
+        assert any("Invalid max drawdown" in v and "<= 0" in v for v in violations)
+
+        # Drawdown exceeding -100% (impossible)
+        huge_dd = _create_valid_metrics()
+        huge_dd["max_drawdown_pct"] = -120.0
+        violations = validate_metric_sanity(huge_dd)
+        assert any("Invalid max drawdown" in v and "exceed -100%" in v for v in violations)
+
+        # Should raise when raise_on_critical=True
+        import pytest
+
+        with pytest.raises(MetricSanityError):
+            validate_metric_sanity(positive_dd, raise_on_critical=True)
+
+    def test_sanity_check_very_large_drawdown_warning(self):
+        """
+        Test that very large (but valid) drawdowns trigger warnings.
+
+        Drawdowns exceeding -50% are unusual and may indicate problems,
+        though they are technically possible.
+        """
+
+        large_dd = _create_valid_metrics()
+        large_dd["max_drawdown_pct"] = -75.0
+        violations = validate_metric_sanity(large_dd)
+        assert any("Very large max drawdown" in v for v in violations)
+
+    def test_sanity_check_negative_ratios(self):
+        """
+        Test that negative win/loss ratios are caught.
+
+        Avg win/loss ratio must be >= 0 (can't have negative ratio).
+        """
+
+        import pytest
+
+        negative_ratio = _create_valid_metrics()
+        negative_ratio["avg_win_loss_ratio"] = -1.0
+        violations = validate_metric_sanity(negative_ratio)
+        assert any("Invalid avg win/loss ratio" in v for v in violations)
+
+        with pytest.raises(MetricSanityError):
+            validate_metric_sanity(negative_ratio, raise_on_critical=True)
+
+    def test_sanity_check_negative_trade_count(self):
+        """
+        Test that negative trade counts are caught.
+
+        Trade counts must be >= 0 (can't have negative trades).
+        """
+
+        import pytest
+
+        negative_trades = _create_valid_metrics()
+        negative_trades["total_trades"] = -5
+        violations = validate_metric_sanity(negative_trades)
+        assert any("Invalid total trades" in v for v in violations)
+
+        with pytest.raises(MetricSanityError):
+            validate_metric_sanity(negative_trades, raise_on_critical=True)
+
+    def test_sanity_check_trade_count_mismatch(self):
+        """
+        Test that trade count mismatches are caught.
+
+        winning_trades + losing_trades must equal total_trades.
+        """
+
+        import pytest
+
+        mismatch = _create_valid_metrics()
+        mismatch["total_trades"] = 100
+        mismatch["winning_trades"] = 60
+        mismatch["losing_trades"] = 30  # Should be 40
+        violations = validate_metric_sanity(mismatch)
+        assert any("Trade count mismatch" in v for v in violations)
+
+        with pytest.raises(MetricSanityError):
+            validate_metric_sanity(mismatch, raise_on_critical=True)
+
+    def test_sanity_check_equity_return_mismatch(self):
+        """
+        Test that equity/return mismatches are caught.
+
+        final_equity should equal initial_capital + total_return.
+        """
+
+        import pytest
+
+        mismatch = _create_valid_metrics()
+        mismatch["initial_capital"] = 10000.0
+        mismatch["final_equity"] = 12000.0
+        mismatch["total_return"] = 1000.0  # Should be 2000.0
+        violations = validate_metric_sanity(mismatch)
+        assert any("Equity/return mismatch" in v for v in violations)
+
+        with pytest.raises(MetricSanityError):
+            validate_metric_sanity(mismatch, raise_on_critical=True)
+
+    def test_sanity_check_extreme_annualized_return(self):
+        """
+        Test that extreme annualized returns trigger warnings.
+
+        Returns > 500% or < -100% are unusual for real strategies.
+        """
+
+        high_return = _create_valid_metrics()
+        high_return["annualized_return_pct"] = 600.0
+        violations = validate_metric_sanity(high_return)
+        assert any("Extreme annualized return" in v for v in violations)
+
+        # Very negative (total wipeout and then some)
+        low_return = _create_valid_metrics()
+        low_return["annualized_return_pct"] = -150.0
+        violations = validate_metric_sanity(low_return)
+        assert any("Extreme annualized return" in v for v in violations)
+
+    def test_sanity_check_negative_holding_period(self):
+        """
+        Test that negative holding periods are caught.
+
+        Average holding period must be >= 0.
+        """
+
+        import pytest
+
+        negative_holding = _create_valid_metrics()
+        negative_holding["avg_holding_period"] = -5.0
+        violations = validate_metric_sanity(negative_holding)
+        assert any("Invalid avg holding period" in v for v in violations)
+
+        with pytest.raises(MetricSanityError):
+            validate_metric_sanity(negative_holding, raise_on_critical=True)
+
+    def test_calculate_all_metrics_runs_sanity_checks(self):
+        """
+        Test that calculate_all_metrics runs sanity checks by default.
+
+        With valid inputs, no warnings should be logged.
+        """
+        equity_curve = np.array([10000.0, 10500.0, 10200.0, 10800.0, 10300.0, 11000.0])
+        trades_pnl = np.array([500.0, -300.0, 600.0, -500.0, 700.0])
+        trades_holding_periods = np.array([10, 5, 15, 8, 12], dtype=np.int32)
+
+        # This should not raise - all metrics should be valid
+        metrics = PerformanceMetrics.calculate_all_metrics(
+            equity_curve=equity_curve,
+            trades_pnl=trades_pnl,
+            trades_holding_periods=trades_holding_periods,
+            initial_capital=10000.0,
+            enable_sanity_checks=True,
+        )
+
+        # Verify metrics were calculated
+        assert metrics["total_trades"] == 5
+        assert metrics["win_rate"] == 0.6
+
+    def test_calculate_all_metrics_sanity_checks_can_be_disabled(self):
+        """Test that sanity checks can be disabled."""
+        equity_curve = np.array([10000.0, 11000.0])
+        trades_pnl = np.array([1000.0])
+        trades_holding_periods = np.array([10], dtype=np.int32)
+
+        # Should work with sanity checks disabled
+        metrics = PerformanceMetrics.calculate_all_metrics(
+            equity_curve=equity_curve,
+            trades_pnl=trades_pnl,
+            trades_holding_periods=trades_holding_periods,
+            initial_capital=10000.0,
+            enable_sanity_checks=False,
+        )
+        assert metrics["total_return"] == 1000.0
+
+
+def _create_valid_metrics() -> dict:
+    """Create a valid metrics dictionary for testing."""
+    return {
+        "sharpe_ratio": 1.5,
+        "win_rate": 0.55,
+        "max_drawdown_pct": -15.0,
+        "avg_win_loss_ratio": 2.0,
+        "total_trades": 100,
+        "winning_trades": 55,
+        "losing_trades": 45,
+        "initial_capital": 10000.0,
+        "final_equity": 11000.0,
+        "total_return": 1000.0,
+        "annualized_return_pct": 25.0,
+        "avg_holding_period": 5.0,
+    }

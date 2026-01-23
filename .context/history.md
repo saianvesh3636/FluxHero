@@ -910,3 +910,62 @@
 - Violations are logged at ERROR level for debugging
 
 **Result:** Phase 24 Task 9 complete. Sanity check assertions catch critical backtest invariant violations (negative equity, oversized positions, invalid trades, P&L mismatches).
+
+---
+
+## 2026-01-23: Add metric sanity checks (Phase 24)
+
+**Task:** Add metric sanity checks (backend/backtesting/metrics.py)
+
+**Files Changed:**
+- `backend/backtesting/metrics.py` - Added MetricSanityError, validate_metric_sanity(), integrated into PerformanceMetrics.calculate_all_metrics()
+- `tests/validation/test_metric_calculations.py` - Added TestMetricSanityChecksValidation class (13 tests)
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Added `MetricSanityError` exception class for critical metric validation failures
+
+2. Created `validate_metric_sanity()` function that checks:
+   - Sharpe ratio in reasonable range (-5 to +5) - warning for extreme values
+   - Win rate must be valid probability (0 to 1) - critical error if violated
+   - Max drawdown in valid range (0 to -100%) - critical error if violated
+   - Very large drawdowns (< -50%) trigger warning but not error
+   - Avg win/loss ratio must be >= 0 - critical error if violated
+   - Total trades must be >= 0 - critical error if violated
+   - Winning + losing trades must equal total trades - critical error if violated
+   - Final equity must match initial + return - critical error if violated
+   - Extreme annualized returns (> 500% or < -100%) trigger warning
+   - Avg holding period must be >= 0 - critical error if violated
+
+3. Integrated into `PerformanceMetrics.calculate_all_metrics()`:
+   - Added `enable_sanity_checks` parameter (default: True)
+   - Added `raise_on_sanity_failure` parameter (default: False)
+   - Runs validation after calculating all metrics
+   - Logs warnings/errors as appropriate
+
+4. Created comprehensive test suite (13 tests) in TestMetricSanityChecksValidation:
+   - test_sanity_check_valid_metrics_pass: Valid metrics pass all checks
+   - test_sanity_check_extreme_sharpe_ratio: High/low Sharpe triggers warning
+   - test_sanity_check_invalid_win_rate: Win rate outside [0,1] is critical error
+   - test_sanity_check_invalid_max_drawdown: Positive or < -100% is critical error
+   - test_sanity_check_very_large_drawdown_warning: >50% drawdown triggers warning
+   - test_sanity_check_negative_ratios: Negative win/loss ratio is critical error
+   - test_sanity_check_negative_trade_count: Negative trades is critical error
+   - test_sanity_check_trade_count_mismatch: Win+loss != total is critical error
+   - test_sanity_check_equity_return_mismatch: Inconsistent equity/return is critical error
+   - test_sanity_check_extreme_annualized_return: > 500% or < -100% triggers warning
+   - test_sanity_check_negative_holding_period: Negative period is critical error
+   - test_calculate_all_metrics_runs_sanity_checks: Integration test
+   - test_calculate_all_metrics_sanity_checks_can_be_disabled: Disable flag works
+
+5. All 13 tests pass
+6. All linting checks pass (ruff)
+
+**Technical Details:**
+- Critical violations raise MetricSanityError when raise_on_critical=True
+- Warnings are logged but don't raise exceptions
+- Distinguishes between mathematically impossible values (critical) and unusual but possible values (warning)
+- Summary logged showing number of issues found
+
+**Result:** Phase 24 Task 10 complete. Metric sanity checks catch impossible or suspicious metric values with appropriate error/warning levels.

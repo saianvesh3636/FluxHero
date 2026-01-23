@@ -112,7 +112,7 @@ Each task is on a single line for ralphy.sh compatibility.
 
 - [x] Add sanity check assertions (backend/backtesting/engine.py) - assert equity never negative, position size <= max allowed, trades have valid entry < exit timestamps, P&L matches equity change.
 
-- [ ] Add metric sanity checks (backend/backtesting/metrics.py) - assert Sharpe in reasonable range (-5 to +5), win rate between 0 and 1, max drawdown <= 100%, log warning for extreme values.
+- [x] Add metric sanity checks (backend/backtesting/metrics.py) - assert Sharpe in reasonable range (-5 to +5), win rate between 0 and 1, max drawdown <= 100%, log warning for extreme values.
 
 ---
 
