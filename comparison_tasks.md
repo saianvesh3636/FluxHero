@@ -28,7 +28,7 @@ See `docs/COMPARISON_SENTINEL_TRADER.md` for full comparison analysis.
 
 ## Phase B: Paper Trading System (HIGH PRIORITY)
 
-- [ ] Implement paper broker adapter (backend/execution/brokers/paper_broker.py) - create PaperBroker implementing BrokerInterface from Phase A, auto-create $100,000 paper account, store account state in SQLite via backend/storage/sqlite_store.py (balance, positions, trades), reset_account() method to restore initial state, track realized and unrealized P&L. Concept ref: SentinelTrader paper_broker.py (Flask - implement as async class matching our broker interface).
+- [x] Implement paper broker adapter (backend/execution/brokers/paper_broker.py) - create PaperBroker implementing BrokerInterface from Phase A, auto-create $100,000 paper account, store account state in SQLite via backend/storage/sqlite_store.py (balance, positions, trades), reset_account() method to restore initial state, track realized and unrealized P&L. Concept ref: SentinelTrader paper_broker.py (Flask - implement as async class matching our broker interface).
 
 - [ ] Add slippage simulation (backend/execution/brokers/paper_broker.py) - configurable slippage in basis points (default 5 bps via FLUXHERO_PAPER_SLIPPAGE_BPS env), apply slippage on order fill: buy_price = price * (1 + slippage_bps/10000), sell_price = price * (1 - slippage_bps/10000), log slippage impact using loguru. Concept ref: SentinelTrader _apply_slippage() (adapt formula to our implementation).
 

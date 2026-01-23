@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from backend.execution.broker_base import BrokerInterface
 from backend.execution.brokers.alpaca_broker import AlpacaBroker
+from backend.execution.brokers.paper_broker import PaperBroker
 
 # -----------------------------------------------------------------------------
 # Config Models (Pydantic validation per broker type)
@@ -33,12 +34,32 @@ class AlpacaBrokerConfig(BaseModel):
     timeout: float = Field(default=30.0, gt=0, description="Request timeout in seconds")
 
 
+class PaperBrokerConfig(BaseModel):
+    """Configuration for Paper broker (simulated trading)."""
+
+    initial_balance: float = Field(
+        default=100_000.0,
+        gt=0,
+        description="Initial account balance in USD",
+    )
+    db_path: str = Field(
+        default="data/system.db",
+        description="Path to SQLite database for state persistence",
+    )
+    slippage_bps: float = Field(
+        default=5.0,
+        ge=0,
+        description="Slippage in basis points (5 bps = 0.05%)",
+    )
+
+
 # Type alias for supported broker types
-BrokerType = Literal["alpaca"]
+BrokerType = Literal["alpaca", "paper"]
 
 # Registry mapping broker types to their config models
 BROKER_CONFIG_MODELS: dict[str, type[BaseModel]] = {
     "alpaca": AlpacaBrokerConfig,
+    "paper": PaperBrokerConfig,
 }
 
 
@@ -147,7 +168,7 @@ class BrokerFactory:
         Create a broker instance.
 
         Args:
-            broker_type: Type of broker ("alpaca")
+            broker_type: Type of broker ("alpaca", "paper")
             config: Broker configuration dictionary
             use_cache: Whether to use cached instance if available (default: True)
 
@@ -177,6 +198,14 @@ class BrokerFactory:
                 api_secret=alpaca_config.api_secret,
                 base_url=alpaca_config.base_url,
                 timeout=alpaca_config.timeout,
+            )
+        elif broker_type == "paper":
+            paper_config = validated_config
+            assert isinstance(paper_config, PaperBrokerConfig)
+            broker = PaperBroker(
+                initial_balance=paper_config.initial_balance,
+                db_path=paper_config.db_path,
+                slippage_bps=paper_config.slippage_bps,
             )
         else:
             # This shouldn't happen due to validation, but handle gracefully
@@ -255,7 +284,7 @@ def create_broker(
     Uses the singleton BrokerFactory internally.
 
     Args:
-        broker_type: Type of broker ("alpaca")
+        broker_type: Type of broker ("alpaca", "paper")
         config: Broker configuration dictionary
         use_cache: Whether to use cached instance if available (default: True)
 
