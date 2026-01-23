@@ -1792,3 +1792,74 @@ Added comprehensive logging to the BacktestEngine.run() method:
 - Settings page accessible from navigation bar
 
 **Result:** Phase A Task 6 complete. Frontend settings page enables managing broker configurations with secure credential input, connection testing, and status display.
+
+---
+
+## 2026-01-23: Phase A - Task 7: Broker Integration Tests
+
+**Task:** Create broker integration tests (tests/integration/test_broker_adapters.py)
+
+**Files Changed:**
+- `tests/integration/test_broker_adapters.py` (created)
+- `comparison_tasks.md` (marked task complete)
+
+**What Was Done:**
+
+Created comprehensive integration tests for the multi-broker architecture:
+
+1. **Alpaca Broker Adapter Tests (14 tests):**
+   - Connection success/failure scenarios
+   - Invalid/missing credentials handling
+   - Account and positions retrieval
+   - Market and limit order placement
+   - Order cancellation (success/not found)
+   - Health check (connected/disconnected)
+   - Order status queries
+
+2. **Broker Factory Tests (13 tests):**
+   - Correct broker type creation
+   - Singleton pattern verification
+   - Broker caching behavior (enabled/disabled)
+   - Different configs create different instances
+   - Unknown broker type rejection
+   - Pydantic config validation
+   - Cache management (clear, remove, get)
+   - Convenience function testing
+
+3. **Credential Encryption Tests (14 tests):**
+   - Encrypt/decrypt round-trip preservation
+   - Random nonce produces different outputs
+   - Empty/invalid credential error handling
+   - Tampered data detection
+   - Key generation validation
+   - is_encrypted() detection
+   - Credential masking for display
+   - Special characters and unicode support
+
+4. **Connection Retry Logic Tests (4 tests):**
+   - Retry on 5xx server errors
+   - No retry on 4xx client errors
+   - Retry exhaustion after max attempts
+   - Not connected raises RuntimeError
+
+5. **Network Failure Tests (4 tests):**
+   - Connection refused handling
+   - Timeout error handling
+   - Network error during operation
+   - Health check during network failure
+
+6. **Order Status Mapping Tests (5 tests):**
+   - All Alpaca status mappings verified
+
+**Test Results:**
+- 56 tests pass
+- Linting passes (ruff check)
+- Formatting passes (ruff format)
+
+**Technical Details:**
+- Uses pytest-asyncio for async tests
+- Mock responses simulate Alpaca API
+- Tests verify retry logic timing
+- Tests credential encryption security
+
+**Result:** Phase A complete. All multi-broker architecture tasks implemented and tested.

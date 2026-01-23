@@ -22,7 +22,7 @@ See `docs/COMPARISON_SENTINEL_TRADER.md` for full comparison analysis.
 
 - [x] Add broker selection to frontend (frontend/app/settings/page.tsx) - create settings page with broker configuration form, dropdown for broker type selection, secure credential input fields (password type), connection test button, display connection status. Use Next.js App Router and Tailwind CSS following existing frontend patterns. Concept ref: SentinelTrader BrokerConnectionManager.tsx (React/Redux - adapt to our Next.js/hooks approach).
 
-- [ ] Create broker integration tests (tests/integration/test_broker_adapters.py) - test each broker adapter with mock responses, test factory creates correct broker type, test credential encryption/decryption round-trip, test connection retry logic, test error handling for network failures. Use pytest-asyncio for async tests.
+- [x] Create broker integration tests (tests/integration/test_broker_adapters.py) - test each broker adapter with mock responses, test factory creates correct broker type, test credential encryption/decryption round-trip, test connection retry logic, test error handling for network failures. Use pytest-asyncio for async tests.
 
 ---
 
