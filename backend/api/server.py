@@ -471,6 +471,72 @@ app.add_middleware(
 # Request/Response Logging Middleware
 # ============================================================================
 
+# Sensitive fields to mask in request body logging
+SENSITIVE_FIELDS = {"password", "token", "api_key", "apikey", "secret", "credential", "auth"}
+
+# Maximum length for logged request bodies
+MAX_BODY_LOG_LENGTH = 500
+
+
+def _mask_sensitive_data(data: dict | list | str) -> dict | list | str:
+    """
+    Recursively mask sensitive fields in request data.
+
+    Sensitive fields (password, token, api_key, etc.) are replaced with '[REDACTED]'.
+
+    Args:
+        data: Request body data (dict, list, or string)
+
+    Returns:
+        Data with sensitive fields masked
+    """
+    if isinstance(data, dict):
+        masked = {}
+        for key, value in data.items():
+            if key.lower() in SENSITIVE_FIELDS:
+                masked[key] = "[REDACTED]"
+            elif isinstance(value, (dict, list)):
+                masked[key] = _mask_sensitive_data(value)
+            else:
+                masked[key] = value
+        return masked
+    elif isinstance(data, list):
+        return [_mask_sensitive_data(item) for item in data]
+    return data
+
+
+def _truncate_body(body: str) -> str:
+    """
+    Truncate request body if it exceeds MAX_BODY_LOG_LENGTH.
+
+    Args:
+        body: Request body string
+
+    Returns:
+        Truncated body with indicator if truncated
+    """
+    if len(body) > MAX_BODY_LOG_LENGTH:
+        return body[:MAX_BODY_LOG_LENGTH] + f"... [truncated, total {len(body)} chars]"
+    return body
+
+
+def _should_log_request_bodies() -> bool:
+    """
+    Check if request body logging is enabled.
+
+    Request body logging is only enabled when:
+    1. LOG_REQUEST_BODIES env var is set to 'true' or '1'
+    2. ENV is not 'production'
+
+    Returns:
+        True if request body logging is enabled
+    """
+    env = os.getenv("ENV", "development")
+    if env == "production":
+        return False
+    log_bodies = os.getenv("LOG_REQUEST_BODIES", "false").lower()
+    return log_bodies in ("true", "1", "yes")
+
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -480,23 +546,50 @@ async def log_requests(request: Request, call_next):
     Logs:
     - Request method, path, client IP
     - Response status code, processing time
-    - Request/response body size
+    - Request body (optional, development only, with sensitive field masking)
     """
     # Generate request ID for tracking
     request_id = f"{int(time.time() * 1000)}-{id(request)}"
 
+    # Prepare extra logging data
+    log_extra = {
+        "request_id": request_id,
+        "method": request.method,
+        "path": request.url.path,
+        "query_params": str(request.query_params),
+        "client_ip": request.client.host if request.client else "unknown",
+    }
+
+    # Optionally log request body (development only)
+    if _should_log_request_bodies() and request.method in ("POST", "PUT", "PATCH"):
+        try:
+            # Read body - need to cache it since body can only be read once
+            body_bytes = await request.body()
+            if body_bytes:
+                import json
+
+                try:
+                    body_data = json.loads(body_bytes)
+                    masked_body = _mask_sensitive_data(body_data)
+                    body_str = json.dumps(masked_body)
+                except json.JSONDecodeError:
+                    # Not JSON, log as string
+                    body_str = body_bytes.decode("utf-8", errors="replace")
+
+                log_extra["request_body"] = _truncate_body(body_str)
+
+            # Create a new request with the cached body for downstream processing
+            # This is necessary because the body stream can only be read once
+            async def receive():
+                return {"type": "http.request", "body": body_bytes}
+
+            request = Request(request.scope, receive)
+        except Exception as e:
+            logger.debug(f"Could not read request body for logging: {e}")
+
     # Log incoming request
     start_time = time.time()
-    logger.info(
-        "Incoming request",
-        extra={
-            "request_id": request_id,
-            "method": request.method,
-            "path": request.url.path,
-            "query_params": str(request.query_params),
-            "client_ip": request.client.host if request.client else "unknown",
-        },
-    )
+    logger.info("Incoming request", extra=log_extra)
 
     # Process request
     try:

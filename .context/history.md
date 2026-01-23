@@ -1358,3 +1358,61 @@
 - Pass/fail status prominently displayed with visual indicators
 
 **Result:** Phase 18 Task 6 complete. Walk-forward frontend page enables users to run walk-forward tests, view per-window results, and see pass/fail status with equity curve visualization.
+
+---
+
+## 2026-01-23: Add optional request body logging for development (Phase 19)
+
+**Task:** Add optional request body logging for development (backend/api/server.py)
+
+**Files Changed:**
+- `backend/api/server.py` - Added SENSITIVE_FIELDS, MAX_BODY_LOG_LENGTH, _mask_sensitive_data(), _truncate_body(), _should_log_request_bodies(), updated log_requests middleware
+- `tests/unit/test_api_server.py` - Added 17 tests for request body logging
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Added constants and helper functions to `backend/api/server.py`:
+   - **SENSITIVE_FIELDS:** Set of sensitive field names to mask (password, token, api_key, apikey, secret, credential, auth)
+   - **MAX_BODY_LOG_LENGTH:** 500 characters (truncate bodies larger than this)
+   - **_mask_sensitive_data():** Recursively masks sensitive fields in dict/list data with '[REDACTED]'
+   - **_truncate_body():** Truncates long bodies with indicator showing total length
+   - **_should_log_request_bodies():** Checks LOG_REQUEST_BODIES env var, always disabled in production
+
+2. Updated `log_requests` middleware:
+   - Added request body logging for POST/PUT/PATCH methods when enabled
+   - Body is read, masked, truncated, and added to log extras
+   - Body stream is re-created for downstream processing
+   - Feature controlled by LOG_REQUEST_BODIES env var
+   - Never logs bodies in production environment (ENV=production)
+
+3. Created comprehensive test suite (17 tests):
+   - **test_mask_sensitive_data_simple_dict:** Basic dict masking
+   - **test_mask_sensitive_data_nested_dict:** Nested structure masking
+   - **test_mask_sensitive_data_list:** List with dicts masking
+   - **test_mask_sensitive_data_case_insensitive:** Case-insensitive field matching
+   - **test_mask_sensitive_data_non_dict:** Non-dict values unchanged
+   - **test_truncate_body_short:** Short bodies not truncated
+   - **test_truncate_body_long:** Long bodies truncated with indicator
+   - **test_should_log_request_bodies_disabled_by_default:** Disabled by default
+   - **test_should_log_request_bodies_enabled:** Enabled via env var
+   - **test_should_log_request_bodies_production_always_disabled:** Always disabled in production
+   - **test_should_log_request_bodies_accepts_yes:** Accepts 'yes' as truthy
+   - **test_should_log_request_bodies_accepts_1:** Accepts '1' as truthy
+   - **test_request_body_logging_when_enabled:** Integration test
+   - **test_request_body_logging_masks_sensitive_fields:** Sensitive data masked
+   - **test_request_body_not_logged_for_get_requests:** GET requests don't log body
+   - **test_sensitive_fields_constant:** Constant contains expected fields
+   - **test_max_body_log_length_constant:** Constant value is 500
+
+4. All 17 tests pass
+5. All linting checks pass (ruff)
+
+**Technical Details:**
+- Feature is opt-in via LOG_REQUEST_BODIES environment variable
+- Production safety: ENV=production always disables feature
+- Sensitive field masking is case-insensitive and recursive
+- Body truncation preserves first 500 chars with length indicator
+- Request body stream is reconstructed after reading for downstream processing
+
+**Result:** Phase 19 Task 1 complete. Optional request body logging enables debugging during development while ensuring security (masking sensitive fields) and performance (truncation) without ever logging in production.

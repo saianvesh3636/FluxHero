@@ -26,7 +26,7 @@ Each task is on a single line for ralphy.sh compatibility.
 
 ## Phase 19: Logging Enhancements - PARTIAL
 
-- [ ] Add optional request body logging for development (backend/api/server.py) - add LOG_REQUEST_BODIES env flag, truncate bodies >500 chars, never log in production, mask sensitive fields (password, token, api_key).
+- [x] Add optional request body logging for development (backend/api/server.py) - add LOG_REQUEST_BODIES env flag, truncate bodies >500 chars, never log in production, mask sensitive fields (password, token, api_key).
 
 - [ ] Add backtest operation logging (backend/backtesting/engine.py) - log backtest start with config summary, log progress every 10% of bars, log final metrics summary, include duration in milliseconds.
 

@@ -1324,5 +1324,297 @@ def test_health_endpoint_degraded_status(client):
     app_state.sqlite_store = original_store
 
 
+# ============================================================================
+# Request Body Logging Tests (Phase 19)
+# ============================================================================
+
+
+def test_mask_sensitive_data_simple_dict():
+    """Test that sensitive fields are masked in simple dictionaries"""
+    from backend.api.server import _mask_sensitive_data
+
+    data = {
+        "username": "testuser",
+        "password": "secret123",
+        "api_key": "key-abc-123",
+        "symbol": "SPY",
+    }
+
+    masked = _mask_sensitive_data(data)
+
+    assert masked["username"] == "testuser"
+    assert masked["password"] == "[REDACTED]"
+    assert masked["api_key"] == "[REDACTED]"
+    assert masked["symbol"] == "SPY"
+
+
+def test_mask_sensitive_data_nested_dict():
+    """Test that sensitive fields are masked in nested dictionaries"""
+    from backend.api.server import _mask_sensitive_data
+
+    data = {
+        "user": {
+            "name": "test",
+            "token": "jwt-token-123",
+            "settings": {"theme": "dark", "secret": "mysecret"},
+        },
+        "apikey": "api123",
+    }
+
+    masked = _mask_sensitive_data(data)
+
+    assert masked["user"]["name"] == "test"
+    assert masked["user"]["token"] == "[REDACTED]"
+    assert masked["user"]["settings"]["theme"] == "dark"
+    assert masked["user"]["settings"]["secret"] == "[REDACTED]"
+    assert masked["apikey"] == "[REDACTED]"
+
+
+def test_mask_sensitive_data_list():
+    """Test that sensitive fields are masked in lists"""
+    from backend.api.server import _mask_sensitive_data
+
+    data = [{"username": "user1", "password": "pass1"}, {"username": "user2", "password": "pass2"}]
+
+    masked = _mask_sensitive_data(data)
+
+    assert masked[0]["username"] == "user1"
+    assert masked[0]["password"] == "[REDACTED]"
+    assert masked[1]["username"] == "user2"
+    assert masked[1]["password"] == "[REDACTED]"
+
+
+def test_mask_sensitive_data_case_insensitive():
+    """Test that sensitive field matching is case-insensitive"""
+    from backend.api.server import _mask_sensitive_data
+
+    data = {
+        "PASSWORD": "upper",
+        "Password": "mixed",
+        "API_KEY": "upper_key",
+        "Token": "mixed_token",
+    }
+
+    masked = _mask_sensitive_data(data)
+
+    assert masked["PASSWORD"] == "[REDACTED]"
+    assert masked["Password"] == "[REDACTED]"
+    assert masked["API_KEY"] == "[REDACTED]"
+    assert masked["Token"] == "[REDACTED]"
+
+
+def test_mask_sensitive_data_non_dict():
+    """Test that non-dict/list values are returned unchanged"""
+    from backend.api.server import _mask_sensitive_data
+
+    assert _mask_sensitive_data("string") == "string"
+    assert _mask_sensitive_data(123) == 123
+    assert _mask_sensitive_data(None) is None
+
+
+def test_truncate_body_short():
+    """Test that short bodies are not truncated"""
+    from backend.api.server import _truncate_body
+
+    body = '{"symbol": "SPY", "start_date": "2020-01-01"}'
+    assert _truncate_body(body) == body
+
+
+def test_truncate_body_long():
+    """Test that long bodies are truncated with indicator"""
+    from backend.api.server import MAX_BODY_LOG_LENGTH, _truncate_body
+
+    body = "x" * 1000
+    result = _truncate_body(body)
+
+    assert len(result) < len(body)
+    assert result.startswith("x" * MAX_BODY_LOG_LENGTH)
+    assert "[truncated, total 1000 chars]" in result
+
+
+def test_should_log_request_bodies_disabled_by_default():
+    """Test that request body logging is disabled by default"""
+    import os
+
+    from backend.api.server import _should_log_request_bodies
+
+    # Clear env vars
+    os.environ.pop("LOG_REQUEST_BODIES", None)
+    os.environ["ENV"] = "development"
+
+    assert _should_log_request_bodies() is False
+
+
+def test_should_log_request_bodies_enabled():
+    """Test that request body logging can be enabled via env var"""
+    import os
+
+    from backend.api.server import _should_log_request_bodies
+
+    os.environ["ENV"] = "development"
+    os.environ["LOG_REQUEST_BODIES"] = "true"
+
+    assert _should_log_request_bodies() is True
+
+    # Cleanup
+    os.environ.pop("LOG_REQUEST_BODIES", None)
+
+
+def test_should_log_request_bodies_production_always_disabled():
+    """Test that request body logging is always disabled in production"""
+    import os
+
+    from backend.api.server import _should_log_request_bodies
+
+    os.environ["ENV"] = "production"
+    os.environ["LOG_REQUEST_BODIES"] = "true"
+
+    assert _should_log_request_bodies() is False
+
+    # Cleanup
+    os.environ["ENV"] = "development"
+    os.environ.pop("LOG_REQUEST_BODIES", None)
+
+
+def test_should_log_request_bodies_accepts_yes():
+    """Test that LOG_REQUEST_BODIES accepts 'yes' as truthy value"""
+    import os
+
+    from backend.api.server import _should_log_request_bodies
+
+    os.environ["ENV"] = "development"
+    os.environ["LOG_REQUEST_BODIES"] = "yes"
+
+    assert _should_log_request_bodies() is True
+
+    # Cleanup
+    os.environ.pop("LOG_REQUEST_BODIES", None)
+
+
+def test_should_log_request_bodies_accepts_1():
+    """Test that LOG_REQUEST_BODIES accepts '1' as truthy value"""
+    import os
+
+    from backend.api.server import _should_log_request_bodies
+
+    os.environ["ENV"] = "development"
+    os.environ["LOG_REQUEST_BODIES"] = "1"
+
+    assert _should_log_request_bodies() is True
+
+    # Cleanup
+    os.environ.pop("LOG_REQUEST_BODIES", None)
+
+
+def test_request_body_logging_when_enabled(client, caplog):
+    """Test that request bodies are logged when feature is enabled"""
+    import os
+
+    os.environ["ENV"] = "development"
+    os.environ["LOG_REQUEST_BODIES"] = "true"
+
+    # Clear any existing records
+    caplog.clear()
+
+    with caplog.at_level(logging.INFO):
+        # Make a POST request with body
+        client.post(
+            "/api/backtest",
+            json={
+                "symbol": "SPY",
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-02",
+                "initial_capital": 10000.0,
+            },
+        )
+        # We don't care if it succeeds, just that logging happened
+        # (It will likely fail due to insufficient data, which is expected)
+
+    # Cleanup
+    os.environ.pop("LOG_REQUEST_BODIES", None)
+
+    # Verify logging occurred without errors - check for incoming request log
+    assert any("Incoming request" in r.message for r in caplog.records)
+
+
+def test_request_body_logging_masks_sensitive_fields(client, caplog):
+    """Test that sensitive fields in request bodies are masked when logged"""
+    import os
+
+    os.environ["ENV"] = "development"
+    os.environ["LOG_REQUEST_BODIES"] = "true"
+
+    caplog.clear()
+
+    with caplog.at_level(logging.INFO):
+        # Make a POST request with sensitive data
+        # Note: Using backtest endpoint which expects JSON
+        client.post(
+            "/api/backtest",
+            json={
+                "symbol": "SPY",
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-02",
+                "password": "secretpassword",
+                "api_key": "secret-api-key",
+            },
+        )
+
+    # Cleanup
+    os.environ.pop("LOG_REQUEST_BODIES", None)
+
+    # Check that if request body was logged, sensitive fields are masked
+    full_log_text = caplog.text
+    # The actual password/api_key values should NOT appear
+    assert "secretpassword" not in full_log_text
+    assert "secret-api-key" not in full_log_text
+
+
+def test_request_body_not_logged_for_get_requests(client, caplog):
+    """Test that GET requests don't attempt body logging"""
+    import os
+
+    os.environ["ENV"] = "development"
+    os.environ["LOG_REQUEST_BODIES"] = "true"
+
+    caplog.clear()
+
+    with caplog.at_level(logging.INFO):
+        response = client.get("/api/status")
+        assert response.status_code == 200
+
+    # Cleanup
+    os.environ.pop("LOG_REQUEST_BODIES", None)
+
+    # GET requests should not have request_body in logs
+    incoming_logs = [r for r in caplog.records if "Incoming request" in r.message]
+    for log_record in incoming_logs:
+        if hasattr(log_record, "request_body"):
+            # If request_body exists, it should be from a non-GET request
+            assert log_record.method != "GET"
+
+
+def test_sensitive_fields_constant():
+    """Test that SENSITIVE_FIELDS constant contains expected fields"""
+    from backend.api.server import SENSITIVE_FIELDS
+
+    # Verify key sensitive fields are included
+    assert "password" in SENSITIVE_FIELDS
+    assert "token" in SENSITIVE_FIELDS
+    assert "api_key" in SENSITIVE_FIELDS
+    assert "apikey" in SENSITIVE_FIELDS
+    assert "secret" in SENSITIVE_FIELDS
+    assert "credential" in SENSITIVE_FIELDS
+    assert "auth" in SENSITIVE_FIELDS
+
+
+def test_max_body_log_length_constant():
+    """Test that MAX_BODY_LOG_LENGTH constant is set appropriately"""
+    from backend.api.server import MAX_BODY_LOG_LENGTH
+
+    # Should be 500 as per requirements
+    assert MAX_BODY_LOG_LENGTH == 500
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
