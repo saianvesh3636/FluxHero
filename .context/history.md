@@ -462,3 +462,41 @@
 
 **Result:** Visual regression testing fully implemented. All 15 tests passing with 8 baseline screenshots captured. Future UI changes will be automatically detected by comparing against these baselines. Phase 6 complete - all TASKS.md items finished.
 
+---
+
+## 2026-01-23 - Phase 24: Metric Validation Suite (Quality Control & Validation Framework)
+
+**Task:** Create metric validation suite with hand-calculated test cases
+**Files Changed:**
+- tests/validation/test_metric_calculations.py (NEW - 500+ lines)
+- enhancement_tasks.md (marked task complete)
+
+**What Was Done:**
+1. Created comprehensive validation test suite for all metric calculations in `backend/backtesting/metrics.py`:
+   - **TestCalculateReturnsValidation** (5 tests): Simple returns, round percentages, flat equity, single period, edge cases
+   - **TestCalculateSharpeRatioValidation** (5 tests): Hand-calculated Sharpe, known values, zero volatility, negative Sharpe, empty returns
+   - **TestCalculateMaxDrawdownValidation** (6 tests): Hand-calculated drawdown, simple case, no drawdown, monotonic decrease, multiple drawdowns, empty
+   - **TestCalculateWinRateValidation** (6 tests): Hand-calculated win rate, all wins, all losses, breakeven handling, empty, single trade
+   - **TestCalculateAvgWinLossRatioValidation** (6 tests): Hand-calculated ratio, equal averages, no losses, no wins, precise calculation, empty
+   - **TestCalculateTotalReturnValidation** (4 tests): Hand-calculated returns, loss, breakeven, double
+   - **TestCalculateAnnualizedReturnValidation** (5 tests): Hand-calculated CAGR, half year, two years, negative, zero days
+   - **TestCalculateAvgHoldingPeriodValidation** (3 tests): Hand-calculated average, single, empty
+   - **TestPerformanceMetricsIntegrationValidation** (4 tests): Full metrics calculation, success criteria passing/failing/edge values
+
+2. Test features:
+   - Every test includes step-by-step hand calculations in comments
+   - Uses known equity curves with manually verified expected values
+   - Tests both typical cases and edge cases (empty arrays, zero values, extreme values)
+   - Validates formulas match the implementation exactly
+   - Uses `np.testing.assert_almost_equal` for floating-point comparisons
+
+3. All 44 tests pass with parallel execution
+4. All linting checks pass (ruff)
+
+**Technical Details:**
+- Tests validate: returns, Sharpe ratio, max drawdown, win rate, avg win/loss ratio, total return, annualized return (CAGR), holding period
+- Includes worked examples for each calculation (e.g., Sharpe = (annual_return - risk_free_rate) / annual_std)
+- Validates PerformanceMetrics.check_success_criteria boundary conditions (>0.8 Sharpe, >-25% drawdown, >45% win rate, >1.5 win/loss ratio)
+
+**Result:** Phase 24 Task 1 complete. Metric validation suite catches calculation bugs by comparing against hand-verified expected values.
+
