@@ -165,10 +165,69 @@ class TestDockerignore:
     def test_excludes_ide_configs(self, dockerignore_content: str) -> None:
         """Should exclude IDE configuration directories."""
         assert ".vscode" in dockerignore_content, ".dockerignore should exclude .vscode/"
+        assert ".idea" in dockerignore_content, ".dockerignore should exclude .idea/"
 
     def test_excludes_coverage_files(self, dockerignore_content: str) -> None:
         """Should exclude coverage files."""
         assert ".coverage" in dockerignore_content, ".dockerignore should exclude .coverage"
+
+    def test_excludes_venv(self, dockerignore_content: str) -> None:
+        """Should exclude virtual environment directories."""
+        assert ".venv" in dockerignore_content, ".dockerignore should exclude .venv/"
+        assert "venv" in dockerignore_content, ".dockerignore should exclude venv/"
+
+    def test_excludes_env_files(self, dockerignore_content: str) -> None:
+        """Should exclude .env files but allow .env.example."""
+        assert ".env" in dockerignore_content, ".dockerignore should exclude .env"
+        # Check for negation pattern to keep .env.example
+        assert "!.env.example" in dockerignore_content or ".env.example" in dockerignore_content, (
+            ".dockerignore should allow .env.example"
+        )
+
+    def test_excludes_docs_directory(self, dockerignore_content: str) -> None:
+        """Should exclude docs directory."""
+        assert "docs/" in dockerignore_content, ".dockerignore should exclude docs/"
+
+    def test_excludes_markdown_files(self, dockerignore_content: str) -> None:
+        """Should exclude markdown files but allow README."""
+        assert "*.md" in dockerignore_content, ".dockerignore should exclude *.md"
+        # Check for negation pattern to keep README
+        assert "!README.md" in dockerignore_content, ".dockerignore should allow README.md"
+
+    def test_excludes_pytest_cache(self, dockerignore_content: str) -> None:
+        """Should exclude pytest cache."""
+        assert ".pytest_cache" in dockerignore_content, ".dockerignore should exclude .pytest_cache"
+
+    def test_excludes_mypy_cache(self, dockerignore_content: str) -> None:
+        """Should exclude mypy cache."""
+        assert ".mypy_cache" in dockerignore_content, ".dockerignore should exclude .mypy_cache/"
+
+    def test_excludes_ruff_cache(self, dockerignore_content: str) -> None:
+        """Should exclude ruff linter cache."""
+        assert ".ruff_cache" in dockerignore_content, ".dockerignore should exclude .ruff_cache/"
+
+    def test_excludes_next_directory(self, dockerignore_content: str) -> None:
+        """Should exclude .next build directory."""
+        assert ".next" in dockerignore_content, ".dockerignore should exclude .next/"
+
+    def test_excludes_logs(self, dockerignore_content: str) -> None:
+        """Should exclude log files and logs directory."""
+        assert "*.log" in dockerignore_content, ".dockerignore should exclude *.log"
+        assert "logs/" in dockerignore_content, ".dockerignore should exclude logs/"
+
+    def test_excludes_build_artifacts(self, dockerignore_content: str) -> None:
+        """Should exclude build artifact directories."""
+        assert "dist/" in dockerignore_content, ".dockerignore should exclude dist/"
+        assert "build/" in dockerignore_content, ".dockerignore should exclude build/"
+
+    def test_excludes_htmlcov(self, dockerignore_content: str) -> None:
+        """Should exclude HTML coverage reports."""
+        assert "htmlcov" in dockerignore_content, ".dockerignore should exclude htmlcov/"
+
+    def test_excludes_os_files(self, dockerignore_content: str) -> None:
+        """Should exclude OS-specific files."""
+        assert ".DS_Store" in dockerignore_content, ".dockerignore should exclude .DS_Store"
+        assert "Thumbs.db" in dockerignore_content, ".dockerignore should exclude Thumbs.db"
 
 
 class TestDockerBuildPrerequisites:

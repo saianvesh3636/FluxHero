@@ -8,39 +8,68 @@ REQUIREMENTS.md
 TASKS.md
 FLUXHERO_TASKS.md
 FLUXHERO_REQUIREMENTS.md
+comparison_tasks.md
 .context/
 .ralphy/
 
-# Documentation (keep README, exclude detailed docs)
-*.guide.md
-*-guide.md
+# Documentation - exclude all docs except README
+docs/
+*.md
+!README.md
 
-# Development files
+# Environment files - use .env.example for reference
+.env
+.env.*
+!.env.example
+!.env.docker.example
+
+# Git
 .git/
 .gitignore
-.env.local
-.env.development
-*.log
 
-# Test files (unless you want tests in production)
-tests/
+# Python development
+.venv/
+venv/
 **/__pycache__/
 *.pyc
+*.pyo
+*.pyd
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .coverage
 htmlcov/
+*.egg-info/
+
+# Test files
+tests/
 
 # Node development
 node_modules/
 .next/
 *.tsbuildinfo
+.npm/
+.yarn/
 
-# IDE
+# IDE and editor configs
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+.project
+.settings/
 
 # OS files
 .DS_Store
 Thumbs.db
+ehthumbs.db
+
+# Logs (runtime logs go to mounted volumes)
+*.log
+logs/
+
+# Build artifacts
+dist/
+build/
+*.egg

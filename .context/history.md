@@ -2207,3 +2207,35 @@ Implemented the PaperBroker class as the first task of Phase B (Paper Trading Sy
 3. All 68 tests passed, linting passed
 
 **Result:** Docker Compose configuration ready for deployment (Phase C, task 3 of 7).
+
+## 2026-01-23 - Create .dockerignore Files (Phase C)
+
+**Task**: Create .dockerignore files (.dockerignore)
+**Files Changed**:
+- .dockerignore (updated with comprehensive exclusions)
+- tests/integration/test_docker_config.py (added 14 new tests for ignore patterns)
+- comparison_tasks.md (marked task complete)
+
+**Summary**:
+Enhanced the .dockerignore file with comprehensive exclusion patterns as part of Phase C (Docker Deployment):
+
+1. **Updated .dockerignore** with exclusions for:
+   - Python: .venv/, venv/, __pycache__/, *.pyc, .pytest_cache/, .mypy_cache/, .ruff_cache/, .coverage, htmlcov/
+   - Node: node_modules/, .next/, *.tsbuildinfo, .npm/, .yarn/
+   - Environment: .env, .env.* (with negation for .env.example, .env.docker.example)
+   - Documentation: docs/, *.md (with negation for README.md)
+   - Git: .git/, .gitignore
+   - IDE: .vscode/, .idea/, *.swp, *.swo
+   - OS: .DS_Store, Thumbs.db
+   - Build: dist/, build/, *.egg, logs/, *.log
+
+2. **Added 14 new tests** to TestDockerignore class:
+   - test_excludes_venv, test_excludes_env_files, test_excludes_docs_directory
+   - test_excludes_markdown_files, test_excludes_pytest_cache, test_excludes_mypy_cache
+   - test_excludes_ruff_cache, test_excludes_next_directory, test_excludes_logs
+   - test_excludes_build_artifacts, test_excludes_htmlcov, test_excludes_os_files
+   - Updated test_excludes_ide_configs to also check for .idea
+
+3. All 80 tests passed, linting passed
+
+**Result:** Docker build context properly filtered (Phase C, task 4 of 7).
