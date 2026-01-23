@@ -32,6 +32,8 @@ dependencies = [
     "pydantic>=2.6.0",
     "pydantic-settings>=2.1.0",
     "loguru>=0.7.3",
+    # Security
+    "cryptography>=42.0.0",
 ]
 
 [project.optional-dependencies]

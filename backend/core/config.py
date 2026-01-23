@@ -99,6 +99,17 @@ class Settings(BaseSettings):
     )
 
     # ========================================================================
+    # Security Settings
+    # ========================================================================
+
+    encryption_key: str = Field(
+        default="",
+        description="AES-256 encryption key for broker credentials. "
+        "Generate with: python -c 'import secrets; print(secrets.token_hex(32))'. "
+        "MUST be set in production.",
+    )
+
+    # ========================================================================
     # Alpaca API Settings
     # ========================================================================
 

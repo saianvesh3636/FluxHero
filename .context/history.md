@@ -1646,3 +1646,46 @@ Added comprehensive logging to the BacktestEngine.run() method:
 7. All linting checks pass (ruff)
 
 **Result:** Phase A Task 3 complete. Broker factory enables type-safe broker creation with Pydantic validation and singleton caching for connection reuse.
+
+---
+
+## 2026-01-23: Add broker credential encryption (Phase A Task 4)
+
+**Task:** Add broker credential encryption (backend/execution/broker_credentials.py)
+
+**Files Changed:**
+- `backend/execution/broker_credentials.py` (created)
+- `backend/core/config.py` (added encryption_key setting)
+- `pyproject.toml` (added cryptography dependency)
+- `tests/unit/test_broker_credentials.py` (created)
+- `comparison_tasks.md` (marked task complete)
+
+**What Was Done:**
+1. Created broker credential encryption module using AES-256-GCM:
+   - `encrypt_credential()` - encrypts credentials with random nonce
+   - `decrypt_credential()` - decrypts and verifies authenticity
+   - `generate_encryption_key()` - generates secure 256-bit keys
+   - `is_encrypted()` - heuristic check for encrypted values
+   - `mask_credential()` - safely mask credentials for logging/display
+   - `CredentialEncryptionError` - custom exception for encryption errors
+
+2. Added security configuration:
+   - `encryption_key` setting in backend/core/config.py
+   - Loaded from FLUXHERO_ENCRYPTION_KEY environment variable
+   - Falls back to dev key in development mode, requires key in production
+
+3. Added cryptography>=42.0.0 dependency to pyproject.toml
+
+4. Comprehensive test suite (36 tests):
+   - TestEncryptDecryptRoundTrip (9 tests): API key, secret, special chars, unicode, long/short
+   - TestEncryptionErrors (5 tests): Empty string, invalid base64, too short, tampered
+   - TestEncryptionKey (5 tests): Dev mode, key format, uniqueness, custom key, wrong key
+   - TestIsEncrypted (6 tests): True/false cases for various inputs
+   - TestMaskCredential (6 tests): Standard mask, custom visible chars, edge cases
+   - TestCredentialEncryptionError (2 tests): Exception class
+   - TestModuleImports (4 tests): Module imports work
+
+5. All 36 tests pass
+6. All linting checks pass (ruff)
+
+**Result:** Phase A Task 4 complete. Broker credentials can now be encrypted at rest using AES-256-GCM, protecting API keys and secrets from exposure.
