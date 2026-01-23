@@ -44,7 +44,7 @@ See `docs/COMPARISON_SENTINEL_TRADER.md` for full comparison analysis.
 
 ## Phase C: Docker Deployment (HIGH PRIORITY)
 
-- [ ] Create backend Dockerfile (docker/Dockerfile.backend) - use python:3.11-slim base image, install uv package manager (curl -LsSf https://astral.sh/uv/install.sh), copy pyproject.toml and uv.lock, run uv sync, copy backend code, expose port 8000, CMD uvicorn backend.api.server:app, add HEALTHCHECK for /api/health endpoint.
+- [x] Create backend Dockerfile (docker/Dockerfile.backend) - use python:3.11-slim base image, install uv package manager (curl -LsSf https://astral.sh/uv/install.sh), copy pyproject.toml and uv.lock, run uv sync, copy backend code, expose port 8000, CMD uvicorn backend.api.server:app, add HEALTHCHECK for /api/health endpoint.
 
 - [ ] Create frontend Dockerfile (docker/Dockerfile.frontend) - use node:20-alpine base image, copy package.json and package-lock.json, run npm ci, copy frontend code, run npm run build (next build), expose port 3000, CMD npm start (next start). Multi-stage build to reduce image size.
 

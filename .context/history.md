@@ -2107,3 +2107,34 @@ Implemented the PaperBroker class as the first task of Phase B (Paper Trading Sy
 3. **Verified linting**: Ruff check and format passed
 
 **Result:** Paper trading test suite complete with 61 tests covering all Phase B requirements. Tests verify account initialization, order placement, slippage, P&L calculations, and account reset.
+
+
+---
+
+## 2026-01-23: Backend Dockerfile (Phase C)
+
+**Task:** Create backend Dockerfile (docker/Dockerfile.backend)
+
+**Files Changed:**
+- `docker/Dockerfile.backend` (created)
+- `tests/integration/test_docker_config.py` (created)
+- `comparison_tasks.md` (updated - marked task complete)
+
+**What Was Done:**
+1. Created `docker/Dockerfile.backend` with:
+   - Multi-stage build using python:3.11-slim base image
+   - uv package manager installation
+   - Production-only dependency installation (no dev deps)
+   - PYTHONPATH and PYTHONUNBUFFERED environment variables
+   - Data and logs directory creation (/app/data, /app/logs)
+   - HEALTHCHECK using /health endpoint with curl
+   - CMD running uvicorn with backend.api.server:app
+
+2. Created comprehensive test suite `tests/integration/test_docker_config.py` with 26 tests:
+   - TestBackendDockerfile (15 tests): Validates Dockerfile structure
+   - TestDockerignore (7 tests): Validates .dockerignore content
+   - TestDockerBuildPrerequisites (4 tests): Validates required files exist
+
+3. All tests passed, linting passed
+
+**Result:** Backend Dockerfile ready for Docker deployment (Phase C, task 1 of 7).

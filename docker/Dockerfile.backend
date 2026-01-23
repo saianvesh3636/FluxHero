@@ -1,0 +1,59 @@
+# FluxHero Backend Dockerfile
+# Python 3.11 slim image with FastAPI/Uvicorn
+
+FROM python:3.11-slim AS builder
+
+# Install system dependencies for building Python packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv package manager
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+WORKDIR /app
+
+# Copy dependency files first for better caching
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies (production only, no dev dependencies)
+RUN uv sync --frozen --no-dev
+
+# Production stage
+FROM python:3.11-slim
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy virtual environment from builder
+COPY --from=builder /app/.venv /app/.venv
+
+# Set up Python path to use the virtual environment
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONPATH="/app"
+ENV PYTHONUNBUFFERED=1
+
+# Create directories for data and logs
+RUN mkdir -p /app/data /app/logs
+
+# Copy backend code
+COPY backend/ ./backend/
+
+# Copy configuration files if they exist
+COPY config/ ./config/
+
+# Expose FastAPI port
+EXPOSE 8000
+
+# Health check using the /health endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run uvicorn server
+CMD ["uvicorn", "backend.api.server:app", "--host", "0.0.0.0", "--port", "8000"]

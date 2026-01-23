@@ -1,0 +1,227 @@
+"""
+Docker Configuration Tests
+
+Phase C - Docker Deployment: Tests for Dockerfile validation and structure.
+
+This test suite covers:
+1. Dockerfile.backend existence and structure
+   - Uses correct base image
+   - Installs uv package manager
+   - Sets up virtual environment correctly
+   - Exposes correct port
+   - Has HEALTHCHECK configured
+   - Has correct CMD for uvicorn
+
+2. .dockerignore validation
+   - Excludes development files
+   - Excludes test files
+   - Excludes IDE configurations
+   - Excludes __pycache__
+
+3. Docker build prerequisites
+   - pyproject.toml exists
+   - uv.lock exists
+   - backend directory structure is valid
+"""
+
+import re
+from pathlib import Path
+
+import pytest
+
+
+class TestBackendDockerfile:
+    """Tests for backend Dockerfile structure and content."""
+
+    @pytest.fixture
+    def dockerfile_path(self) -> Path:
+        """Get the path to the backend Dockerfile."""
+        return Path(__file__).parent.parent.parent / "docker" / "Dockerfile.backend"
+
+    @pytest.fixture
+    def dockerfile_content(self, dockerfile_path: Path) -> str:
+        """Read the Dockerfile content."""
+        assert dockerfile_path.exists(), f"Dockerfile not found at {dockerfile_path}"
+        return dockerfile_path.read_text()
+
+    def test_dockerfile_exists(self, dockerfile_path: Path) -> None:
+        """Dockerfile.backend should exist in docker/ directory."""
+        assert dockerfile_path.exists(), "docker/Dockerfile.backend does not exist"
+
+    def test_uses_python_311_slim_base(self, dockerfile_content: str) -> None:
+        """Should use python:3.11-slim as base image."""
+        assert "FROM python:3.11-slim" in dockerfile_content, (
+            "Dockerfile should use python:3.11-slim base image"
+        )
+
+    def test_installs_uv_package_manager(self, dockerfile_content: str) -> None:
+        """Should install uv package manager via curl."""
+        assert "astral.sh/uv/install.sh" in dockerfile_content, (
+            "Dockerfile should install uv package manager"
+        )
+
+    def test_copies_dependency_files(self, dockerfile_content: str) -> None:
+        """Should copy pyproject.toml and uv.lock for dependency installation."""
+        assert "COPY pyproject.toml" in dockerfile_content, (
+            "Dockerfile should copy pyproject.toml"
+        )
+        assert "uv.lock" in dockerfile_content, (
+            "Dockerfile should reference uv.lock"
+        )
+
+    def test_runs_uv_sync(self, dockerfile_content: str) -> None:
+        """Should run uv sync for dependency installation."""
+        assert "uv sync" in dockerfile_content, (
+            "Dockerfile should run uv sync"
+        )
+
+    def test_copies_backend_code(self, dockerfile_content: str) -> None:
+        """Should copy the backend directory."""
+        assert re.search(r"COPY backend[/\s]", dockerfile_content), (
+            "Dockerfile should copy backend/ directory"
+        )
+
+    def test_exposes_port_8000(self, dockerfile_content: str) -> None:
+        """Should expose port 8000 for FastAPI."""
+        assert "EXPOSE 8000" in dockerfile_content, (
+            "Dockerfile should expose port 8000"
+        )
+
+    def test_has_healthcheck(self, dockerfile_content: str) -> None:
+        """Should have HEALTHCHECK instruction using /health endpoint."""
+        assert "HEALTHCHECK" in dockerfile_content, (
+            "Dockerfile should have HEALTHCHECK instruction"
+        )
+        assert "/health" in dockerfile_content, (
+            "HEALTHCHECK should use /health endpoint"
+        )
+
+    def test_cmd_runs_uvicorn(self, dockerfile_content: str) -> None:
+        """Should have CMD that runs uvicorn with correct app path."""
+        assert "uvicorn" in dockerfile_content, (
+            "Dockerfile should run uvicorn"
+        )
+        assert "backend.api.server:app" in dockerfile_content, (
+            "Dockerfile should reference backend.api.server:app"
+        )
+
+    def test_sets_pythonpath(self, dockerfile_content: str) -> None:
+        """Should set PYTHONPATH environment variable."""
+        assert "PYTHONPATH" in dockerfile_content, (
+            "Dockerfile should set PYTHONPATH"
+        )
+
+    def test_sets_pythonunbuffered(self, dockerfile_content: str) -> None:
+        """Should set PYTHONUNBUFFERED for proper logging."""
+        assert "PYTHONUNBUFFERED" in dockerfile_content, (
+            "Dockerfile should set PYTHONUNBUFFERED=1"
+        )
+
+    def test_creates_data_directory(self, dockerfile_content: str) -> None:
+        """Should create /app/data directory for SQLite and cache."""
+        assert "/app/data" in dockerfile_content, (
+            "Dockerfile should create /app/data directory"
+        )
+
+    def test_creates_logs_directory(self, dockerfile_content: str) -> None:
+        """Should create /app/logs directory for log files."""
+        assert "/app/logs" in dockerfile_content, (
+            "Dockerfile should create /app/logs directory"
+        )
+
+    def test_uses_multistage_build(self, dockerfile_content: str) -> None:
+        """Should use multi-stage build for smaller image size."""
+        from_count = dockerfile_content.count("FROM python:3.11-slim")
+        assert from_count >= 2, (
+            "Dockerfile should use multi-stage build (at least 2 FROM instructions)"
+        )
+
+
+class TestDockerignore:
+    """Tests for .dockerignore file content."""
+
+    @pytest.fixture
+    def dockerignore_path(self) -> Path:
+        """Get the path to .dockerignore."""
+        return Path(__file__).parent.parent.parent / ".dockerignore"
+
+    @pytest.fixture
+    def dockerignore_content(self, dockerignore_path: Path) -> str:
+        """Read the .dockerignore content."""
+        assert dockerignore_path.exists(), ".dockerignore not found"
+        return dockerignore_path.read_text()
+
+    def test_dockerignore_exists(self, dockerignore_path: Path) -> None:
+        """.dockerignore should exist in project root."""
+        assert dockerignore_path.exists(), ".dockerignore does not exist"
+
+    def test_excludes_git_directory(self, dockerignore_content: str) -> None:
+        """Should exclude .git directory."""
+        assert ".git" in dockerignore_content, (
+            ".dockerignore should exclude .git/"
+        )
+
+    def test_excludes_pycache(self, dockerignore_content: str) -> None:
+        """Should exclude __pycache__ directories."""
+        assert "__pycache__" in dockerignore_content, (
+            ".dockerignore should exclude __pycache__"
+        )
+
+    def test_excludes_node_modules(self, dockerignore_content: str) -> None:
+        """Should exclude node_modules directory."""
+        assert "node_modules" in dockerignore_content, (
+            ".dockerignore should exclude node_modules/"
+        )
+
+    def test_excludes_tests(self, dockerignore_content: str) -> None:
+        """Should exclude tests directory."""
+        assert "tests" in dockerignore_content, (
+            ".dockerignore should exclude tests/"
+        )
+
+    def test_excludes_ide_configs(self, dockerignore_content: str) -> None:
+        """Should exclude IDE configuration directories."""
+        assert ".vscode" in dockerignore_content, (
+            ".dockerignore should exclude .vscode/"
+        )
+
+    def test_excludes_coverage_files(self, dockerignore_content: str) -> None:
+        """Should exclude coverage files."""
+        assert ".coverage" in dockerignore_content, (
+            ".dockerignore should exclude .coverage"
+        )
+
+
+class TestDockerBuildPrerequisites:
+    """Tests for files required for Docker build."""
+
+    @pytest.fixture
+    def project_root(self) -> Path:
+        """Get the project root path."""
+        return Path(__file__).parent.parent.parent
+
+    def test_pyproject_toml_exists(self, project_root: Path) -> None:
+        """pyproject.toml should exist for dependency specification."""
+        pyproject = project_root / "pyproject.toml"
+        assert pyproject.exists(), "pyproject.toml is required for Docker build"
+
+    def test_uv_lock_exists(self, project_root: Path) -> None:
+        """uv.lock should exist for reproducible builds."""
+        uv_lock = project_root / "uv.lock"
+        assert uv_lock.exists(), "uv.lock is required for Docker build"
+
+    def test_backend_directory_exists(self, project_root: Path) -> None:
+        """backend/ directory should exist."""
+        backend = project_root / "backend"
+        assert backend.exists(), "backend/ directory is required"
+        assert backend.is_dir(), "backend should be a directory"
+
+    def test_backend_api_server_exists(self, project_root: Path) -> None:
+        """backend/api/server.py should exist (entrypoint)."""
+        server = project_root / "backend" / "api" / "server.py"
+        assert server.exists(), "backend/api/server.py is required as entrypoint"
+
+    def test_config_directory_exists(self, project_root: Path) -> None:
+        """config/ directory should exist for configuration files."""
+        config = project_root / "config"
+        assert config.exists(), "config/ directory should exist"
