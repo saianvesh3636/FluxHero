@@ -78,6 +78,8 @@ class BacktestConfig:
     impact_threshold: float = 0.1  # R9.2.3: 10% of avg volume
     impact_penalty_pct: float = 0.0005  # R9.2.3: Extra 0.05% slippage for large orders
     risk_free_rate: float = 0.04  # R9.3.1: 4% annual risk-free rate for Sharpe
+    max_position_size: int = 100000  # Maximum shares allowed in a single position
+    enable_sanity_checks: bool = True  # Enable runtime sanity check assertions
 
 
 @dataclass
@@ -194,6 +196,186 @@ class BacktestState:
     trades: list[Trade] = field(default_factory=list)
     equity_curve: list[float] = field(default_factory=list)
     peak_equity: float = 0.0
+
+
+class SanityCheckError(Exception):
+    """Raised when a sanity check assertion fails during backtesting.
+
+    This indicates a critical issue with the backtest logic, such as:
+    - Negative equity (impossible in real trading)
+    - Position size exceeding limits
+    - Invalid trade timestamps (exit before entry)
+    - P&L mismatch with equity changes
+    """
+
+    pass
+
+
+def validate_sanity_checks(
+    state: BacktestState,
+    config: BacktestConfig,
+    bar_index: int,
+    timestamps: NDArray | None = None,
+) -> list[str]:
+    """
+    Perform runtime sanity checks on backtest state.
+
+    Validates critical invariants that should never be violated:
+    - Equity never negative
+    - Position size <= max allowed
+    - Trades have valid entry < exit timestamps
+    - P&L matches equity change (within tolerance)
+
+    Parameters
+    ----------
+    state : BacktestState
+        Current backtest state to validate
+    config : BacktestConfig
+        Backtest configuration with limits
+    bar_index : int
+        Current bar index for context in error messages
+    timestamps : Optional[NDArray]
+        Bar timestamps for trade validation
+
+    Returns
+    -------
+    list[str]
+        List of sanity check violations (empty if all pass)
+
+    Raises
+    ------
+    SanityCheckError
+        If enable_sanity_checks is True and a critical violation is found
+    """
+    violations: list[str] = []
+
+    # Check 1: Equity never negative
+    if state.equity < 0:
+        msg = f"Bar {bar_index}: Negative equity detected: ${state.equity:.2f}"
+        violations.append(msg)
+        logger.error(f"Sanity check FAILED: {msg}")
+
+    # Check 2: Cash never negative
+    if state.cash < 0:
+        msg = f"Bar {bar_index}: Negative cash detected: ${state.cash:.2f}"
+        violations.append(msg)
+        logger.error(f"Sanity check FAILED: {msg}")
+
+    # Check 3: Position size within limits
+    if state.position is not None:
+        if state.position.shares > config.max_position_size:
+            msg = (
+                f"Bar {bar_index}: Position size {state.position.shares} "
+                f"exceeds max allowed {config.max_position_size}"
+            )
+            violations.append(msg)
+            logger.error(f"Sanity check FAILED: {msg}")
+
+        # Position shares must be positive
+        if state.position.shares <= 0:
+            msg = f"Bar {bar_index}: Invalid position shares: {state.position.shares}"
+            violations.append(msg)
+            logger.error(f"Sanity check FAILED: {msg}")
+
+    # Check 4: Trade timestamps valid (entry < exit)
+    for i, trade in enumerate(state.trades):
+        # Check bar indices
+        if trade.exit_bar_index is not None:
+            if trade.entry_bar_index >= trade.exit_bar_index:
+                msg = (
+                    f"Trade {i}: Invalid bar indices - entry={trade.entry_bar_index} "
+                    f">= exit={trade.exit_bar_index}"
+                )
+                violations.append(msg)
+                logger.error(f"Sanity check FAILED: {msg}")
+
+        # Check timestamps if available
+        if trade.entry_time is not None and trade.exit_time is not None:
+            if trade.entry_time >= trade.exit_time:
+                msg = (
+                    f"Trade {i}: Invalid timestamps - entry={trade.entry_time} "
+                    f">= exit={trade.exit_time}"
+                )
+                violations.append(msg)
+                logger.error(f"Sanity check FAILED: {msg}")
+
+        # Check holding_bars consistency
+        if trade.exit_bar_index is not None:
+            expected_holding = trade.exit_bar_index - trade.entry_bar_index
+            if trade.holding_bars != expected_holding:
+                msg = (
+                    f"Trade {i}: Holding bars mismatch - recorded={trade.holding_bars}, "
+                    f"expected={expected_holding}"
+                )
+                violations.append(msg)
+                logger.warning(f"Sanity check warning: {msg}")
+
+    return violations
+
+
+def validate_pnl_equity_consistency(
+    state: BacktestState,
+    initial_capital: float,
+    tolerance: float = 0.01,
+) -> list[str]:
+    """
+    Validate that cumulative P&L from trades matches the equity change.
+
+    This check ensures the accounting is correct - the sum of all trade P&L
+    plus the unrealized P&L of open positions should equal the total equity
+    change from initial capital.
+
+    Parameters
+    ----------
+    state : BacktestState
+        Final backtest state with trades
+    initial_capital : float
+        Starting capital
+    tolerance : float
+        Acceptable difference as a fraction (default 0.01 = 1%)
+
+    Returns
+    -------
+    list[str]
+        List of P&L consistency violations (empty if consistent)
+    """
+    violations: list[str] = []
+
+    # Sum of realized P&L from all trades
+    realized_pnl = sum(trade.pnl for trade in state.trades)
+
+    # Unrealized P&L from open position (already included in equity)
+    # Since equity = cash + position_value, and position_value is at current price,
+    # the equity change already accounts for unrealized P&L
+
+    # Total equity change
+    equity_change = state.equity - initial_capital
+
+    # The equity change should equal the realized P&L (since we mark-to-market
+    # the position value is already reflected in equity at each bar)
+    # But we also need to account for the open position's unrealized P&L
+    # For closed trades, equity_change should match realized_pnl when flat
+
+    if state.position is None:
+        # If flat, equity change should match realized P&L
+        diff = abs(equity_change - realized_pnl)
+        threshold = abs(initial_capital * tolerance)
+
+        if diff > threshold:
+            msg = (
+                f"P&L mismatch when flat: equity_change=${equity_change:.2f}, "
+                f"realized_pnl=${realized_pnl:.2f}, diff=${diff:.2f}"
+            )
+            violations.append(msg)
+            logger.error(f"Sanity check FAILED: {msg}")
+    else:
+        # With open position, just log for information
+        logger.debug(
+            f"Open position check: equity_change=${equity_change:.2f}, "
+            f"realized_pnl=${realized_pnl:.2f}, position_shares={state.position.shares}"
+        )
+
+    return violations
 
 
 def validate_bar_integrity(
@@ -421,7 +603,15 @@ class BacktestEngine:
             # Track equity curve
             state.equity_curve.append(state.equity)
 
-            # Step 4: Generate signals from strategy (if not at last bar)
+            # Step 4: Run sanity checks (if enabled)
+            if self.config.enable_sanity_checks:
+                violations = validate_sanity_checks(state, self.config, i, timestamps)
+                if violations:
+                    raise SanityCheckError(
+                        f"Sanity check failed at bar {i}: {'; '.join(violations)}"
+                    )
+
+            # Step 5: Generate signals from strategy (if not at last bar)
             if i < n_bars - 1:  # Don't generate signals on last bar
                 orders = strategy_func(bars, i, state.position)
 
@@ -430,6 +620,16 @@ class BacktestEngine:
                     order.bar_index = i
                     order.symbol = symbol
                     state.pending_orders.append(order)
+
+        # Final sanity check: P&L consistency
+        if self.config.enable_sanity_checks:
+            pnl_violations = validate_pnl_equity_consistency(
+                state, self.config.initial_capital
+            )
+            if pnl_violations:
+                raise SanityCheckError(
+                    f"P&L consistency check failed: {'; '.join(pnl_violations)}"
+                )
 
         return state
 

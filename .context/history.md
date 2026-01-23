@@ -854,3 +854,59 @@
 - Cross-references to requirement specifications
 
 **Result:** Phase 24 Task 8 complete. Assumptions document provides comprehensive documentation of system design decisions with validated tests ensuring accuracy.
+
+---
+
+## 2026-01-23: Add sanity check assertions (Phase 24)
+
+**Task:** Add sanity check assertions (backend/backtesting/engine.py)
+
+**Files Changed:**
+- `backend/backtesting/engine.py` - Added SanityCheckError, validate_sanity_checks(), validate_pnl_equity_consistency(), max_position_size config, enable_sanity_checks config, integrated into BacktestEngine.run()
+- `tests/unit/test_sanity_checks.py` - Created comprehensive test suite (23 tests)
+- `enhancement_tasks.md` - Marked task complete
+
+**What I Did:**
+
+1. Added `SanityCheckError` exception class for critical backtest invariant violations
+
+2. Added two new config options to `BacktestConfig`:
+   - `max_position_size: int = 100000` - Maximum shares allowed in a single position
+   - `enable_sanity_checks: bool = True` - Enable/disable runtime sanity checks
+
+3. Created `validate_sanity_checks()` function that checks:
+   - Equity never negative
+   - Cash never negative
+   - Position size <= max_position_size
+   - Position shares > 0 when position exists
+   - Trade entry_bar_index < exit_bar_index
+   - Trade entry_time < exit_time (when timestamps available)
+   - holding_bars matches expected value (exit - entry)
+
+4. Created `validate_pnl_equity_consistency()` function that verifies:
+   - When flat, cumulative realized P&L matches equity change from initial capital
+   - Uses configurable tolerance (default 1%)
+   - Logs details for open positions without failing
+
+5. Integrated into `BacktestEngine.run()`:
+   - Sanity checks run after equity update each bar (Step 4)
+   - P&L consistency check runs at end of backtest
+   - Raises SanityCheckError if violations found
+   - Can be disabled via `enable_sanity_checks=False`
+
+6. Created comprehensive test suite (23 tests) in `tests/unit/test_sanity_checks.py`:
+   - **TestValidateSanityChecks** (9 tests): valid state, negative equity/cash, position limits, trade timestamps
+   - **TestValidatePnlEquityConsistency** (4 tests): consistent P&L, mismatches, open positions
+   - **TestBacktestEngineSanityCheckIntegration** (4 tests): normal backtest, disable flag, error class
+   - **TestSanityCheckEdgeCases** (6 tests): empty trades, None values, tolerance boundaries
+
+7. All 72 engine tests pass (49 existing + 23 new)
+8. All linting checks pass (ruff)
+
+**Technical Details:**
+- Sanity checks are enabled by default for safety
+- Can be disabled for performance in production
+- P&L tolerance prevents false positives from floating-point arithmetic
+- Violations are logged at ERROR level for debugging
+
+**Result:** Phase 24 Task 9 complete. Sanity check assertions catch critical backtest invariant violations (negative equity, oversized positions, invalid trades, P&L mismatches).
