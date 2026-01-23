@@ -96,7 +96,7 @@ Each task is on a single line for ralphy.sh compatibility.
 
 - [x] Create indicator validation suite (tests/validation/test_indicator_calculations.py) - use known price series with hand-calculated indicators, verify EMA(10) on [100,101,102...], verify RSI on overbought/oversold patterns, compare against TradingView.
 
-- [ ] Create signal validation suite (tests/validation/test_signal_generation.py) - verify trend-following signals on known trending data, verify mean-reversion signals on ranging data, test regime detection on synthetic transitions.
+- [x] Create signal validation suite (tests/validation/test_signal_generation.py) - verify trend-following signals on known trending data, verify mean-reversion signals on ranging data, test regime detection on synthetic transitions.
 
 - [ ] Add data validation on load (backend/data/yahoo_provider.py) - check for NaN in OHLCV, negative prices, volume=0, high<low errors, gaps>5 days missing data.
 

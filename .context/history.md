@@ -540,3 +540,46 @@
 - Edge cases: insufficient data returns NaN, empty arrays handled gracefully
 
 **Result:** Phase 24 Task 2 complete. Indicator validation suite catches calculation bugs by comparing against hand-verified expected values.
+
+---
+
+### 2026-01-23 - Create signal validation suite (Phase 24.3)
+
+**Task:** Create signal validation suite (tests/validation/test_signal_generation.py)
+
+**Files Changed:**
+- tests/validation/test_signal_generation.py (created)
+- enhancement_tasks.md (marked task complete)
+
+**What I Did:**
+1. Created comprehensive signal validation test suite with 38 tests across 11 test classes:
+   - **TestTrendFollowingSignalValidation** (6 tests): LONG entry, SHORT entry, EXIT_LONG, EXIT_SHORT, no signal within bands, NaN handling
+   - **TestMeanReversionSignalValidation** (5 tests): LONG entry on oversold, EXIT_LONG on middle band, EXIT_LONG on RSI overbought, no signal conditions
+   - **TestRegimeDetectionValidation** (6 tests): STRONG_TREND, MEAN_REVERSION, NEUTRAL classification, boundary values, synthetic transitions, NaN handling
+   - **TestTrailingStopValidation** (2 tests): Long and short trailing stop calculations
+   - **TestFixedStopLossValidation** (3 tests): Long stop, short stop, custom percentage
+   - **TestPositionSizingValidation** (3 tests): Position size calculation, short position, zero risk
+   - **TestBlendSignalsValidation** (2 tests): Agreement required, no agreement required
+   - **TestSizeAdjustmentValidation** (3 tests): Trend-following (100%), mean-reversion (100%), neutral (70%)
+   - **TestSignalGenerationWithRealIndicators** (3 tests): Trend-following with calculated KAMA/ATR, mean-reversion with RSI/Bollinger, regime detection on synthetic patterns
+   - **TestEdgeCases** (5 tests): Empty arrays, single element, two elements, all NaN, regime all NaN
+
+2. Test features:
+   - Every test includes step-by-step signal logic verification in comments
+   - Validates trend-following entry: Price crosses above KAMA + (0.5 × ATR) → LONG
+   - Validates trend-following exit: Price crosses below KAMA - (0.3 × ATR) → EXIT_LONG
+   - Validates mean-reversion entry: RSI < 30 AND price <= lower Bollinger Band → LONG
+   - Validates mean-reversion exit: Price >= middle band OR RSI > 70 → EXIT_LONG
+   - Validates regime classification: ADX > 25 AND R² > 0.6 → STRONG_TREND
+
+3. All 38 tests pass with parallel execution
+4. All linting checks pass (ruff)
+
+**Technical Details:**
+- Tests validate: generate_trend_following_signals, generate_mean_reversion_signals, classify_trend_regime, calculate_trailing_stop, calculate_fixed_stop_loss, calculate_position_size, blend_signals, adjust_size_for_regime
+- Includes worked examples for signal conditions
+- Tests regime transitions from trending to ranging markets
+- Integration tests use actual indicator calculations (KAMA, ATR, RSI, Bollinger Bands)
+
+**Result:** Phase 24 Task 3 complete. Signal validation suite verifies signal generation logic against hand-calculated expected values.
+
