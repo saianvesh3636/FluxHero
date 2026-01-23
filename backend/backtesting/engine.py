@@ -18,6 +18,7 @@ Reference:
 """
 
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import IntEnum
@@ -547,6 +548,19 @@ class BacktestEngine:
         BacktestState
             Final backtest state with all trades and equity curve
         """
+        # Record start time for duration tracking
+        start_time_ms = time.perf_counter() * 1000
+
+        n_bars = len(bars)
+
+        # Log backtest start with config summary
+        logger.info(
+            f"Backtest started: symbol={symbol}, bars={n_bars}, "
+            f"initial_capital=${self.config.initial_capital:,.2f}, "
+            f"commission=${self.config.commission_per_share}/share, "
+            f"slippage={self.config.slippage_pct*100:.3f}%"
+        )
+
         # Validate bar integrity before running backtest
         validate_bar_integrity(bars, timestamps)
 
@@ -558,7 +572,9 @@ class BacktestEngine:
             peak_equity=self.config.initial_capital,
         )
 
-        n_bars = len(bars)
+        # Calculate progress checkpoints (every 10%)
+        progress_interval = max(1, n_bars // 10)
+        last_progress_logged = 0
 
         # Extract OHLC data
         if bars.shape[1] >= 5:
@@ -580,6 +596,17 @@ class BacktestEngine:
         # Main backtest loop
         for i in range(n_bars):
             state.current_bar = i
+
+            # Log progress every 10%
+            if i > 0 and i - last_progress_logged >= progress_interval:
+                progress_pct = (i / n_bars) * 100
+                elapsed_ms = time.perf_counter() * 1000 - start_time_ms
+                logger.info(
+                    f"Backtest progress: {progress_pct:.0f}% ({i}/{n_bars} bars), "
+                    f"trades={len(state.trades)}, equity=${state.equity:,.2f}, "
+                    f"elapsed={elapsed_ms:.0f}ms"
+                )
+                last_progress_logged = i
 
             # Step 1: Fill pending orders (R9.1.1: next-bar fill)
             self._fill_pending_orders(state, opens[i], volumes_data[i], avg_volume, timestamps, i)
@@ -630,6 +657,20 @@ class BacktestEngine:
                 raise SanityCheckError(
                     f"P&L consistency check failed: {'; '.join(pnl_violations)}"
                 )
+
+        # Log final metrics summary
+        duration_ms = time.perf_counter() * 1000 - start_time_ms
+        total_return = state.equity - self.config.initial_capital
+        total_return_pct = (total_return / self.config.initial_capital) * 100.0
+        win_count = sum(1 for t in state.trades if t.pnl > 0)
+        win_rate = (win_count / len(state.trades) * 100.0) if state.trades else 0.0
+
+        logger.info(
+            f"Backtest completed: duration={duration_ms:.0f}ms, "
+            f"total_trades={len(state.trades)}, win_rate={win_rate:.1f}%, "
+            f"return=${total_return:,.2f} ({total_return_pct:+.2f}%), "
+            f"final_equity=${state.equity:,.2f}"
+        )
 
         return state
 

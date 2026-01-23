@@ -1,5 +1,30 @@
 # FluxHero Development History
 
+## 2026-01-23 02:24 - Add Backtest Operation Logging (Phase 19)
+
+**Task**: Add backtest operation logging to backend/backtesting/engine.py
+**Files Changed**:
+- backend/backtesting/engine.py
+- tests/unit/test_backtesting_engine.py
+
+**Summary**:
+Added comprehensive logging to the BacktestEngine.run() method:
+1. **Start logging**: Logs backtest start with config summary (symbol, bars, initial_capital, commission, slippage)
+2. **Progress logging**: Logs every 10% progress with trades count, equity, and elapsed time in milliseconds
+3. **Completion logging**: Logs final metrics (duration in ms, total trades, win rate, return, final equity)
+
+**Tests Added** (6 new tests in TestBacktestOperationLogging class):
+- test_backtest_logs_start_message: Verifies start message with config summary
+- test_backtest_logs_completion_message: Verifies completion message with metrics
+- test_backtest_logs_progress_for_large_dataset: Verifies progress logging every 10%
+- test_backtest_logs_duration_in_milliseconds: Verifies duration format
+- test_backtest_logs_correct_trade_stats: Verifies accurate trade statistics
+- test_backtest_no_progress_for_small_dataset: Verifies minimal logging for small datasets
+
+**Result**: All 55 backtesting engine tests pass. Linting passes for changed files.
+
+---
+
 ## 2026-01-22 16:20 - Verify Backend Server (Phase 3.1)
 
 **Task**: Frontend-Backend Diagnosis - Verify Backend Server

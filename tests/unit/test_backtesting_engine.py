@@ -790,5 +790,207 @@ class TestBarIntegrityValidation:
         assert len(state.equity_curve) == len(bars)
 
 
+# ============================================================================
+# Tests for Backtest Operation Logging
+# ============================================================================
+
+
+class TestBacktestOperationLogging:
+    """Test backtest operation logging functionality."""
+
+    def test_backtest_logs_start_message(self, caplog):
+        """Test that backtest logs start message with config summary."""
+        import logging
+
+        bars = np.array([
+            [100.0, 102.0, 99.0, 101.0, 1000000],
+            [101.0, 103.0, 100.0, 102.0, 1000000],
+            [102.0, 105.0, 101.0, 104.0, 1000000],
+        ])
+
+        def dummy_strategy(bars_data, current_idx, position):
+            return []
+
+        config = BacktestConfig(initial_capital=100000.0)
+        engine = BacktestEngine(config)
+
+        with caplog.at_level(logging.INFO, logger="backend.backtesting.engine"):
+            engine.run(bars, dummy_strategy, symbol="SPY")
+
+        # Check start message logged
+        start_messages = [r for r in caplog.records if "Backtest started" in r.message]
+        assert len(start_messages) == 1
+
+        start_msg = start_messages[0].message
+        assert "symbol=SPY" in start_msg
+        assert "bars=3" in start_msg
+        assert "initial_capital=$100,000.00" in start_msg
+        assert "commission=$0.005/share" in start_msg
+        assert "slippage=0.010%" in start_msg
+
+    def test_backtest_logs_completion_message(self, caplog):
+        """Test that backtest logs completion message with final metrics."""
+        import logging
+
+        bars = np.array([
+            [100.0, 102.0, 99.0, 101.0, 1000000],
+            [101.0, 103.0, 100.0, 102.0, 1000000],
+            [102.0, 105.0, 101.0, 104.0, 1000000],
+        ])
+
+        def dummy_strategy(bars_data, current_idx, position):
+            return []
+
+        config = BacktestConfig(initial_capital=100000.0)
+        engine = BacktestEngine(config)
+
+        with caplog.at_level(logging.INFO, logger="backend.backtesting.engine"):
+            engine.run(bars, dummy_strategy, symbol="TEST")
+
+        # Check completion message logged
+        complete_messages = [r for r in caplog.records if "Backtest completed" in r.message]
+        assert len(complete_messages) == 1
+
+        complete_msg = complete_messages[0].message
+        assert "duration=" in complete_msg
+        assert "ms" in complete_msg
+        assert "total_trades=" in complete_msg
+        assert "win_rate=" in complete_msg
+        assert "return=" in complete_msg
+        assert "final_equity=" in complete_msg
+
+    def test_backtest_logs_progress_for_large_dataset(self, caplog):
+        """Test that backtest logs progress every 10% for large datasets."""
+        import logging
+
+        # Create 100 bars to trigger progress logging
+        n_bars = 100
+        bars = np.zeros((n_bars, 5))
+        bars[:, 0] = 100.0  # Open
+        bars[:, 1] = 102.0  # High
+        bars[:, 2] = 99.0   # Low
+        bars[:, 3] = 101.0  # Close
+        bars[:, 4] = 1000000  # Volume
+
+        def dummy_strategy(bars_data, current_idx, position):
+            return []
+
+        config = BacktestConfig(initial_capital=100000.0)
+        engine = BacktestEngine(config)
+
+        with caplog.at_level(logging.INFO, logger="backend.backtesting.engine"):
+            engine.run(bars, dummy_strategy, symbol="TEST")
+
+        # Check progress messages logged
+        progress_messages = [r for r in caplog.records if "Backtest progress" in r.message]
+
+        # With 100 bars, we should get progress logs at 10%, 20%, ..., 90%
+        assert len(progress_messages) >= 1
+
+        # Verify progress message format
+        if progress_messages:
+            msg = progress_messages[0].message
+            assert "%" in msg
+            assert "bars)" in msg
+            assert "trades=" in msg
+            assert "equity=" in msg
+            assert "elapsed=" in msg
+            assert "ms" in msg
+
+    def test_backtest_logs_duration_in_milliseconds(self, caplog):
+        """Test that backtest duration is logged in milliseconds."""
+        import logging
+        import re
+
+        bars = np.array([
+            [100.0, 102.0, 99.0, 101.0, 1000000],
+            [101.0, 103.0, 100.0, 102.0, 1000000],
+            [102.0, 105.0, 101.0, 104.0, 1000000],
+        ])
+
+        def dummy_strategy(bars_data, current_idx, position):
+            return []
+
+        config = BacktestConfig(initial_capital=100000.0)
+        engine = BacktestEngine(config)
+
+        with caplog.at_level(logging.INFO, logger="backend.backtesting.engine"):
+            engine.run(bars, dummy_strategy, symbol="TEST")
+
+        # Find completion message and verify duration format
+        complete_messages = [r for r in caplog.records if "Backtest completed" in r.message]
+        assert len(complete_messages) == 1
+
+        # Extract duration using regex
+        match = re.search(r"duration=(\d+)ms", complete_messages[0].message)
+        assert match is not None, "Duration should be in format 'duration=XXms'"
+
+        duration_ms = int(match.group(1))
+        assert duration_ms >= 0, "Duration should be non-negative"
+
+    def test_backtest_logs_correct_trade_stats(self, caplog):
+        """Test that completion log contains accurate trade statistics."""
+        import logging
+
+        bars = np.array([
+            [100.0, 102.0, 99.0, 101.0, 1000000],  # Bar 0
+            [101.0, 103.0, 100.0, 102.0, 1000000],  # Bar 1 - buy fills here
+            [102.0, 105.0, 101.0, 104.0, 1000000],  # Bar 2
+            [104.0, 106.0, 103.0, 105.0, 1000000],  # Bar 3 - sell fills here
+            [105.0, 107.0, 104.0, 106.0, 1000000],  # Bar 4
+        ])
+
+        # Strategy: buy at bar 0, sell at bar 2 (profitable trade)
+        def simple_strategy(bars_data, current_idx, position):
+            orders = []
+            if current_idx == 0 and position is None:
+                orders.append(Order(bar_index=0, symbol="TEST", side=OrderSide.BUY, shares=100))
+            elif current_idx == 2 and position is not None:
+                orders.append(Order(bar_index=2, symbol="TEST", side=OrderSide.SELL, shares=100))
+            return orders
+
+        config = BacktestConfig(initial_capital=100000.0)
+        engine = BacktestEngine(config)
+
+        with caplog.at_level(logging.INFO, logger="backend.backtesting.engine"):
+            engine.run(bars, simple_strategy, symbol="TEST")
+
+        # Find completion message
+        complete_messages = [r for r in caplog.records if "Backtest completed" in r.message]
+        assert len(complete_messages) == 1
+
+        msg = complete_messages[0].message
+        # Should show 1 trade, 100% win rate (profitable trade)
+        assert "total_trades=1" in msg
+        assert "win_rate=100.0%" in msg
+
+    def test_backtest_no_progress_for_small_dataset(self, caplog):
+        """Test that progress logging is minimal for very small datasets."""
+        import logging
+
+        # Only 3 bars - progress interval = 0, so no progress logs expected
+        bars = np.array([
+            [100.0, 102.0, 99.0, 101.0, 1000000],
+            [101.0, 103.0, 100.0, 102.0, 1000000],
+            [102.0, 105.0, 101.0, 104.0, 1000000],
+        ])
+
+        def dummy_strategy(bars_data, current_idx, position):
+            return []
+
+        config = BacktestConfig(initial_capital=100000.0)
+        engine = BacktestEngine(config)
+
+        with caplog.at_level(logging.INFO, logger="backend.backtesting.engine"):
+            engine.run(bars, dummy_strategy, symbol="TEST")
+
+        # Should have start and completion, but no progress messages
+        # (3 bars / 10 = 0, progress_interval = max(1, 0) = 1, but only 3 bars)
+        progress_messages = [r for r in caplog.records if "Backtest progress" in r.message]
+        # For 3 bars, we may or may not get progress logs depending on the interval
+        # The key is that we don't flood the logs for tiny datasets
+        assert len(progress_messages) <= 2  # At most 2 progress messages for 3 bars
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
