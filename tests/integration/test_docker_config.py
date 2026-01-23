@@ -12,13 +12,26 @@ This test suite covers:
    - Has HEALTHCHECK configured
    - Has correct CMD for uvicorn
 
-2. .dockerignore validation
+2. Dockerfile.frontend existence and structure
+   - Uses Node 20 Alpine base
+   - Multi-stage build
+   - Has HEALTHCHECK configured
+   - Uses non-root user
+
+3. docker-compose.yml validation
+   - Defines backend and frontend services
+   - Correct port mappings
+   - Volume mounts for data persistence
+   - Health checks configured
+   - Service dependencies
+
+4. .dockerignore validation
    - Excludes development files
    - Excludes test files
    - Excludes IDE configurations
    - Excludes __pycache__
 
-3. Docker build prerequisites
+5. Docker build prerequisites
    - pyproject.toml exists
    - uv.lock exists
    - backend directory structure is valid
@@ -313,3 +326,162 @@ class TestFrontendBuildPrerequisites:
         app_dir = project_root / "frontend" / "app"
         assert app_dir.exists(), "frontend/app/ directory is required for Next.js"
         assert app_dir.is_dir(), "frontend/app should be a directory"
+
+
+class TestDockerCompose:
+    """Tests for docker-compose.yml structure and content using string matching.
+
+    These tests validate the docker-compose.yml configuration without requiring
+    the pyyaml dependency. They use regex and string matching to verify the
+    expected configuration is present.
+    """
+
+    @pytest.fixture
+    def compose_path(self) -> Path:
+        """Get the path to docker-compose.yml."""
+        return Path(__file__).parent.parent.parent / "docker-compose.yml"
+
+    @pytest.fixture
+    def compose_content(self, compose_path: Path) -> str:
+        """Read the docker-compose.yml raw content."""
+        assert compose_path.exists(), f"docker-compose.yml not found at {compose_path}"
+        return compose_path.read_text()
+
+    def test_compose_file_exists(self, compose_path: Path) -> None:
+        """docker-compose.yml should exist in project root."""
+        assert compose_path.exists(), "docker-compose.yml does not exist"
+
+    def test_defines_services_section(self, compose_content: str) -> None:
+        """Should have services section."""
+        assert "services:" in compose_content, "docker-compose.yml should have services section"
+
+    def test_defines_backend_service(self, compose_content: str) -> None:
+        """Should define a backend service."""
+        assert re.search(r"^\s+backend:", compose_content, re.MULTILINE), (
+            "Should define backend service"
+        )
+
+    def test_defines_frontend_service(self, compose_content: str) -> None:
+        """Should define a frontend service."""
+        assert re.search(r"^\s+frontend:", compose_content, re.MULTILINE), (
+            "Should define frontend service"
+        )
+
+    def test_backend_uses_dockerfile(self, compose_content: str) -> None:
+        """Backend service should reference Dockerfile.backend."""
+        assert "Dockerfile.backend" in compose_content, (
+            "Backend should use docker/Dockerfile.backend"
+        )
+
+    def test_frontend_uses_dockerfile(self, compose_content: str) -> None:
+        """Frontend service should reference Dockerfile.frontend."""
+        assert "Dockerfile.frontend" in compose_content, (
+            "Frontend should use docker/Dockerfile.frontend"
+        )
+
+    def test_backend_port_mapping(self, compose_content: str) -> None:
+        """Backend should expose port 8000."""
+        assert re.search(r'"?8000:8000"?', compose_content), (
+            "Backend should expose port 8000"
+        )
+
+    def test_frontend_port_mapping(self, compose_content: str) -> None:
+        """Frontend should expose port 3000."""
+        assert re.search(r'"?3000:3000"?', compose_content), (
+            "Frontend should expose port 3000"
+        )
+
+    def test_backend_has_volumes(self, compose_content: str) -> None:
+        """Backend should have volume mounts defined."""
+        # Look for volumes section under backend
+        assert "volumes:" in compose_content, "Should define volumes"
+
+    def test_backend_mounts_data_directory(self, compose_content: str) -> None:
+        """Backend should mount data directory for persistence."""
+        # Match patterns like ./data:/app/data or data:/app/data
+        assert re.search(r"\.?/?data.*:/app/data", compose_content), (
+            "Backend should mount data directory for SQLite/cache"
+        )
+
+    def test_backend_mounts_logs_directory(self, compose_content: str) -> None:
+        """Backend should mount logs directory."""
+        # Match patterns like ./logs:/app/logs or logs:/app/logs
+        assert re.search(r"\.?/?logs.*:/app/logs", compose_content), (
+            "Backend should mount logs directory"
+        )
+
+    def test_backend_has_env_file(self, compose_content: str) -> None:
+        """Backend should use env_file for configuration."""
+        assert "env_file:" in compose_content, "Backend should use env_file"
+
+    def test_backend_has_healthcheck(self, compose_content: str) -> None:
+        """Backend should have healthcheck configured."""
+        assert "healthcheck:" in compose_content, "Should have healthcheck configured"
+        # Backend healthcheck should reference port 8000 or /health
+        assert "8000" in compose_content and "health" in compose_content.lower(), (
+            "Backend healthcheck should test health endpoint"
+        )
+
+    def test_frontend_depends_on_backend(self, compose_content: str) -> None:
+        """Frontend should depend on backend service."""
+        assert "depends_on:" in compose_content, "Frontend should have depends_on"
+        assert "backend:" in compose_content, "Frontend should depend on backend"
+
+    def test_frontend_waits_for_healthy_backend(self, compose_content: str) -> None:
+        """Frontend should wait for backend to be healthy."""
+        assert "service_healthy" in compose_content, (
+            "Frontend should wait for backend to be healthy"
+        )
+
+    def test_frontend_has_api_url_environment(self, compose_content: str) -> None:
+        """Frontend should have NEXT_PUBLIC_API_URL pointing to backend."""
+        assert "NEXT_PUBLIC_API_URL" in compose_content, (
+            "Frontend should have NEXT_PUBLIC_API_URL environment variable"
+        )
+        # API URL should point to backend service
+        assert re.search(r"NEXT_PUBLIC_API_URL.*backend", compose_content), (
+            "API URL should point to backend service"
+        )
+
+    def test_frontend_has_ws_url_environment(self, compose_content: str) -> None:
+        """Frontend should have NEXT_PUBLIC_WS_URL for WebSocket."""
+        assert "NEXT_PUBLIC_WS_URL" in compose_content, (
+            "Frontend should have NEXT_PUBLIC_WS_URL environment variable"
+        )
+
+    def test_defines_network(self, compose_content: str) -> None:
+        """Should define a Docker network for inter-service communication."""
+        assert "networks:" in compose_content, "docker-compose.yml should define networks"
+
+    def test_services_use_network(self, compose_content: str) -> None:
+        """Services should be connected to the defined network."""
+        # Count networks: occurrences - should be at least 3 (definition + 2 services)
+        network_count = compose_content.count("networks:")
+        assert network_count >= 3, (
+            f"Services should be connected to network (found {network_count}, expected at least 3)"
+        )
+
+    def test_backend_has_restart_policy(self, compose_content: str) -> None:
+        """Backend should have restart policy configured."""
+        assert "restart:" in compose_content, "Should have restart policy"
+        assert re.search(r"restart:\s*(unless-stopped|always|on-failure)", compose_content), (
+            "Should have proper restart policy"
+        )
+
+    def test_has_container_names(self, compose_content: str) -> None:
+        """Services should have container names defined."""
+        assert "container_name:" in compose_content, "Should define container names"
+        assert "fluxhero-backend" in compose_content, "Backend should have named container"
+        assert "fluxhero-frontend" in compose_content, "Frontend should have named container"
+
+    def test_backend_overrides_cache_dir(self, compose_content: str) -> None:
+        """Backend should override FLUXHERO_CACHE_DIR for container paths."""
+        assert "FLUXHERO_CACHE_DIR" in compose_content, (
+            "Backend should set FLUXHERO_CACHE_DIR"
+        )
+
+    def test_backend_overrides_log_file(self, compose_content: str) -> None:
+        """Backend should override FLUXHERO_LOG_FILE for container paths."""
+        assert "FLUXHERO_LOG_FILE" in compose_content, (
+            "Backend should set FLUXHERO_LOG_FILE"
+        )

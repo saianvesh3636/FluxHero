@@ -48,7 +48,7 @@ See `docs/COMPARISON_SENTINEL_TRADER.md` for full comparison analysis.
 
 - [x] Create frontend Dockerfile (docker/Dockerfile.frontend) - use node:20-alpine base image, copy package.json and package-lock.json, run npm ci, copy frontend code, run npm run build (next build), expose port 3000, CMD npm start (next start). Multi-stage build to reduce image size.
 
-- [ ] Create docker-compose.yml (docker-compose.yml) - define services: backend (port 8000), frontend (port 3000), volumes for data persistence (./data:/app/data for sqlite db and parquet cache, ./logs:/app/logs), env_file: .env, health checks using curl, depends_on with condition: service_healthy for startup order.
+- [x] Create docker-compose.yml (docker-compose.yml) - define services: backend (port 8000), frontend (port 3000), volumes for data persistence (./data:/app/data for sqlite db and parquet cache, ./logs:/app/logs), env_file: .env, health checks using curl, depends_on with condition: service_healthy for startup order.
 
 - [ ] Create .dockerignore files (.dockerignore) - exclude node_modules, __pycache__, .venv, .git, .env (use .env.example), tests/, docs/, *.md, .pytest_cache, .mypy_cache, IDE configs (.vscode, .idea). Create separate backend and frontend .dockerignore if needed.
 

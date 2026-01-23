@@ -1,0 +1,78 @@
+# FluxHero Docker Compose Configuration
+# ======================================
+# Orchestrates backend (FastAPI) and frontend (Next.js) services
+#
+# Usage:
+#   docker compose up -d          # Start all services
+#   docker compose logs -f        # Follow logs
+#   docker compose down           # Stop all services
+#
+# For production deployment, ensure .env file is configured
+# See docker/.env.docker.example for required variables
+
+services:
+  # ==========================================================================
+  # Backend Service (FastAPI + Uvicorn)
+  # ==========================================================================
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: fluxhero-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist SQLite database and parquet cache
+      - ./data:/app/data
+      # Persist log files
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      # Override paths for containerized environment
+      - FLUXHERO_CACHE_DIR=/app/data/cache
+      - FLUXHERO_LOG_FILE=/app/logs/fluxhero.log
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - fluxhero-network
+
+  # ==========================================================================
+  # Frontend Service (Next.js)
+  # ==========================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: fluxhero-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # Point to backend service via Docker network
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NEXT_PUBLIC_WS_URL=ws://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - fluxhero-network
+
+# ==========================================================================
+# Networks
+# ==========================================================================
+networks:
+  fluxhero-network:
+    driver: bridge
+    name: fluxhero-network

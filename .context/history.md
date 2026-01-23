@@ -2167,3 +2167,43 @@ Implemented the PaperBroker class as the first task of Phase B (Paper Trading Sy
 3. All 45 tests passed, linting passed
 
 **Result:** Frontend Dockerfile ready for Docker deployment (Phase C, task 2 of 7).
+
+---
+
+## 2026-01-23 14:15 - Phase C: Create docker-compose.yml
+
+**Task:** Create docker-compose.yml (docker-compose.yml)
+
+**Files Changed:**
+- `docker-compose.yml` (created - Docker Compose orchestration)
+- `tests/integration/test_docker_config.py` (updated - added docker-compose tests)
+- `comparison_tasks.md` (updated - marked task complete)
+
+**What Was Done:**
+1. Created `docker-compose.yml` with:
+   - Backend service (port 8000) using docker/Dockerfile.backend
+   - Frontend service (port 3000) using docker/Dockerfile.frontend
+   - Volume mounts for data persistence (./data:/app/data, ./logs:/app/logs)
+   - env_file support for .env configuration
+   - Health checks using curl for backend, wget for frontend
+   - depends_on with condition: service_healthy for startup order
+   - Container names (fluxhero-backend, fluxhero-frontend)
+   - Docker network (fluxhero-network) for inter-service communication
+   - Restart policy (unless-stopped) for reliability
+   - Environment overrides for container paths (FLUXHERO_CACHE_DIR, FLUXHERO_LOG_FILE)
+   - Frontend environment pointing to backend service (NEXT_PUBLIC_API_URL, NEXT_PUBLIC_WS_URL)
+
+2. Extended test suite with TestDockerCompose class (23 new tests):
+   - File existence and structure validation
+   - Service definitions and build contexts
+   - Port mappings (8000, 3000)
+   - Volume mounts for data and logs
+   - Health checks configuration
+   - Service dependencies (frontend depends on healthy backend)
+   - Network configuration
+   - Environment variables for inter-service communication
+   - Restart policies and container names
+
+3. All 68 tests passed, linting passed
+
+**Result:** Docker Compose configuration ready for deployment (Phase C, task 3 of 7).
