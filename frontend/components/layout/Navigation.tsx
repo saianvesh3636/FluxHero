@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { StatusDot } from '../ui/StatusDot';
+import { TradingModeToggle } from '../TradingModeToggle';
+import { useTradingMode } from '../../contexts/TradingModeContext';
 
 export interface NavItem {
   label: string;
@@ -35,6 +37,11 @@ export function Navigation({
   connectionStatus = 'disconnected',
 }: NavigationProps) {
   const pathname = usePathname();
+  const { mode, modeState, switchMode, isLoading: modeLoading } = useTradingMode();
+
+  const handleModeChange = async (newMode: 'live' | 'paper', confirmLive = false) => {
+    await switchMode(newMode, confirmLive);
+  };
 
   return (
     <nav className="bg-panel-800 h-14 sticky top-0 z-50">
@@ -71,17 +78,25 @@ export function Navigation({
           })}
         </div>
 
-        {/* Status Indicator */}
-        <div className="flex items-center gap-2">
-          <StatusDot
-            status={connectionStatus}
-            showLabel
-            className="hidden sm:flex"
+        {/* Trading Mode Toggle & Status Indicator */}
+        <div className="flex items-center gap-4">
+          <TradingModeToggle
+            mode={mode}
+            isLiveBrokerConfigured={modeState?.is_live_broker_configured || false}
+            isLoading={modeLoading}
+            onModeChange={handleModeChange}
           />
-          <StatusDot
-            status={connectionStatus}
-            className="sm:hidden"
-          />
+          <div className="flex items-center gap-2">
+            <StatusDot
+              status={connectionStatus}
+              showLabel
+              className="hidden sm:flex"
+            />
+            <StatusDot
+              status={connectionStatus}
+              className="sm:hidden"
+            />
+          </div>
         </div>
       </div>
     </nav>
