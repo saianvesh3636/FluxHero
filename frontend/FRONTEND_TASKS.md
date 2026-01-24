@@ -187,27 +187,36 @@ This document outlines the implementation roadmap for redesigning the FluxHero t
 
 ## Phase 5: Chart Components
 
-### 5.1 Trading Chart Wrapper
-- [x] Update `components/charts/TradingChart.tsx`
-- [x] Apply panel-700 background
-- [x] Style grid with panel-500
-- [x] Configure candlestick colors (profit/loss)
-- [x] Style indicator lines (accent-500, blue-500)
-- [x] Updated to lightweight-charts v5 API
+### 5.1 Chart Library Architecture
+- [x] Create `components/charts/` directory structure
+- [x] Create `config/theme.ts` with CHART_COLORS mapped to Tailwind tokens
+- [x] Create `config/constants.ts` with named dimensions (CHART_HEIGHT, LINE_WIDTH)
+- [x] Create `types/index.ts` with TypeScript interfaces
+- [x] Create `utils/dataTransformers.ts` for data conversion
+- [x] Create `utils/formatters.ts` for price/volume formatting
+- [x] Create `utils/colorUtils.ts` for color manipulation
 
-### 5.2 Chart Controls
-- [x] Symbol selector in Analytics page
-- [x] Timeframe selector (button group)
-- [x] Fullscreen toggle button
+### 5.2 Core Chart Components
+- [x] Create `core/ChartContainer.tsx` base wrapper with loading state
+- [x] Create `core/OHLCDataBox.tsx` for OHLC display on hover
+- [x] Create `hooks/useChart.ts` for chart lifecycle management
+- [x] Create `hooks/useSeries.ts` for series management
 
-### 5.3 Indicator Panel
-- [x] Create `components/charts/IndicatorPanel.tsx`
-- [x] Display current indicator values
-- [x] ATR, RSI, ADX, KAMA
-- [x] Market regime badge
-- [x] Grid layout
+### 5.3 Composed Chart Components
+- [x] Create `composed/CandlestickChart.tsx` with OHLC, volume, indicators
+- [x] Create `composed/EquityCurveChart.tsx` with area fill, benchmark
+- [x] Create `composed/LineChart.tsx` for simple line charts
+- [x] Create `composed/PnLComparisonChart.tsx` with interactive legend
+- [x] Create `composed/TradeDetailChart.tsx` with price lines and markers
 
-**Deliverable:** Chart components styled consistently.
+### 5.4 Chart Features
+- [x] OHLC data display on hover (OHLCDataBox)
+- [x] Magnet crosshair mode for precise candle selection
+- [x] Theme colors mapped to Tailwind design tokens
+- [x] SSR-safe with dynamic imports
+- [x] Smooth scrolling without jitter (separated data updates from chart creation)
+
+**Deliverable:** Complete chart library using lightweight-charts v5.
 
 ---
 
@@ -376,8 +385,24 @@ components/trading/PLDisplay.tsx
 components/trading/PositionCard.tsx
 components/trading/AccountSummary.tsx
 components/trading/PositionsTable.tsx
+components/trading/OrderEntryModal.tsx
 components/trading/index.ts
-components/charts/IndicatorPanel.tsx
+components/charts/config/theme.ts
+components/charts/config/constants.ts
+components/charts/types/index.ts
+components/charts/core/ChartContainer.tsx
+components/charts/core/OHLCDataBox.tsx
+components/charts/hooks/useChart.ts
+components/charts/hooks/useSeries.ts
+components/charts/hooks/useCrosshairOHLC.ts
+components/charts/composed/CandlestickChart.tsx
+components/charts/composed/EquityCurveChart.tsx
+components/charts/composed/LineChart.tsx
+components/charts/composed/PnLComparisonChart.tsx
+components/charts/composed/TradeDetailChart.tsx
+components/charts/utils/dataTransformers.ts
+components/charts/utils/formatters.ts
+components/charts/utils/colorUtils.ts
 components/charts/index.ts
 lib/utils.ts
 app/history/page.tsx (migrated from pages/)

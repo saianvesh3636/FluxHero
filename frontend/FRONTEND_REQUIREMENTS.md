@@ -507,10 +507,8 @@ markers.setMarkers([
 
 ### 9.1 Home Page (`/`)
 
-- System status card with StatusDot
-- Feature cards grid (2 cols)
-- Backend connection indicator
-- Retry button on connection failure
+- Redirects to `/trades` (main entry point)
+- No standalone homepage UI (navigation via top bar)
 
 ### 9.2 Live Trading Page (`/live`)
 
