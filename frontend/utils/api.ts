@@ -669,57 +669,26 @@ class ApiClient {
   }
 
   /**
-   * Get chart data from Yahoo Finance
-   * Returns OHLCV candle data for charting
+   * Get chart data from provider
+   * Returns ALL available OHLCV candle data for the symbol/interval
+   * Backend handles caching - first request fetches max, subsequent requests use cache
    *
    * @param symbol - Stock symbol (e.g., SPY, AAPL, MSFT)
    * @param interval - Data interval: 1m, 5m, 15m, 1h, 4h, 1d
-   * @param bars - Number of bars/candles to fetch (default: 300)
    * @param useCache - Whether to use cached data (default: true)
    */
   async getChartData(
     symbol: string = 'SPY',
     interval: string = '1d',
-    bars: number = 300,
     useCache: boolean = true,
-    maxDays?: number  // Optional: pass from /api/chart/intervals response
   ): Promise<ChartCandleData[]> {
-    // Convert bars to days based on interval
-    // Trading day = 6.5 hours = 390 minutes
-    const barsPerDay: Record<string, number> = {
-      '1m': 390,
-      '5m': 78,
-      '15m': 26,
-      '30m': 13,
-      '1h': 7,  // ~6.5 rounded up
-      '4h': 2,  // ~1.6 rounded up
-      '1d': 1,
-      '1wk': 0.2,  // 1 bar per 5 days
-    };
-
-    const bpd = barsPerDay[interval] || 1;
-    let days = Math.ceil(bars / bpd) + 5; // Add buffer for weekends/holidays
-
-    // Cap days to provider's limit if specified (from /api/chart/intervals)
-    if (maxDays !== undefined) {
-      days = Math.min(days, maxDays);
-    }
-
     const params = new URLSearchParams({
       symbol: symbol.toUpperCase(),
       interval,
-      days: days.toString(),
       use_cache: useCache.toString(),
     });
 
-    // Fetch and limit to requested bar count
-    const data = await this.fetchJson<ChartCandleData[]>(`${API_BASE_URL}/chart?${params}`);
-
-    // Return only the last N bars requested
-    if (data.length > bars) {
-      return data.slice(-bars);
-    }
-    return data;
+    return this.fetchJson<ChartCandleData[]>(`${API_BASE_URL}/chart?${params}`);
   }
 
   /**

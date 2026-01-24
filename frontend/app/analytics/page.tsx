@@ -55,12 +55,8 @@ export default function AnalyticsPage() {
     setError(null);
 
     try {
-      // Get max_days from provider's interval info
-      const intervalInfo = availableIntervals.find(i => i.name === interval);
-      const maxDays = intervalInfo?.max_days;
-
-      // Fetch chart data with provider's limit
-      const data = await apiClient.getChartData(selectedSymbol, interval, 300, true, maxDays);
+      // Fetch all available chart data (backend handles caching)
+      const data = await apiClient.getChartData(selectedSymbol, interval);
       setCandles(data);
 
       // Calculate simple indicators from the data

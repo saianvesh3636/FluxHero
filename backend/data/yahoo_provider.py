@@ -424,6 +424,131 @@ class YahooFinanceProvider(DataProvider):
             provider=self.name,
         )
 
+    async def fetch_max_available(
+        self,
+        symbol: str,
+        interval: str = "1d",
+    ) -> HistoricalData:
+        """
+        Fetch maximum available historical data for a symbol/interval.
+
+        Uses yfinance's period parameter to get max available data,
+        respecting provider's limits for each interval type.
+
+        Args:
+            symbol: Ticker symbol (e.g., "SPY", "AAPL")
+            interval: Data interval ("1d", "1h", "15m", etc.)
+
+        Returns:
+            HistoricalData with all available bars
+        """
+        symbol = symbol.upper().strip()
+
+        # Check if interval is supported
+        interval_info = self.get_interval_info(interval)
+        fetch_interval = interval_info.aggregate_from if interval_info.aggregate_from else interval
+
+        # Run blocking yfinance call in executor
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,
+            self._fetch_max_sync,
+            symbol,
+            fetch_interval,
+        )
+
+        # Aggregate if needed (e.g., 1h -> 4h)
+        if interval_info.aggregate_from:
+            result = self._aggregate_bars(result, interval_info)
+
+        return result
+
+    def _fetch_max_sync(
+        self,
+        symbol: str,
+        interval: str,
+    ) -> HistoricalData:
+        """Synchronous fetch of max available data using period parameter."""
+        logger.info(f"Fetching max available {symbol} data for interval {interval}")
+
+        try:
+            # Use period="max" - yfinance will return whatever is available
+            # For intraday, it respects Yahoo's limits automatically
+            df = yf.download(
+                symbol,
+                period="max",
+                interval=interval,
+                progress=False,
+                auto_adjust=True,
+            )
+        except Exception as e:
+            error_msg = str(e).lower()
+            if "404" in error_msg or "not found" in error_msg:
+                raise SymbolNotFoundError(symbol, self.name)
+            raise DataProviderError(f"Failed to fetch data for {symbol}: {e}")
+
+        # Check for empty data
+        if df.empty:
+            raise SymbolNotFoundError(
+                symbol, self.name,
+                f"No data returned for '{symbol}' with interval {interval}. "
+                "The symbol may be invalid or delisted."
+            )
+
+        # Handle multi-level columns (yfinance sometimes returns these)
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+
+        # Validate required columns
+        required_cols = ["Open", "High", "Low", "Close", "Volume"]
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            raise DataProviderError(f"Missing columns in data: {missing_cols}")
+
+        # Validate data quality (use larger gap tolerance for historical data)
+        validation_issues = validate_ohlcv_data(df, symbol, max_gap_days=10)
+
+        # Only raise on critical issues
+        critical_issues = [
+            issue for issue in validation_issues
+            if any(kw in issue.lower() for kw in ["nan values", "negative prices", "high < low"])
+        ]
+
+        if critical_issues:
+            raise DataValidationError(symbol, critical_issues)
+
+        # Drop rows with NaN values
+        df = df.dropna()
+
+        if len(df) < 1:
+            raise InsufficientDataError(symbol, 0, 1)
+
+        logger.info(f"Fetched {len(df)} bars for {symbol} (max available)")
+
+        # Convert to numpy arrays
+        bars = np.column_stack([
+            df["Open"].values.astype(np.float64),
+            df["High"].values.astype(np.float64),
+            df["Low"].values.astype(np.float64),
+            df["Close"].values.astype(np.float64),
+            df["Volume"].values.astype(np.float64),
+        ])
+
+        timestamps = np.array(
+            [ts.timestamp() for ts in df.index.to_pydatetime()],
+            dtype=np.float64,
+        )
+
+        dates = [ts.strftime("%Y-%m-%d") for ts in df.index.to_pydatetime()]
+
+        return HistoricalData(
+            symbol=symbol,
+            bars=bars,
+            timestamps=timestamps,
+            dates=dates,
+            provider=self.name,
+        )
+
     async def search_symbols(self, query: str, limit: int = 10) -> list[SymbolInfo]:
         """
         Search for symbols matching a query (symbol or company name).

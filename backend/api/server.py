@@ -563,8 +563,8 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting FluxHero API server")
 
-    # Initialize SQLite store
-    db_path = Path(__file__).parent.parent.parent.parent / "data" / "system.db"
+    # Initialize SQLite store (project/data/system.db)
+    db_path = Path(__file__).parent.parent.parent / "data" / "system.db"
     app_state.sqlite_store = SQLiteStore(db_path=str(db_path))
     await app_state.sqlite_store.initialize()
     logger.info("SQLite store initialized", extra={"db_path": str(db_path)})
@@ -1964,12 +1964,6 @@ async def get_chart_data(
         default="1d",
         description="Data interval: 1m, 5m, 15m, 1h, 4h, 1d",
     ),
-    days: int = Query(
-        default=100,
-        ge=1,
-        le=1825,  # Up to 5 years
-        description="Number of days of historical data (1-1825, up to 5 years)",
-    ),
     use_cache: bool = Query(
         default=True,
         description="Use cached data if available",
@@ -1978,107 +1972,108 @@ async def get_chart_data(
     """
     Get historical chart data with server-side caching.
 
-    Returns OHLCV candle data for charting. Uses SQLite cache for historical
-    data and fetches fresh data only when needed.
+    Returns ALL available OHLCV candle data for the symbol/interval.
+    Uses incremental caching - only fetches missing data, never refetches history.
 
     Cache Strategy:
-    - Historical data (before today) is cached indefinitely
-    - Today's data is always fetched fresh
-    - Cache supports up to 5 years of data per symbol/interval
+    - No cache: Fetch max available from provider, cache everything except today
+    - Cache current: Return cached data + fetch today fresh
+    - Cache stale: Return cached data + fetch only missing days + cache them
 
     Args:
         symbol: Stock symbol (e.g., SPY, AAPL, MSFT)
         interval: Data interval (1m, 5m, 15m, 1h, 4h, 1d)
-        days: Number of days of historical data (up to 5 years)
         use_cache: Whether to use cached data (default: True)
 
     Returns:
         List of CandleData with time, open, high, low, close, volume
-
-    Note:
-        - Intraday intervals (1m, 5m, 15m) are limited to last 7 days by Yahoo
-        - 1h interval is limited to last 730 days
-        - Daily data can go back 5+ years
     """
     from datetime import datetime, timedelta
     from backend.data.yahoo_provider import YahooFinanceProvider
     from backend.data.provider import UnsupportedIntervalError
+    from backend.storage.cache_service import CacheService
 
     symbol = symbol.upper()
-    today = datetime.now().strftime("%Y-%m-%d")
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
+    today = CacheService.get_today()
+    end_str = today
 
     try:
         provider = YahooFinanceProvider()
 
         # Check if interval is supported
         try:
-            interval_info = provider.get_interval_info(interval)
+            provider.get_interval_info(interval)
         except UnsupportedIntervalError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
-        # Adjust date range based on provider limitations for intraday data
-        intraday_limits = {
-            "1m": 7,
-            "5m": 60,
-            "15m": 60,
-            "30m": 60,
-            "1h": 730,
-            "4h": 730,
-        }
-        if interval in intraday_limits:
-            max_days = intraday_limits[interval]
-            start_date = max(start_date, end_date - timedelta(days=max_days))
+        # Helper to convert provider data to CandleData list
+        def convert_historical_to_candles(historical) -> list[CandleData]:
+            result = []
+            for i in range(len(historical.timestamps)):
+                result.append(CandleData(
+                    time=int(historical.timestamps[i]),
+                    open=float(historical.bars[i, 0]),
+                    high=float(historical.bars[i, 1]),
+                    low=float(historical.bars[i, 2]),
+                    close=float(historical.bars[i, 3]),
+                    volume=int(historical.bars[i, 4]) if historical.bars.shape[1] > 4 else 0,
+                ))
+            return result
 
-        start_str = start_date.strftime("%Y-%m-%d")
-        end_str = end_date.strftime("%Y-%m-%d")
+        # Helper to prepare candles for caching (exclude today)
+        def prepare_for_cache(candles: list[CandleData]) -> list[dict]:
+            return [
+                {
+                    "time": c.time,
+                    "open": c.open,
+                    "high": c.high,
+                    "low": c.low,
+                    "close": c.close,
+                    "volume": c.volume,
+                }
+                for c in candles
+                if datetime.fromtimestamp(c.time).strftime("%Y-%m-%d") != today
+            ]
 
         candles = []
 
-        # Try to get cached data first
+        # Try cache first
         if use_cache and app_state.sqlite_store:
             cached = await app_state.sqlite_store.get_cached_candles(
                 symbol=symbol,
                 interval=interval,
-                start_date=start_str,
+                start_date="1900-01-01",
                 end_date=end_str,
             )
 
             if cached:
-                # Check if cache covers the requested date range
-                cached_min_date = min(c.date for c in cached)
-                cached_max_date = max(c.date for c in cached)
-                yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-
-                # Cache is complete if it starts at or before requested start AND ends at yesterday
-                cache_covers_range = (
-                    cached_min_date <= start_str and cached_max_date >= yesterday
+                # Use cache service to check freshness
+                cache_service = CacheService()
+                freshness = cache_service.check_freshness(
+                    cached_items=cached,
+                    get_date=lambda c: c.date,
+                    today=today,
                 )
 
-                if cache_covers_range:
-                    # Convert cached candles to CandleData format
-                    for c in cached:
-                        # Skip today's cached data - we'll fetch fresh
-                        if c.date == today:
-                            continue
-                        candles.append(
-                            CandleData(
-                                time=c.timestamp,
-                                open=c.open,
-                                high=c.high,
-                                low=c.low,
-                                close=c.close,
-                                volume=int(c.volume),
-                            )
-                        )
+                # Convert cached items to CandleData
+                for c in cached:
+                    if c.date == today:
+                        continue  # Skip today's cached data, we'll fetch fresh
+                    candles.append(CandleData(
+                        time=c.timestamp,
+                        open=c.open,
+                        high=c.high,
+                        low=c.low,
+                        close=c.close,
+                        volume=int(c.volume),
+                    ))
 
+                if freshness.is_current:
+                    # Cache is current - just fetch today
                     logger.info(
-                        f"Cache hit: {symbol} {interval} returned {len(candles)} cached candles "
-                        f"(range: {cached_min_date} to {cached_max_date})"
+                        f"Cache hit: {symbol} {interval} has {len(candles)} candles "
+                        f"(range: {freshness.min_date} to {freshness.max_date})"
                     )
-
-                    # Fetch only today's data
                     try:
                         historical = await provider.fetch_historical_data(
                             symbol=symbol,
@@ -2086,84 +2081,60 @@ async def get_chart_data(
                             end_date=end_str,
                             interval=interval,
                         )
-
-                        # Add fresh today's data
-                        for i in range(len(historical.timestamps)):
-                            candles.append(
-                                CandleData(
-                                    time=int(historical.timestamps[i]),
-                                    open=float(historical.bars[i, 0]),
-                                    high=float(historical.bars[i, 1]),
-                                    low=float(historical.bars[i, 2]),
-                                    close=float(historical.bars[i, 3]),
-                                    volume=int(historical.bars[i, 4]) if historical.bars.shape[1] > 4 else 0,
-                                )
-                            )
+                        candles.extend(convert_historical_to_candles(historical))
                     except Exception as e:
-                        # If fetching today fails, just return cached data
                         logger.warning(f"Failed to fetch today's data for {symbol}: {e}")
 
-                    # Sort by time and return
-                    candles.sort(key=lambda x: x.time)
-                    logger.info(
-                        f"Chart data (cache+today): {symbol} {interval} returned {len(candles)} candles"
-                    )
-                    return candles
                 else:
+                    # Cache is stale - fetch only missing days
                     logger.info(
-                        f"Cache partial: {symbol} {interval} has {len(cached)} candles "
-                        f"(range: {cached_min_date} to {cached_max_date}), "
-                        f"requested: {start_str} to {end_str}. Fetching from provider."
+                        f"Cache stale: {symbol} {interval} last: {freshness.max_date}, "
+                        f"fetching from {freshness.fetch_from_date}"
                     )
+                    try:
+                        historical = await provider.fetch_historical_data(
+                            symbol=symbol,
+                            start_date=freshness.fetch_from_date,
+                            end_date=end_str,
+                            interval=interval,
+                        )
+                        new_candles = convert_historical_to_candles(historical)
+                        candles.extend(new_candles)
 
-        # No cache or partial cache - fetch from provider
-        historical = await provider.fetch_historical_data(
+                        # Cache the new data (except today)
+                        to_cache = prepare_for_cache(new_candles)
+                        if to_cache:
+                            await app_state.sqlite_store.save_candles(symbol, interval, to_cache)
+                            logger.info(f"Cached {len(to_cache)} new candles for {symbol} {interval}")
+
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch missing days for {symbol}: {e}")
+
+                candles.sort(key=lambda x: x.time)
+                logger.info(f"Chart data: {symbol} {interval} returned {len(candles)} total candles")
+                return candles
+
+        # No cache - fetch max available from provider
+        logger.info(f"No cache, fetching max available for {symbol} {interval}")
+
+        historical = await provider.fetch_max_available(
             symbol=symbol,
-            start_date=start_str,
-            end_date=end_str,
             interval=interval,
         )
 
-        # Convert to CandleData format
-        candles = []
-        bars = historical.bars
-        timestamps = historical.timestamps
+        candles = convert_historical_to_candles(historical)
 
-        candles_to_cache = []
-        for i in range(len(timestamps)):
-            ts = int(timestamps[i])
-            candle_date = datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+        # Cache everything except today
+        if use_cache and app_state.sqlite_store:
+            to_cache = prepare_for_cache(candles)
+            if to_cache:
+                try:
+                    await app_state.sqlite_store.save_candles(symbol, interval, to_cache)
+                    logger.info(f"Cached {len(to_cache)} candles for {symbol} {interval}")
+                except Exception as e:
+                    logger.warning(f"Failed to cache candles for {symbol}: {e}")
 
-            candle = CandleData(
-                time=ts,
-                open=float(bars[i, 0]),
-                high=float(bars[i, 1]),
-                low=float(bars[i, 2]),
-                close=float(bars[i, 3]),
-                volume=int(bars[i, 4]) if bars.shape[1] > 4 else 0,
-            )
-            candles.append(candle)
-
-            # Don't cache today's data (it may update during the day)
-            if candle_date != today:
-                candles_to_cache.append({
-                    "time": ts,
-                    "open": candle.open,
-                    "high": candle.high,
-                    "low": candle.low,
-                    "close": candle.close,
-                    "volume": candle.volume,
-                })
-
-        # Save to cache (background, non-blocking)
-        if use_cache and app_state.sqlite_store and candles_to_cache:
-            try:
-                await app_state.sqlite_store.save_candles(symbol, interval, candles_to_cache)
-                logger.info(f"Cached {len(candles_to_cache)} candles for {symbol} {interval}")
-            except Exception as e:
-                logger.warning(f"Failed to cache candles for {symbol}: {e}")
-
-        logger.info(f"Chart data: {symbol} {interval} returned {len(candles)} candles")
+        logger.info(f"Chart data: {symbol} {interval} returned {len(candles)} total candles")
         return candles
 
     except HTTPException:
