@@ -326,6 +326,37 @@ export interface SymbolSearchResponse {
 }
 
 /**
+ * Chart interval info from API
+ */
+export interface IntervalInfo {
+  name: string;      // e.g., "1h", "4h", "1d"
+  label: string;     // e.g., "1 Hour", "4 Hours", "1 Day"
+  seconds: number;   // Duration in seconds
+  max_days: number;  // Maximum history available
+  native: boolean;   // True if provider supports natively
+}
+
+/**
+ * Cache breakdown entry
+ */
+export interface CacheBreakdownEntry {
+  symbol: string;
+  interval: string;
+  count: number;
+  min_date: string;
+  max_date: string;
+}
+
+/**
+ * Cache statistics response
+ */
+export interface CacheStatsResponse {
+  total_candles: number;
+  unique_symbols: number;
+  breakdown: CacheBreakdownEntry[];
+}
+
+/**
  * API Error with status code
  */
 export class ApiError extends Error {
@@ -635,6 +666,103 @@ class ApiClient {
    */
   async getTestCandles(symbol: string = 'SPY'): Promise<CandleData[]> {
     return this.fetchJson<CandleData[]>(`${API_BASE_URL}/test/candles?symbol=${symbol}`);
+  }
+
+  /**
+   * Get chart data from Yahoo Finance
+   * Returns OHLCV candle data for charting
+   *
+   * @param symbol - Stock symbol (e.g., SPY, AAPL, MSFT)
+   * @param interval - Data interval: 1m, 5m, 15m, 1h, 4h, 1d
+   * @param bars - Number of bars/candles to fetch (default: 300)
+   * @param useCache - Whether to use cached data (default: true)
+   */
+  async getChartData(
+    symbol: string = 'SPY',
+    interval: string = '1d',
+    bars: number = 300,
+    useCache: boolean = true,
+    maxDays?: number  // Optional: pass from /api/chart/intervals response
+  ): Promise<ChartCandleData[]> {
+    // Convert bars to days based on interval
+    // Trading day = 6.5 hours = 390 minutes
+    const barsPerDay: Record<string, number> = {
+      '1m': 390,
+      '5m': 78,
+      '15m': 26,
+      '30m': 13,
+      '1h': 7,  // ~6.5 rounded up
+      '4h': 2,  // ~1.6 rounded up
+      '1d': 1,
+      '1wk': 0.2,  // 1 bar per 5 days
+    };
+
+    const bpd = barsPerDay[interval] || 1;
+    let days = Math.ceil(bars / bpd) + 5; // Add buffer for weekends/holidays
+
+    // Cap days to provider's limit if specified (from /api/chart/intervals)
+    if (maxDays !== undefined) {
+      days = Math.min(days, maxDays);
+    }
+
+    const params = new URLSearchParams({
+      symbol: symbol.toUpperCase(),
+      interval,
+      days: days.toString(),
+      use_cache: useCache.toString(),
+    });
+
+    // Fetch and limit to requested bar count
+    const data = await this.fetchJson<ChartCandleData[]>(`${API_BASE_URL}/chart?${params}`);
+
+    // Return only the last N bars requested
+    if (data.length > bars) {
+      return data.slice(-bars);
+    }
+    return data;
+  }
+
+  /**
+   * Get available chart intervals
+   * Returns supported intervals with metadata (max history, labels, etc.)
+   */
+  async getChartIntervals(): Promise<IntervalInfo[]> {
+    return this.fetchJson<IntervalInfo[]>(`${API_BASE_URL}/chart/intervals`);
+  }
+
+  /**
+   * Get cache statistics
+   * Returns info about cached candle data
+   */
+  async getCacheStats(): Promise<CacheStatsResponse> {
+    return this.fetchJson<CacheStatsResponse>(`${API_BASE_URL}/cache/stats`);
+  }
+
+  /**
+   * Clear candle cache
+   * @param symbol - Optional symbol to clear (clears all if not specified)
+   */
+  async clearCache(symbol?: string): Promise<{ deleted: number; symbol: string }> {
+    const url = symbol
+      ? `${API_BASE_URL}/cache/clear?symbol=${symbol.toUpperCase()}`
+      : `${API_BASE_URL}/cache/clear`;
+    return this.fetchJson<{ deleted: number; symbol: string }>(url, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Check if a symbol/interval has cached data
+   */
+  async isCached(symbol: string, interval: string): Promise<boolean> {
+    try {
+      const stats = await this.getCacheStats();
+      return stats.breakdown.some(
+        (b) => b.symbol === symbol.toUpperCase() && b.interval === interval
+      );
+    } catch {
+      return false;
+    }
   }
 
   /**

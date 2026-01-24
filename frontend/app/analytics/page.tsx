@@ -1,20 +1,12 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { createChart, IChartApi, ISeriesApi, CandlestickData, LineData, Time, CandlestickSeries, LineSeries, createSeriesMarkers, ISeriesMarkersPluginApi, SeriesMarker } from 'lightweight-charts';
+import { createChart, IChartApi, ISeriesApi, CandlestickData, Time, CandlestickSeries } from 'lightweight-charts';
 import { useWebSocketContext } from '../../contexts/WebSocketContext';
 import { PageContainer, PageHeader, StatsGrid } from '../../components/layout';
-import { Card, CardTitle, Select, Badge, Skeleton } from '../../components/ui';
-import { PLDisplay } from '../../components/trading';
-import { formatCurrency, formatPercent } from '../../lib/utils';
-
-interface SignalMarker {
-  time: Time;
-  position: 'aboveBar' | 'belowBar';
-  color: string;
-  shape: 'arrowUp' | 'arrowDown';
-  text: string;
-}
+import { Card, CardTitle, Badge } from '../../components/ui';
+import { PLDisplay, SymbolSearch } from '../../components/trading';
+import { apiClient, ChartCandleData, IntervalInfo } from '../../utils/api';
 
 interface PerformanceMetrics {
   totalReturn: number;
@@ -24,40 +16,28 @@ interface PerformanceMetrics {
   maxDrawdown: number;
 }
 
-const symbolOptions = [
-  { value: 'SPY', label: 'SPY' },
-  { value: 'QQQ', label: 'QQQ' },
-  { value: 'AAPL', label: 'AAPL' },
-  { value: 'TSLA', label: 'TSLA' },
-  { value: 'MSFT', label: 'MSFT' },
-];
-
-const timeframeOptions = [
-  { value: '1m', label: '1 Minute' },
-  { value: '5m', label: '5 Minutes' },
-  { value: '15m', label: '15 Minutes' },
-  { value: '1h', label: '1 Hour' },
-  { value: '4h', label: '4 Hours' },
-  { value: '1d', label: '1 Day' },
-];
-
 export default function AnalyticsPage() {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
-  const kamaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
-  const atrUpperBandRef = useRef<ISeriesApi<'Line'> | null>(null);
-  const atrLowerBandRef = useRef<ISeriesApi<'Line'> | null>(null);
-  const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
 
   const [symbol, setSymbol] = useState<string>('SPY');
-  const [timeframe, setTimeframe] = useState<string>('1h');
+  const [symbolName, setSymbolName] = useState<string>('SPDR S&P 500 ETF Trust');
+  const [selectedSymbol, setSelectedSymbol] = useState<string>('SPY'); // Only updates on selection
+  const [interval, setInterval] = useState<string>('1d'); // Current interval (1m, 5m, 1h, 1d, etc.)
+  const [availableIntervals, setAvailableIntervals] = useState<IntervalInfo[]>([]);
+  const [candles, setCandles] = useState<ChartCandleData[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [chartReady, setChartReady] = useState(false);
+
   const [indicators, setIndicators] = useState({
-    atr: 2.5,
-    rsi: 45.2,
-    adx: 28.5,
-    regime: 'TRENDING'
+    atr: 0,
+    rsi: 50,
+    adx: 25,
+    regime: 'NEUTRAL'
   });
+
   const [metrics, setMetrics] = useState<PerformanceMetrics>({
     totalReturn: 0,
     totalReturnPct: 0,
@@ -65,78 +45,125 @@ export default function AnalyticsPage() {
     winRate: 0,
     maxDrawdown: 0
   });
-  const [loading, setLoading] = useState<boolean>(true);
-  const [initialLoad, setInitialLoad] = useState<boolean>(true);
-
-  // Track if a fetch is already in progress to prevent duplicate calls
-  const isFetchingRef = useRef(false);
 
   const { prices, getPrice, subscribe } = useWebSocketContext();
 
-  // Initialize chart with design system colors
+  // Fetch chart data from API
+  const fetchChartData = useCallback(async () => {
+    // Don't fetch if no symbol selected
+    if (!selectedSymbol || selectedSymbol.trim() === '') {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Get max_days from provider's interval info
+      const intervalInfo = availableIntervals.find(i => i.name === interval);
+      const maxDays = intervalInfo?.max_days;
+
+      // Fetch chart data with provider's limit
+      const data = await apiClient.getChartData(selectedSymbol, interval, 300, true, maxDays);
+      setCandles(data);
+
+      // Calculate simple indicators from the data
+      if (data.length > 14) {
+        const closes = data.map(c => c.close);
+        const atr = calculateATR(data);
+        const rsi = calculateRSI(closes);
+        const adx = calculateADX(data);
+
+        setIndicators({
+          atr: atr,
+          rsi: rsi,
+          adx: adx,
+          regime: adx > 25 ? 'TRENDING' : 'MEAN_REVERTING',
+        });
+
+        // Calculate performance metrics
+        const firstPrice = data[0]?.close || 0;
+        const lastPrice = data[data.length - 1]?.close || 0;
+        const returnPct = firstPrice > 0 ? ((lastPrice - firstPrice) / firstPrice) * 100 : 0;
+
+        setMetrics({
+          totalReturn: lastPrice - firstPrice,
+          totalReturnPct: returnPct,
+          sharpeRatio: calculateSharpe(closes),
+          winRate: calculateWinRate(data),
+          maxDrawdown: calculateMaxDrawdown(closes),
+        });
+      }
+    } catch (err) {
+      let message = 'Failed to fetch chart data';
+      if (err instanceof Error) {
+        // Handle case where message might be an object
+        message = typeof err.message === 'string' ? err.message : JSON.stringify(err.message);
+      } else if (typeof err === 'object' && err !== null) {
+        message = JSON.stringify(err);
+      }
+      setError(message);
+      console.error('Chart data error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedSymbol, interval, availableIntervals]);
+
+  // Initialize chart after component mounts
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      const container = chartContainerRef.current;
+      if (!container || chartRef.current) return;
 
-    const chart = createChart(chartContainerRef.current, {
-      width: chartContainerRef.current.clientWidth,
-      height: 500,
-      layout: {
-        background: { color: '#1C1C28' }, // panel-700
-        textColor: '#CCCAD5', // text-400
-      },
-      grid: {
-        vertLines: { color: '#21222F' }, // panel-500
-        horzLines: { color: '#21222F' },
-      },
-      crosshair: {
-        mode: 1,
-      },
-      rightPriceScale: {
-        borderColor: '#21222F',
-      },
-      timeScale: {
-        borderColor: '#21222F',
-        timeVisible: true,
-        secondsVisible: false,
-      },
-    });
+      try {
+        const chart = createChart(container, {
+          width: container.clientWidth,
+          height: container.clientHeight,
+          layout: {
+            background: { color: '#1C1C28' },
+            textColor: '#CCCAD5',
+          },
+          grid: {
+            vertLines: { color: '#21222F' },
+            horzLines: { color: '#21222F' },
+          },
+          crosshair: {
+            mode: 1,
+          },
+          rightPriceScale: {
+            borderColor: '#21222F',
+            autoScale: true,
+            scaleMargins: {
+              top: 0.1,
+              bottom: 0.1,
+            },
+          },
+          timeScale: {
+            borderColor: '#21222F',
+            timeVisible: true,
+            secondsVisible: false,
+          },
+        });
 
-    chartRef.current = chart;
+        chartRef.current = chart;
 
-    const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#22C55E', // profit-500
-      downColor: '#EF4444', // loss-500
-      borderVisible: false,
-      wickUpColor: '#22C55E',
-      wickDownColor: '#EF4444',
-    });
-    candlestickSeriesRef.current = candlestickSeries;
+        const candlestickSeries = chart.addSeries(CandlestickSeries, {
+          upColor: '#22C55E',
+          downColor: '#EF4444',
+          borderVisible: false,
+          wickUpColor: '#22C55E',
+          wickDownColor: '#EF4444',
+        });
+        candlestickSeriesRef.current = candlestickSeries;
 
-    const markers = createSeriesMarkers(candlestickSeries, []);
-    markersRef.current = markers;
-
-    const kamaSeries = chart.addSeries(LineSeries, {
-      color: '#A549FC', // accent-500
-      lineWidth: 2,
-      title: 'KAMA',
-    });
-    kamaSeriesRef.current = kamaSeries;
-
-    const atrUpperBand = chart.addSeries(LineSeries, {
-      color: '#3E7AEE', // blue-500
-      lineWidth: 1,
-      lineStyle: 2,
-      title: 'ATR Upper',
-    });
-    atrUpperBandRef.current = atrUpperBand;
-
-    const atrLowerBand = chart.addSeries(LineSeries, {
-      color: '#3E7AEE',
-      lineWidth: 1,
-      lineStyle: 2,
-      title: 'ATR Lower',
-    });
-    atrLowerBandRef.current = atrLowerBand;
+        setChartReady(true);
+        console.log('Chart initialized successfully');
+      } catch (err) {
+        console.error('Error creating chart:', err);
+      }
+    }, 100);
 
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
@@ -147,133 +174,172 @@ export default function AnalyticsPage() {
     };
 
     window.addEventListener('resize', handleResize);
+
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('resize', handleResize);
-      chart.remove();
+      if (chartRef.current) {
+        chartRef.current.remove();
+        chartRef.current = null;
+        candlestickSeriesRef.current = null;
+        setChartReady(false);
+      }
     };
   }, []);
 
-  // Fetch chart data
-  const fetchChartData = useCallback(async () => {
-    // Prevent duplicate concurrent fetches
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
 
-    setLoading(true);
-    try {
-      const mockData = generateMockData(100);
-
-      if (candlestickSeriesRef.current) {
-        candlestickSeriesRef.current.setData(mockData.candles);
+  // Fetch available intervals on mount
+  useEffect(() => {
+    const fetchIntervals = async () => {
+      try {
+        const intervals = await apiClient.getChartIntervals();
+        setAvailableIntervals(intervals);
+      } catch (err) {
+        console.error('Failed to fetch intervals:', err);
+        // Fallback to common intervals if API fails
+        setAvailableIntervals([
+          { name: '5m', label: '5 Min', seconds: 300, max_days: 60, native: true },
+          { name: '1h', label: '1 Hour', seconds: 3600, max_days: 730, native: true },
+          { name: '1d', label: '1 Day', seconds: 86400, max_days: 1825, native: true },
+        ]);
       }
-      if (kamaSeriesRef.current) {
-        kamaSeriesRef.current.setData(mockData.kama);
-      }
-      if (atrUpperBandRef.current) {
-        atrUpperBandRef.current.setData(mockData.atrUpper);
-      }
-      if (atrLowerBandRef.current) {
-        atrLowerBandRef.current.setData(mockData.atrLower);
-      }
-      if (markersRef.current) {
-        markersRef.current.setMarkers(mockData.signals as SeriesMarker<Time>[]);
-      }
-
-      setIndicators({
-        atr: mockData.latestIndicators.atr,
-        rsi: mockData.latestIndicators.rsi,
-        adx: mockData.latestIndicators.adx,
-        regime: mockData.latestIndicators.regime,
-      });
-
-      setMetrics({
-        totalReturn: 15420.50,
-        totalReturnPct: 15.42,
-        sharpeRatio: 1.85,
-        winRate: 58.3,
-        maxDrawdown: 12.5,
-      });
-    } catch (error) {
-      console.error('Error fetching chart data:', error);
-    } finally {
-      setLoading(false);
-      setInitialLoad(false);
-      isFetchingRef.current = false;
-    }
+    };
+    fetchIntervals();
   }, []);
 
+  // Fetch data when symbol/timeframe changes
   useEffect(() => {
-    // Reset fetch flag when symbol or timeframe changes
-    isFetchingRef.current = false;
     fetchChartData();
-    const interval = setInterval(fetchChartData, 5000);
-    return () => clearInterval(interval);
-  }, [symbol, timeframe, fetchChartData]);
+  }, [fetchChartData]);
 
+  // Update chart when data changes
   useEffect(() => {
-    subscribe([symbol]);
-  }, [symbol, subscribe]);
+    if (!chartReady || !candlestickSeriesRef.current || candles.length === 0) return;
 
+    const chartData: CandlestickData[] = candles.map(c => ({
+      time: c.time as Time,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+    }));
+
+    candlestickSeriesRef.current.setData(chartData);
+    chartRef.current?.timeScale().fitContent();
+    console.log(`Chart updated with ${chartData.length} candles`);
+  }, [candles, chartReady]);
+
+  // Subscribe to WebSocket for real-time updates
   useEffect(() => {
-    const priceData = getPrice(symbol);
-    if (priceData && candlestickSeriesRef.current) {
-      console.log('Real-time price update:', priceData);
+    if (selectedSymbol) {
+      subscribe([selectedSymbol]);
     }
-  }, [prices, symbol, getPrice]);
+  }, [selectedSymbol, subscribe]);
 
-  if (initialLoad) {
-    return (
-      <PageContainer>
-        <PageHeader title="Analytics Dashboard" subtitle="Loading..." />
-        <Card className="mb-6">
-          <Skeleton height={500} className="rounded-lg" />
-        </Card>
-        <StatsGrid columns={4}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <Skeleton variant="text" className="mb-2" />
-              <Skeleton variant="title" />
-            </Card>
-          ))}
-        </StatsGrid>
-      </PageContainer>
-    );
-  }
+  // Handle real-time price updates
+  useEffect(() => {
+    const priceData = getPrice(selectedSymbol);
+    if (priceData && candlestickSeriesRef.current && candles.length > 0) {
+      // Update the last candle with real-time data
+      const lastCandle = candles[candles.length - 1];
+      if (lastCandle) {
+        candlestickSeriesRef.current.update({
+          time: lastCandle.time as Time,
+          open: lastCandle.open,
+          high: Math.max(lastCandle.high, priceData.price),
+          low: Math.min(lastCandle.low, priceData.price),
+          close: priceData.price,
+        });
+      }
+    }
+  }, [prices, selectedSymbol, getPrice, candles]);
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Analytics Dashboard"
-        subtitle="Real-time market analysis and performance metrics"
-      />
-
-      {/* Controls */}
-      <div className="flex flex-wrap gap-4 mb-6">
-        <div className="w-40">
-          <Select
-            label="Symbol"
-            options={symbolOptions}
+      {/* Header with search inline on left */}
+      <div className="flex items-center gap-6 mb-6">
+        <div className="w-64">
+          <SymbolSearch
             value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
+            onChange={(sym, name) => {
+              setSymbol(sym);
+              // Only fetch data when a symbol is SELECTED from dropdown (name is provided)
+              if (name) {
+                setSymbolName(name);
+                setSelectedSymbol(sym); // This triggers data fetch
+              }
+            }}
+            placeholder="Search stocks..."
           />
         </div>
-        <div className="w-40">
-          <Select
-            label="Timeframe"
-            options={timeframeOptions}
-            value={timeframe}
-            onChange={(e) => setTimeframe(e.target.value)}
-          />
+        <div>
+          <h1 className="text-2xl font-bold text-text-900">Analytics Dashboard</h1>
+          <p className="text-text-400 text-sm">Real-time market analysis and performance metrics</p>
         </div>
       </div>
 
+      {/* Error Banner */}
+      {error && (
+        <Card variant="highlighted" className="mb-6 border-l-4 border-loss-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-loss-500 font-medium">Error loading chart data</p>
+              <p className="text-text-400 text-sm">{error}</p>
+            </div>
+            <button
+              onClick={fetchChartData}
+              className="px-4 py-2 bg-panel-400 hover:bg-panel-300 rounded text-text-700"
+            >
+              Retry
+            </button>
+          </div>
+        </Card>
+      )}
+
       {/* Chart */}
-      <Card noPadding className="mb-6 overflow-hidden">
+      <Card noPadding className="mb-6">
         <div className="p-4 border-b border-panel-500 flex items-center justify-between">
-          <CardTitle>{symbol} - {timeframeOptions.find(t => t.value === timeframe)?.label}</CardTitle>
-          {loading && <Badge variant="warning">Updating...</Badge>}
+          <div className="flex items-center gap-3">
+            <CardTitle>
+              {selectedSymbol}{symbolName && ` - ${symbolName}`}
+            </CardTitle>
+            {candles.length > 0 && (
+              <span className="text-sm text-text-300">
+                ({candles.length} bars)
+              </span>
+            )}
+          </div>
+
+          {/* Interval selector pills */}
+          <div className="flex bg-panel-400 rounded-lg p-1 gap-0.5">
+            {availableIntervals.map((option) => (
+              <button
+                key={option.name}
+                onClick={() => setInterval(option.name)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  interval === option.name
+                    ? 'bg-panel-700 text-text-900 shadow-sm'
+                    : 'text-text-400 hover:text-text-700 hover:bg-panel-500'
+                }`}
+                title={`${option.label} - up to ${option.max_days} days of history`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
-        <div ref={chartContainerRef} className="bg-panel-700" />
+        <div className="relative">
+          <div
+            ref={chartContainerRef}
+            className="bg-panel-700 w-full h-[50vh] min-h-[350px]"
+          />
+          {/* Loading overlay - top right corner */}
+          {loading && (
+            <div className="absolute top-3 right-3 z-10">
+              <Badge variant="warning">Loading...</Badge>
+            </div>
+          )}
+        </div>
       </Card>
 
       {/* Indicators */}
@@ -333,7 +399,7 @@ export default function AnalyticsPage() {
       <Card>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
           <div>
-            <span className="text-sm text-text-400 block mb-1">Total Return</span>
+            <span className="text-sm text-text-400 block mb-1">Price Change</span>
             <PLDisplay value={metrics.totalReturn} percent={metrics.totalReturnPct} size="lg" />
           </div>
           <div>
@@ -372,7 +438,9 @@ export default function AnalyticsPage() {
           </div>
           <div>
             <span className="text-sm text-text-400 block mb-1">Status</span>
-            <Badge variant="success" size="md">ACTIVE</Badge>
+            <Badge variant={error ? 'error' : 'success'} size="md">
+              {error ? 'ERROR' : 'ACTIVE'}
+            </Badge>
           </div>
         </div>
       </Card>
@@ -380,84 +448,106 @@ export default function AnalyticsPage() {
       {/* Legend */}
       <div className="mt-6 flex flex-wrap gap-6 text-sm text-text-400">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-accent-500 rounded-full" />
-          <span>KAMA Line</span>
+          <div className="w-3 h-3 bg-profit-500 rounded-sm" />
+          <span>Bullish Candle</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-blue-500 rounded-full" />
-          <span>ATR Bands</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-b-8 border-b-profit-500" />
-          <span>Buy Signal</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-8 border-t-loss-500" />
-          <span>Sell Signal</span>
+          <div className="w-3 h-3 bg-loss-500 rounded-sm" />
+          <span>Bearish Candle</span>
         </div>
       </div>
     </PageContainer>
   );
 }
 
-function generateMockData(numCandles: number) {
-  const candles: CandlestickData[] = [];
-  const kama: LineData[] = [];
-  const atrUpper: LineData[] = [];
-  const atrLower: LineData[] = [];
-  const signals: SignalMarker[] = [];
+// Simple indicator calculations
+function calculateATR(candles: ChartCandleData[], period: number = 14): number {
+  if (candles.length < period + 1) return 0;
 
-  let basePrice = 450;
-  let basetime = Math.floor(Date.now() / 1000) - (numCandles * 3600);
+  let atrSum = 0;
+  for (let i = candles.length - period; i < candles.length; i++) {
+    const high = candles[i].high;
+    const low = candles[i].low;
+    const prevClose = candles[i - 1]?.close || candles[i].open;
+    const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+    atrSum += tr;
+  }
+  return atrSum / period;
+}
 
-  for (let i = 0; i < numCandles; i++) {
-    const time = (basetime + i * 3600) as Time;
-    const volatility = 2 + Math.random() * 3;
+function calculateRSI(closes: number[], period: number = 14): number {
+  if (closes.length < period + 1) return 50;
 
-    basePrice += (Math.random() - 0.5) * 5;
+  let gains = 0;
+  let losses = 0;
 
-    const open = basePrice;
-    const close = basePrice + (Math.random() - 0.5) * 4;
-    const high = Math.max(open, close) + Math.random() * 2;
-    const low = Math.min(open, close) - Math.random() * 2;
-
-    candles.push({ time, open, high, low, close });
-
-    const kamaValue = basePrice + Math.sin(i / 10) * 3;
-    kama.push({ time, value: kamaValue });
-    atrUpper.push({ time, value: kamaValue + volatility * 0.5 });
-    atrLower.push({ time, value: kamaValue - volatility * 0.5 });
-
-    if (i % 15 === 0 && i > 0) {
-      signals.push({
-        time,
-        position: 'belowBar',
-        color: '#22C55E',
-        shape: 'arrowUp',
-        text: 'B',
-      });
-    } else if (i % 20 === 0 && i > 0) {
-      signals.push({
-        time,
-        position: 'aboveBar',
-        color: '#EF4444',
-        shape: 'arrowDown',
-        text: 'S',
-      });
-    }
+  for (let i = closes.length - period; i < closes.length; i++) {
+    const change = closes[i] - closes[i - 1];
+    if (change > 0) gains += change;
+    else losses -= change;
   }
 
-  return {
-    candles,
-    kama,
-    atrUpper,
-    atrLower,
-    signals,
-    latestIndicators: {
-      atr: 2.5,
-      rsi: 45.2,
-      adx: 28.5,
-      regime: 'TRENDING',
-    },
-  };
+  if (losses === 0) return 100;
+  const rs = gains / losses;
+  return 100 - (100 / (1 + rs));
+}
+
+function calculateADX(candles: ChartCandleData[], period: number = 14): number {
+  if (candles.length < period * 2) return 25;
+
+  // Simplified ADX calculation
+  let sumDM = 0;
+  for (let i = candles.length - period; i < candles.length; i++) {
+    const high = candles[i].high;
+    const low = candles[i].low;
+    const prevHigh = candles[i - 1]?.high || high;
+    const prevLow = candles[i - 1]?.low || low;
+
+    const plusDM = high - prevHigh > prevLow - low ? Math.max(high - prevHigh, 0) : 0;
+    const minusDM = prevLow - low > high - prevHigh ? Math.max(prevLow - low, 0) : 0;
+    sumDM += Math.abs(plusDM - minusDM);
+  }
+
+  return (sumDM / period) * 10; // Scaled approximation
+}
+
+function calculateSharpe(closes: number[]): number {
+  if (closes.length < 2) return 0;
+
+  const returns = [];
+  for (let i = 1; i < closes.length; i++) {
+    returns.push((closes[i] - closes[i - 1]) / closes[i - 1]);
+  }
+
+  const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
+  const variance = returns.reduce((a, b) => a + Math.pow(b - avgReturn, 2), 0) / returns.length;
+  const stdDev = Math.sqrt(variance);
+
+  if (stdDev === 0) return 0;
+  return (avgReturn / stdDev) * Math.sqrt(252); // Annualized
+}
+
+function calculateWinRate(candles: ChartCandleData[]): number {
+  if (candles.length < 2) return 50;
+
+  let wins = 0;
+  for (let i = 1; i < candles.length; i++) {
+    if (candles[i].close > candles[i - 1].close) wins++;
+  }
+  return (wins / (candles.length - 1)) * 100;
+}
+
+function calculateMaxDrawdown(closes: number[]): number {
+  if (closes.length < 2) return 0;
+
+  let maxDrawdown = 0;
+  let peak = closes[0];
+
+  for (const close of closes) {
+    if (close > peak) peak = close;
+    const drawdown = ((peak - close) / peak) * 100;
+    if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+  }
+
+  return maxDrawdown;
 }

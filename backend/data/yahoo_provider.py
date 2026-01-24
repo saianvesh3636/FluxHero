@@ -137,6 +137,32 @@ class YahooFinanceProvider(DataProvider):
     def name(self) -> str:
         return "Yahoo Finance"
 
+    @property
+    def supported_intervals(self) -> dict[str, "IntervalInfo"]:
+        """
+        Yahoo Finance supported intervals.
+
+        Native: 1m, 5m, 15m, 30m, 1h, 1d, 1wk
+        Aggregated: 4h (from 1h)
+
+        Note: Intraday data has limited history:
+        - 1m: last 7 days
+        - 5m, 15m, 30m: last 60 days
+        - 1h: last 730 days
+        """
+        from backend.data.provider import IntervalInfo
+
+        return {
+            "1m": IntervalInfo("1m", 60, native=True),
+            "5m": IntervalInfo("5m", 300, native=True),
+            "15m": IntervalInfo("15m", 900, native=True),
+            "30m": IntervalInfo("30m", 1800, native=True),
+            "1h": IntervalInfo("1h", 3600, native=True),
+            "4h": IntervalInfo("4h", 14400, native=False, aggregate_from="1h"),
+            "1d": IntervalInfo("1d", 86400, native=True),
+            "1wk": IntervalInfo("1wk", 604800, native=True),
+        }
+
     async def validate_symbol(self, symbol: str) -> SymbolInfo:
         """
         Validate a symbol exists on Yahoo Finance.
@@ -208,7 +234,7 @@ class YahooFinanceProvider(DataProvider):
             symbol: Ticker symbol (e.g., "SPY", "AAPL")
             start_date: Start date "YYYY-MM-DD"
             end_date: End date "YYYY-MM-DD"
-            interval: Data interval ("1d", "1h", "1wk", etc.)
+            interval: Data interval ("1d", "1h", "4h", etc.)
 
         Returns:
             HistoricalData with bars, timestamps, dates
@@ -216,9 +242,13 @@ class YahooFinanceProvider(DataProvider):
         Raises:
             SymbolNotFoundError: If symbol doesn't exist
             DateRangeError: If date range is invalid
+            UnsupportedIntervalError: If interval not supported
             DataProviderError: On other errors
         """
         symbol = symbol.upper().strip()
+
+        # Check if interval is supported and get info
+        interval_info = self.get_interval_info(interval)
 
         # Validate date format and range
         try:
@@ -233,6 +263,9 @@ class YahooFinanceProvider(DataProvider):
         if end_dt > datetime.now():
             raise DateRangeError("End date cannot be in the future")
 
+        # Determine which interval to fetch
+        fetch_interval = interval_info.aggregate_from if interval_info.aggregate_from else interval
+
         # Run blocking yfinance call in executor
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(
@@ -241,9 +274,68 @@ class YahooFinanceProvider(DataProvider):
             symbol,
             start_date,
             end_date,
-            interval,
+            fetch_interval,
         )
+
+        # Aggregate if needed (e.g., 1h -> 4h)
+        if interval_info.aggregate_from:
+            result = self._aggregate_bars(result, interval_info)
+
         return result
+
+    def _aggregate_bars(
+        self, data: HistoricalData, target_interval: "IntervalInfo"
+    ) -> HistoricalData:
+        """
+        Aggregate bars from a smaller interval to a larger one.
+
+        Args:
+            data: HistoricalData with source bars
+            target_interval: Target interval info (e.g., 4h)
+
+        Returns:
+            HistoricalData with aggregated bars
+        """
+        if data.bars.shape[0] == 0:
+            return data
+
+        source_info = self.supported_intervals.get(target_interval.aggregate_from)
+        if not source_info:
+            return data
+
+        # Calculate how many source bars per target bar
+        ratio = target_interval.seconds // source_info.seconds
+        if ratio <= 1:
+            return data
+
+        # Aggregate bars
+        aggregated_bars = []
+        aggregated_timestamps = []
+        aggregated_dates = []
+
+        for i in range(0, len(data.bars), ratio):
+            chunk = data.bars[i:i + ratio]
+            if len(chunk) == 0:
+                continue
+
+            agg_bar = np.array([
+                chunk[0, 0],  # open from first
+                chunk[:, 1].max(),  # high is max
+                chunk[:, 2].min(),  # low is min
+                chunk[-1, 3],  # close from last
+                chunk[:, 4].sum() if chunk.shape[1] > 4 else 0,  # volume sum
+            ])
+            aggregated_bars.append(agg_bar)
+            aggregated_timestamps.append(data.timestamps[i])
+            aggregated_dates.append(data.dates[i])
+
+        return HistoricalData(
+            symbol=data.symbol,
+            bars=np.array(aggregated_bars),
+            timestamps=np.array(aggregated_timestamps),
+            dates=aggregated_dates,
+            provider=data.provider,
+        )
 
     def _fetch_data_sync(
         self,

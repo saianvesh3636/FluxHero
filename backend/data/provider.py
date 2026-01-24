@@ -93,6 +93,27 @@ class HistoricalData:
     provider: str
 
 
+class UnsupportedIntervalError(DataProviderError):
+    """Raised when requested interval is not supported by provider."""
+    def __init__(self, interval: str, provider: str, supported: list[str]):
+        self.interval = interval
+        self.provider = provider
+        self.supported = supported
+        super().__init__(
+            f"Interval '{interval}' not supported by {provider}. "
+            f"Supported: {', '.join(supported)}"
+        )
+
+
+@dataclass
+class IntervalInfo:
+    """Information about a data interval."""
+    name: str  # e.g., "1h", "4h", "1d"
+    seconds: int  # Duration in seconds
+    native: bool = True  # True if provider supports natively
+    aggregate_from: Optional[str] = None  # If not native, aggregate from this interval
+
+
 class DataProvider(ABC):
     """
     Abstract base class for data providers.
@@ -102,11 +123,56 @@ class DataProvider(ABC):
     with minimal code changes.
     """
 
+    # Standard interval durations in seconds
+    INTERVAL_SECONDS = {
+        "1m": 60,
+        "5m": 300,
+        "15m": 900,
+        "30m": 1800,
+        "1h": 3600,
+        "2h": 7200,
+        "4h": 14400,
+        "1d": 86400,
+        "1wk": 604800,
+    }
+
     @property
     @abstractmethod
     def name(self) -> str:
         """Provider name for logging and error messages."""
         pass
+
+    @property
+    @abstractmethod
+    def supported_intervals(self) -> dict[str, IntervalInfo]:
+        """
+        Return supported intervals with metadata.
+
+        Returns:
+            Dict mapping interval names to IntervalInfo.
+            Include both native intervals and those that can be aggregated.
+        """
+        pass
+
+    def get_interval_info(self, interval: str) -> IntervalInfo:
+        """
+        Get info for an interval, raising error if not supported.
+
+        Args:
+            interval: Requested interval (e.g., "1h", "4h")
+
+        Returns:
+            IntervalInfo for the interval
+
+        Raises:
+            UnsupportedIntervalError: If interval not supported
+        """
+        intervals = self.supported_intervals
+        if interval not in intervals:
+            raise UnsupportedIntervalError(
+                interval, self.name, list(intervals.keys())
+            )
+        return intervals[interval]
 
     @abstractmethod
     async def validate_symbol(self, symbol: str) -> SymbolInfo:

@@ -140,6 +140,23 @@ class ModeState:
     paper_realized_pnl: float = 0.0
 
 
+@dataclass
+class CachedCandle:
+    """Cached OHLCV candle data."""
+
+    id: int | None = None
+    symbol: str = ""
+    interval: str = ""  # "1m", "5m", "15m", "30m", "1h", "1d", "1wk"
+    timestamp: int = 0  # Unix timestamp
+    date: str = ""  # YYYY-MM-DD for easy querying
+    open: float = 0.0
+    high: float = 0.0
+    low: float = 0.0
+    close: float = 0.0
+    volume: float = 0.0
+    cached_at: str = ""  # ISO 8601 timestamp when cached
+
+
 class SQLiteStore:
     """
     SQLite-based storage manager for FluxHero operational data.
@@ -399,6 +416,34 @@ class SQLiteStore:
                 INSERT INTO mode_state (id, active_mode, paper_balance, paper_realized_pnl)
                 VALUES (1, 'paper', 100000.0, 0.0)
             """)
+
+        # Create candle_cache table for historical data caching
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS candle_cache (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL,
+                interval TEXT NOT NULL,
+                timestamp INTEGER NOT NULL,
+                date TEXT NOT NULL,
+                open REAL NOT NULL,
+                high REAL NOT NULL,
+                low REAL NOT NULL,
+                close REAL NOT NULL,
+                volume REAL NOT NULL,
+                cached_at TEXT NOT NULL,
+                UNIQUE(symbol, interval, timestamp)
+            )
+        """)
+
+        # Create indexes for candle_cache
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_candle_cache_lookup
+            ON candle_cache(symbol, interval, date)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_candle_cache_range
+            ON candle_cache(symbol, interval, timestamp)
+        """)
 
         # Create indexes for mode-separated tables
         conn.execute("""
@@ -1468,6 +1513,225 @@ class SQLiteStore:
     async def clear_all_trading_data(self) -> None:
         """Clear all trading data (for fresh start)."""
         await self._async_write(self._clear_all_trading_data_sync)
+
+    # ==================== Candle Cache Operations ====================
+
+    async def get_cached_candles(
+        self,
+        symbol: str,
+        interval: str,
+        start_date: str,
+        end_date: str,
+    ) -> list[CachedCandle]:
+        """
+        Get cached candles for a symbol and interval within date range.
+
+        Args:
+            symbol: Ticker symbol (e.g., "SPY")
+            interval: Data interval (e.g., "1d", "1h")
+            start_date: Start date YYYY-MM-DD
+            end_date: End date YYYY-MM-DD
+
+        Returns:
+            List of CachedCandle objects, ordered by timestamp
+        """
+        logger.debug(
+            "Fetching cached candles",
+            extra={
+                "symbol": symbol,
+                "interval": interval,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+        )
+        conn = self._get_connection()
+        cursor = conn.execute(
+            """
+            SELECT * FROM candle_cache
+            WHERE symbol = ? AND interval = ? AND date >= ? AND date <= ?
+            ORDER BY timestamp ASC
+            """,
+            (symbol.upper(), interval, start_date, end_date),
+        )
+
+        candles = [CachedCandle(**dict(row)) for row in cursor.fetchall()]
+        logger.debug(
+            "Cached candles fetched",
+            extra={"count": len(candles), "symbol": symbol, "interval": interval},
+        )
+        return candles
+
+    async def get_cached_date_range(
+        self,
+        symbol: str,
+        interval: str,
+    ) -> tuple[str | None, str | None]:
+        """
+        Get the date range of cached data for a symbol and interval.
+
+        Returns:
+            Tuple of (earliest_date, latest_date) or (None, None) if no cache
+        """
+        conn = self._get_connection()
+        cursor = conn.execute(
+            """
+            SELECT MIN(date) as min_date, MAX(date) as max_date
+            FROM candle_cache
+            WHERE symbol = ? AND interval = ?
+            """,
+            (symbol.upper(), interval),
+        )
+        row = cursor.fetchone()
+
+        if row and row["min_date"]:
+            return (row["min_date"], row["max_date"])
+        return (None, None)
+
+    def _save_candles_sync(
+        self,
+        symbol: str,
+        interval: str,
+        candles: list[dict],
+    ) -> int:
+        """
+        Synchronous candle save (called by async wrapper).
+
+        Args:
+            symbol: Ticker symbol
+            interval: Data interval
+            candles: List of candle dicts with keys: time, open, high, low, close, volume
+
+        Returns:
+            Number of candles saved
+        """
+        conn = self._get_connection()
+        now = datetime.utcnow().isoformat()
+        symbol = symbol.upper()
+        saved_count = 0
+
+        for candle in candles:
+            timestamp = candle["time"]
+            # Convert timestamp to date string
+            date_str = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
+
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO candle_cache (
+                        symbol, interval, timestamp, date, open, high, low, close, volume, cached_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(symbol, interval, timestamp) DO UPDATE SET
+                        open = excluded.open,
+                        high = excluded.high,
+                        low = excluded.low,
+                        close = excluded.close,
+                        volume = excluded.volume,
+                        cached_at = excluded.cached_at
+                    """,
+                    (
+                        symbol,
+                        interval,
+                        timestamp,
+                        date_str,
+                        candle["open"],
+                        candle["high"],
+                        candle["low"],
+                        candle["close"],
+                        candle["volume"],
+                        now,
+                    ),
+                )
+                saved_count += 1
+            except Exception as e:
+                logger.warning(
+                    f"Failed to cache candle: {e}",
+                    extra={"symbol": symbol, "timestamp": timestamp},
+                )
+
+        logger.info(
+            "Candles cached",
+            extra={"symbol": symbol, "interval": interval, "count": saved_count},
+        )
+        return saved_count
+
+    async def save_candles(
+        self,
+        symbol: str,
+        interval: str,
+        candles: list[dict],
+    ) -> int:
+        """
+        Save candles to cache (async, non-blocking).
+
+        Args:
+            symbol: Ticker symbol (e.g., "SPY")
+            interval: Data interval (e.g., "1d", "1h")
+            candles: List of candle dicts with keys: time, open, high, low, close, volume
+
+        Returns:
+            Number of candles saved
+        """
+        return await self._async_write(self._save_candles_sync, symbol, interval, candles)
+
+    async def get_cache_stats(self) -> dict:
+        """Get cache statistics."""
+        conn = self._get_connection()
+
+        # Total candles
+        cursor = conn.execute("SELECT COUNT(*) FROM candle_cache")
+        total_candles = cursor.fetchone()[0]
+
+        # Unique symbols
+        cursor = conn.execute("SELECT COUNT(DISTINCT symbol) FROM candle_cache")
+        unique_symbols = cursor.fetchone()[0]
+
+        # Symbols with intervals
+        cursor = conn.execute(
+            """
+            SELECT symbol, interval, COUNT(*) as count,
+                   MIN(date) as min_date, MAX(date) as max_date
+            FROM candle_cache
+            GROUP BY symbol, interval
+            """
+        )
+        breakdown = [dict(row) for row in cursor.fetchall()]
+
+        return {
+            "total_candles": total_candles,
+            "unique_symbols": unique_symbols,
+            "breakdown": breakdown,
+        }
+
+    def _clear_candle_cache_sync(self, symbol: str | None = None) -> int:
+        """Synchronous cache clear."""
+        conn = self._get_connection()
+
+        if symbol:
+            cursor = conn.execute(
+                "DELETE FROM candle_cache WHERE symbol = ?",
+                (symbol.upper(),)
+            )
+        else:
+            cursor = conn.execute("DELETE FROM candle_cache")
+
+        deleted = cursor.rowcount
+        logger.info(
+            "Candle cache cleared",
+            extra={"symbol": symbol or "ALL", "deleted": deleted},
+        )
+        return deleted
+
+    async def clear_candle_cache(self, symbol: str | None = None) -> int:
+        """
+        Clear candle cache.
+
+        Args:
+            symbol: If provided, clear only this symbol. Otherwise clear all.
+
+        Returns:
+            Number of rows deleted
+        """
+        return await self._async_write(self._clear_candle_cache_sync, symbol)
 
     async def close(self) -> None:
         """
