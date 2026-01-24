@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { createChart, IChartApi, LineSeries, Time } from 'lightweight-charts';
+import React, { useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { PageContainer, PageHeader, StatsGrid } from '../../components/layout';
 import { Card, CardTitle, Button, Badge, Select, Input, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui';
 import { PLDisplay, SymbolSearch } from '../../components/trading';
+import { EquityCurveChart } from '../../components/charts';
 import { formatCurrency, formatPercent } from '../../lib/utils';
 import {
   apiClient,
@@ -527,11 +527,16 @@ function BacktestResultsModal({ results, onClose, onExport }: BacktestResultsMod
           {/* Equity Curve Chart */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-text-900 mb-4">Equity Curve</h3>
-            <EquityCurveChart
-              equityCurve={results.equity_curve}
-              timestamps={results.timestamps}
-              initialCapital={results.initial_capital}
-            />
+            <Card noPadding className="p-4">
+              <EquityCurveChart
+                data={{
+                  times: results.timestamps,
+                  equity: results.equity_curve,
+                }}
+                initialCapital={results.initial_capital}
+                height={350}
+              />
+            </Card>
           </div>
 
           {/* Export Button */}
@@ -727,11 +732,16 @@ function WalkForwardResultsModal({ results, onClose, onExport }: WalkForwardResu
           {/* Combined Equity Curve Chart */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-text-900 mb-4">Combined Equity Curve</h3>
-            <EquityCurveChart
-              equityCurve={results.combined_equity_curve}
-              timestamps={results.timestamps}
-              initialCapital={results.initial_capital}
-            />
+            <Card noPadding className="p-4">
+              <EquityCurveChart
+                data={{
+                  times: results.timestamps,
+                  equity: results.combined_equity_curve,
+                }}
+                initialCapital={results.initial_capital}
+                height={350}
+              />
+            </Card>
           </div>
 
           {/* Per-Window Results Table */}
@@ -902,110 +912,3 @@ function WindowResultRow({ window }: WindowResultRowProps) {
   );
 }
 
-// Equity Curve Chart Component
-interface EquityCurveChartProps {
-  equityCurve: number[];
-  timestamps: string[];
-  initialCapital: number;
-}
-
-function EquityCurveChart({ equityCurve, timestamps, initialCapital }: EquityCurveChartProps) {
-  const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-
-  useEffect(() => {
-    if (!chartContainerRef.current || equityCurve.length === 0) return;
-
-    // Clean up previous chart
-    if (chartRef.current) {
-      chartRef.current.remove();
-    }
-
-    const chart = createChart(chartContainerRef.current, {
-      width: chartContainerRef.current.clientWidth,
-      height: 350,
-      layout: {
-        background: { color: '#1C1C28' }, // panel-700
-        textColor: '#CCCAD5', // text-400
-      },
-      grid: {
-        vertLines: { color: '#21222F' }, // panel-500
-        horzLines: { color: '#21222F' },
-      },
-      crosshair: {
-        mode: 1,
-      },
-      rightPriceScale: {
-        borderColor: '#21222F',
-      },
-      timeScale: {
-        borderColor: '#21222F',
-        timeVisible: true,
-        secondsVisible: false,
-      },
-    });
-
-    chartRef.current = chart;
-
-    // Add equity line series
-    const equitySeries = chart.addSeries(LineSeries, {
-      color: '#A549FC', // accent-500 (purple)
-      lineWidth: 2,
-      title: 'Equity',
-      priceFormat: {
-        type: 'custom',
-        formatter: (price: number) => `$${price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
-      },
-    });
-
-    // Add initial capital reference line
-    const baselineSeries = chart.addSeries(LineSeries, {
-      color: '#6B6983', // text-300 (gray)
-      lineWidth: 1,
-      lineStyle: 2, // dashed
-      title: 'Initial Capital',
-      crosshairMarkerVisible: false,
-    });
-
-    // Convert data to chart format
-    const chartData = equityCurve.map((value, i) => ({
-      time: timestamps[i] as Time,
-      value: value,
-    }));
-
-    const baselineData = equityCurve.map((_, i) => ({
-      time: timestamps[i] as Time,
-      value: initialCapital,
-    }));
-
-    equitySeries.setData(chartData);
-    baselineSeries.setData(baselineData);
-
-    // Fit content
-    chart.timeScale().fitContent();
-
-    // Handle resize
-    const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-        });
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (chartRef.current) {
-        chartRef.current.remove();
-        chartRef.current = null;
-      }
-    };
-  }, [equityCurve, timestamps, initialCapital]);
-
-  return (
-    <div className="bg-panel-600 rounded-xl p-4">
-      <div ref={chartContainerRef} className="w-full" />
-    </div>
-  );
-}

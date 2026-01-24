@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { createChart, IChartApi, ISeriesApi, CandlestickData, Time, CandlestickSeries } from 'lightweight-charts';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useWebSocketContext } from '../../contexts/WebSocketContext';
 import { PageContainer, PageHeader, StatsGrid } from '../../components/layout';
 import { Card, CardTitle, Badge } from '../../components/ui';
 import { PLDisplay, SymbolSearch } from '../../components/trading';
+import { CandlestickChart } from '../../components/charts';
 import { apiClient, ChartCandleData, IntervalInfo } from '../../utils/api';
 
 interface PerformanceMetrics {
@@ -17,10 +17,6 @@ interface PerformanceMetrics {
 }
 
 export default function AnalyticsPage() {
-  const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
-
   const [symbol, setSymbol] = useState<string>('SPY');
   const [symbolName, setSymbolName] = useState<string>('SPDR S&P 500 ETF Trust');
   const [selectedSymbol, setSelectedSymbol] = useState<string>('SPY'); // Only updates on selection
@@ -29,7 +25,6 @@ export default function AnalyticsPage() {
   const [candles, setCandles] = useState<ChartCandleData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [chartReady, setChartReady] = useState(false);
 
   const [indicators, setIndicators] = useState({
     atr: 0,
@@ -46,7 +41,7 @@ export default function AnalyticsPage() {
     maxDrawdown: 0
   });
 
-  const { prices, getPrice, subscribe } = useWebSocketContext();
+  const { subscribe } = useWebSocketContext();
 
   // Fetch chart data from API
   const fetchChartData = useCallback(async () => {
@@ -110,84 +105,6 @@ export default function AnalyticsPage() {
     }
   }, [selectedSymbol, interval, availableIntervals]);
 
-  // Initialize chart after component mounts
-  useEffect(() => {
-    // Small delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      const container = chartContainerRef.current;
-      if (!container || chartRef.current) return;
-
-      try {
-        const chart = createChart(container, {
-          width: container.clientWidth,
-          height: container.clientHeight,
-          layout: {
-            background: { color: '#1C1C28' },
-            textColor: '#CCCAD5',
-          },
-          grid: {
-            vertLines: { color: '#21222F' },
-            horzLines: { color: '#21222F' },
-          },
-          crosshair: {
-            mode: 1,
-          },
-          rightPriceScale: {
-            borderColor: '#21222F',
-            autoScale: true,
-            scaleMargins: {
-              top: 0.1,
-              bottom: 0.1,
-            },
-          },
-          timeScale: {
-            borderColor: '#21222F',
-            timeVisible: true,
-            secondsVisible: false,
-          },
-        });
-
-        chartRef.current = chart;
-
-        const candlestickSeries = chart.addSeries(CandlestickSeries, {
-          upColor: '#22C55E',
-          downColor: '#EF4444',
-          borderVisible: false,
-          wickUpColor: '#22C55E',
-          wickDownColor: '#EF4444',
-        });
-        candlestickSeriesRef.current = candlestickSeries;
-
-        setChartReady(true);
-        console.log('Chart initialized successfully');
-      } catch (err) {
-        console.error('Error creating chart:', err);
-      }
-    }, 100);
-
-    const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-        });
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', handleResize);
-      if (chartRef.current) {
-        chartRef.current.remove();
-        chartRef.current = null;
-        candlestickSeriesRef.current = null;
-        setChartReady(false);
-      }
-    };
-  }, []);
-
-
   // Fetch available intervals on mount
   useEffect(() => {
     const fetchIntervals = async () => {
@@ -212,47 +129,12 @@ export default function AnalyticsPage() {
     fetchChartData();
   }, [fetchChartData]);
 
-  // Update chart when data changes
-  useEffect(() => {
-    if (!chartReady || !candlestickSeriesRef.current || candles.length === 0) return;
-
-    const chartData: CandlestickData[] = candles.map(c => ({
-      time: c.time as Time,
-      open: c.open,
-      high: c.high,
-      low: c.low,
-      close: c.close,
-    }));
-
-    candlestickSeriesRef.current.setData(chartData);
-    chartRef.current?.timeScale().fitContent();
-    console.log(`Chart updated with ${chartData.length} candles`);
-  }, [candles, chartReady]);
-
   // Subscribe to WebSocket for real-time updates
   useEffect(() => {
     if (selectedSymbol) {
       subscribe([selectedSymbol]);
     }
   }, [selectedSymbol, subscribe]);
-
-  // Handle real-time price updates
-  useEffect(() => {
-    const priceData = getPrice(selectedSymbol);
-    if (priceData && candlestickSeriesRef.current && candles.length > 0) {
-      // Update the last candle with real-time data
-      const lastCandle = candles[candles.length - 1];
-      if (lastCandle) {
-        candlestickSeriesRef.current.update({
-          time: lastCandle.time as Time,
-          open: lastCandle.open,
-          high: Math.max(lastCandle.high, priceData.price),
-          low: Math.min(lastCandle.low, priceData.price),
-          close: priceData.price,
-        });
-      }
-    }
-  }, [prices, selectedSymbol, getPrice, candles]);
 
   return (
     <PageContainer>
@@ -329,12 +211,24 @@ export default function AnalyticsPage() {
           </div>
         </div>
         <div className="relative">
-          <div
-            ref={chartContainerRef}
-            className="bg-panel-700 w-full h-[50vh] min-h-[350px]"
-          />
+          {candles.length > 0 ? (
+            <CandlestickChart
+              data={{
+                times: candles.map(c => c.time),
+                open: candles.map(c => c.open),
+                high: candles.map(c => c.high),
+                low: candles.map(c => c.low),
+                close: candles.map(c => c.close),
+              }}
+              height={400}
+            />
+          ) : (
+            <div className="h-[400px] bg-panel-700 flex items-center justify-center text-text-400">
+              {loading ? 'Loading chart data...' : 'No data available'}
+            </div>
+          )}
           {/* Loading overlay - top right corner */}
-          {loading && (
+          {loading && candles.length > 0 && (
             <div className="absolute top-3 right-3 z-10">
               <Badge variant="warning">Loading...</Badge>
             </div>

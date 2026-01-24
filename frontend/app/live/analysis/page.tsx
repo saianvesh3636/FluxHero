@@ -2,8 +2,8 @@
  * Live Analysis Page - Performance analytics dashboard
  *
  * Features:
- * - Cumulative P&L chart (algo vs benchmark)
- * - Return % comparison chart
+ * - Cumulative P&L chart (algo vs benchmark) using Plotly
+ * - Return % comparison chart using Plotly
  * - Summary stats panel with all risk ratios
  * - Daily breakdown table
  * - 5-second auto-refresh
@@ -13,18 +13,10 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  createChart,
-  IChartApi,
-  ISeriesApi,
-  LineData,
-  Time,
-  LineSeries,
-  AreaSeries,
-} from 'lightweight-charts';
 import { PageContainer, PageHeader, StatsGrid } from '../../../components/layout';
 import { Card, CardTitle, Button, Badge, Skeleton, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../components/ui';
 import { PLDisplay } from '../../../components/trading';
+import { PnLComparisonChart, EquityCurveChart, CHART_COLORS } from '../../../components/charts';
 import { formatCurrency, formatPercent } from '../../../lib/utils';
 
 interface EquityCurvePoint {
@@ -70,11 +62,6 @@ interface LiveAnalysisData {
 export default function LiveAnalysisPage() {
   const router = useRouter();
 
-  const equityChartRef = useRef<HTMLDivElement>(null);
-  const returnChartRef = useRef<HTMLDivElement>(null);
-  const equityChartApiRef = useRef<IChartApi | null>(null);
-  const returnChartApiRef = useRef<IChartApi | null>(null);
-
   const [analysisData, setAnalysisData] = useState<LiveAnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -117,174 +104,6 @@ export default function LiveAnalysisPage() {
     const interval = setInterval(fetchAnalysis, 5000);
     return () => clearInterval(interval);
   }, [fetchAnalysis]);
-
-  // Initialize equity chart
-  useEffect(() => {
-    if (!equityChartRef.current || !analysisData || analysisData.equity_curve.length === 0) return;
-
-    // Clean up existing chart
-    if (equityChartApiRef.current) {
-      equityChartApiRef.current.remove();
-    }
-
-    const chart = createChart(equityChartRef.current, {
-      width: equityChartRef.current.clientWidth,
-      height: 300,
-      layout: {
-        background: { color: '#1C1C28' },
-        textColor: '#CCCAD5',
-      },
-      grid: {
-        vertLines: { color: '#21222F' },
-        horzLines: { color: '#21222F' },
-      },
-      rightPriceScale: {
-        borderColor: '#21222F',
-      },
-      timeScale: {
-        borderColor: '#21222F',
-        timeVisible: true,
-      },
-    });
-
-    equityChartApiRef.current = chart;
-
-    // Algo equity line
-    const algoSeries = chart.addSeries(AreaSeries, {
-      lineColor: '#A549FC',
-      topColor: 'rgba(165, 73, 252, 0.3)',
-      bottomColor: 'rgba(165, 73, 252, 0.05)',
-      lineWidth: 2,
-      title: 'Strategy',
-    });
-
-    // Benchmark equity line
-    const benchmarkSeries = chart.addSeries(LineSeries, {
-      color: '#6B7280',
-      lineWidth: 1,
-      lineStyle: 2,
-      title: analysisData.benchmark_symbol,
-    });
-
-    // Set data
-    const algoData: LineData<Time>[] = analysisData.equity_curve.map((p) => ({
-      time: p.date as Time,
-      value: p.equity,
-    }));
-
-    const benchmarkData: LineData<Time>[] = analysisData.equity_curve.map((p) => ({
-      time: p.date as Time,
-      value: p.benchmark_equity,
-    }));
-
-    algoSeries.setData(algoData);
-    benchmarkSeries.setData(benchmarkData);
-
-    chart.timeScale().fitContent();
-
-    const handleResize = () => {
-      if (equityChartRef.current && equityChartApiRef.current) {
-        equityChartApiRef.current.applyOptions({
-          width: equityChartRef.current.clientWidth,
-        });
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [analysisData]);
-
-  // Initialize return comparison chart
-  useEffect(() => {
-    if (!returnChartRef.current || !analysisData || analysisData.equity_curve.length === 0) return;
-
-    // Clean up existing chart
-    if (returnChartApiRef.current) {
-      returnChartApiRef.current.remove();
-    }
-
-    const chart = createChart(returnChartRef.current, {
-      width: returnChartRef.current.clientWidth,
-      height: 250,
-      layout: {
-        background: { color: '#1C1C28' },
-        textColor: '#CCCAD5',
-      },
-      grid: {
-        vertLines: { color: '#21222F' },
-        horzLines: { color: '#21222F' },
-      },
-      rightPriceScale: {
-        borderColor: '#21222F',
-      },
-      timeScale: {
-        borderColor: '#21222F',
-        timeVisible: true,
-      },
-    });
-
-    returnChartApiRef.current = chart;
-
-    // Algo return line
-    const algoReturnSeries = chart.addSeries(LineSeries, {
-      color: '#22C55E',
-      lineWidth: 2,
-      title: 'Strategy %',
-    });
-
-    // Benchmark return line
-    const benchmarkReturnSeries = chart.addSeries(LineSeries, {
-      color: '#6B7280',
-      lineWidth: 1,
-      lineStyle: 2,
-      title: `${analysisData.benchmark_symbol} %`,
-    });
-
-    // Set data
-    const algoReturnData: LineData<Time>[] = analysisData.equity_curve.map((p) => ({
-      time: p.date as Time,
-      value: p.cumulative_return_pct,
-    }));
-
-    const benchmarkReturnData: LineData<Time>[] = analysisData.equity_curve.map((p) => ({
-      time: p.date as Time,
-      value: p.benchmark_return_pct,
-    }));
-
-    algoReturnSeries.setData(algoReturnData);
-    benchmarkReturnSeries.setData(benchmarkReturnData);
-
-    chart.timeScale().fitContent();
-
-    const handleResize = () => {
-      if (returnChartRef.current && returnChartApiRef.current) {
-        returnChartApiRef.current.applyOptions({
-          width: returnChartRef.current.clientWidth,
-        });
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [analysisData]);
-
-  // Clean up charts on unmount
-  useEffect(() => {
-    return () => {
-      if (equityChartApiRef.current) {
-        equityChartApiRef.current.remove();
-      }
-      if (returnChartApiRef.current) {
-        returnChartApiRef.current.remove();
-      }
-    };
-  }, []);
 
   if (loading) {
     return (
@@ -331,256 +150,257 @@ export default function LiveAnalysisPage() {
     : 0;
   const alpha = totalReturn - benchmarkReturn;
 
+  // Prepare chart data
+  const equityChartData = {
+    times: equity_curve.map(p => p.date),
+    equity: equity_curve.map(p => p.equity),
+    benchmark: equity_curve.map(p => p.benchmark_equity),
+  };
+
+  const returnChartData = {
+    times: equity_curve.map(p => p.date),
+    series: [
+      {
+        name: 'Algo %',
+        values: equity_curve.map(p => p.cumulative_return_pct),
+        color: CHART_COLORS.profit,
+      },
+      {
+        name: `${analysisData.benchmark_symbol} %`,
+        values: equity_curve.map(p => p.benchmark_return_pct),
+        color: '#6B7280',
+      },
+      {
+        name: 'Diff %',
+        values: equity_curve.map(p => p.cumulative_return_pct - p.benchmark_return_pct),
+        color: CHART_COLORS.blue,
+      },
+    ],
+  };
+
+  const pnlChartData = {
+    times: equity_curve.map(p => p.date),
+    series: [
+      {
+        name: 'Algo P&L',
+        values: equity_curve.map(p => p.cumulative_pnl),
+        color: CHART_COLORS.profit,
+      },
+      {
+        name: `${analysisData.benchmark_symbol} P&L`,
+        values: equity_curve.map((p, i) => {
+          // Calculate benchmark P&L
+          const benchmarkReturn = p.benchmark_return_pct / 100;
+          return analysisData.initial_capital * benchmarkReturn;
+        }),
+        color: CHART_COLORS.loss,
+      },
+    ],
+  };
+
   return (
     <PageContainer>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <PageHeader
-          title="Live Analysis"
+          title="P&L Analysis"
           subtitle={`Performance analytics vs ${analysisData.benchmark_symbol}`}
         />
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-text-400">
-            Last update: {lastUpdate.toLocaleTimeString()}
-          </span>
-          <Button variant="secondary" onClick={() => router.push('/live')}>
-            {'\u2190'} Back to Live
+        <div className="flex items-center gap-3">
+          <Button variant="secondary" size="sm" onClick={() => {}}>
+            Export HTML
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => router.push('/trades')}>
+            Live Trades
           </Button>
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <StatsGrid columns={4} className="mb-6">
-        <Card>
-          <span className="text-sm text-text-400 block mb-1">Total Return</span>
-          <PLDisplay value={totalPnl} percent={totalReturn} size="lg" />
-        </Card>
-
-        <Card>
-          <span className="text-sm text-text-400 block mb-1">Current Equity</span>
-          <span className="text-2xl font-bold text-text-900 font-mono tabular-nums">
-            {formatCurrency(analysisData.current_equity)}
-          </span>
-          <span className="text-xs text-text-300 block mt-1">
-            Initial: {formatCurrency(analysisData.initial_capital)}
-          </span>
-        </Card>
-
-        <Card>
-          <span className="text-sm text-text-400 block mb-1">Alpha vs {analysisData.benchmark_symbol}</span>
-          <span className={`text-2xl font-bold font-mono tabular-nums ${
-            alpha > 0 ? 'text-profit-500' : alpha < 0 ? 'text-loss-500' : 'text-text-700'
-          }`}>
-            {alpha >= 0 ? '+' : ''}{alpha.toFixed(2)}%
-          </span>
-          <span className="text-xs text-text-300 block mt-1">
-            Benchmark: {formatPercent(benchmarkReturn, true)}
-          </span>
-        </Card>
-
-        <Card>
-          <span className="text-sm text-text-400 block mb-1">Trading Days</span>
-          <span className="text-2xl font-bold text-text-900 font-mono tabular-nums">
-            {analysisData.trading_days}
-          </span>
-        </Card>
-      </StatsGrid>
-
-      {/* Risk Metrics */}
-      <h2 className="text-xl font-semibold text-text-900 mb-4">Risk Metrics</h2>
-      <StatsGrid columns={5} className="mb-6">
-        <Card>
-          <span className="text-sm text-text-400 block mb-1">Sharpe Ratio</span>
-          <span className={`text-xl font-bold font-mono tabular-nums ${
-            risk_metrics.sharpe_ratio >= 1 ? 'text-profit-500' :
-            risk_metrics.sharpe_ratio >= 0.5 ? 'text-warning-500' :
-            'text-loss-500'
-          }`}>
-            {risk_metrics.sharpe_ratio.toFixed(2)}
-          </span>
-        </Card>
-
-        <Card>
-          <span className="text-sm text-text-400 block mb-1">Sortino Ratio</span>
-          <span className={`text-xl font-bold font-mono tabular-nums ${
-            risk_metrics.sortino_ratio >= 1.5 ? 'text-profit-500' :
-            risk_metrics.sortino_ratio >= 1 ? 'text-warning-500' :
-            'text-loss-500'
-          }`}>
-            {risk_metrics.sortino_ratio.toFixed(2)}
-          </span>
-        </Card>
-
-        <Card>
-          <span className="text-sm text-text-400 block mb-1">Calmar Ratio</span>
-          <span className={`text-xl font-bold font-mono tabular-nums ${
-            risk_metrics.calmar_ratio >= 1 ? 'text-profit-500' :
-            risk_metrics.calmar_ratio >= 0.5 ? 'text-warning-500' :
-            'text-loss-500'
-          }`}>
-            {risk_metrics.calmar_ratio.toFixed(2)}
-          </span>
-        </Card>
-
-        <Card>
-          <span className="text-sm text-text-400 block mb-1">Max Drawdown</span>
-          <span className="text-xl font-bold text-loss-500 font-mono tabular-nums">
-            -{risk_metrics.max_drawdown_pct.toFixed(1)}%
-          </span>
-          <span className="text-xs text-text-300 block mt-1">
-            {formatCurrency(risk_metrics.max_drawdown)}
-          </span>
-        </Card>
-
-        <Card>
-          <span className="text-sm text-text-400 block mb-1">Win Rate</span>
-          <span className={`text-xl font-bold font-mono tabular-nums ${
-            risk_metrics.win_rate >= 55 ? 'text-profit-500' :
-            risk_metrics.win_rate >= 45 ? 'text-warning-500' :
-            'text-loss-500'
-          }`}>
-            {risk_metrics.win_rate.toFixed(1)}%
-          </span>
-        </Card>
-      </StatsGrid>
-
-      {/* Secondary metrics */}
-      <StatsGrid columns={3} className="mb-8">
-        <Card>
-          <span className="text-sm text-text-400 block mb-1">Profit Factor</span>
-          <span className={`text-xl font-bold font-mono tabular-nums ${
-            risk_metrics.profit_factor >= 1.5 ? 'text-profit-500' :
-            risk_metrics.profit_factor >= 1 ? 'text-warning-500' :
-            'text-loss-500'
-          }`}>
-            {risk_metrics.profit_factor.toFixed(2)}
-          </span>
-        </Card>
-
-        <Card>
-          <span className="text-sm text-text-400 block mb-1">Avg Win</span>
-          <span className="text-xl font-bold text-profit-500 font-mono tabular-nums">
-            {formatCurrency(risk_metrics.avg_win)}
-          </span>
-        </Card>
-
-        <Card>
-          <span className="text-sm text-text-400 block mb-1">Avg Loss</span>
-          <span className="text-xl font-bold text-loss-500 font-mono tabular-nums">
-            {formatCurrency(risk_metrics.avg_loss)}
-          </span>
-        </Card>
-      </StatsGrid>
-
-      {/* Equity Curve Chart */}
-      <Card noPadding className="mb-6 overflow-hidden">
-        <div className="p-4 border-b border-panel-500 flex items-center justify-between">
-          <CardTitle>Equity Curve</CardTitle>
-          <div className="flex items-center gap-4 text-xs text-text-400">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-0.5 bg-accent-500" />
-              <span>Strategy</span>
+      {/* Main Layout: Charts on left, Stats on right */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
+        {/* Charts Column - spans 3 columns */}
+        <div className="lg:col-span-3 space-y-4">
+          {/* Cumulative P&L Chart */}
+          <Card noPadding className="overflow-hidden">
+            <div className="px-3 py-2 border-b border-panel-500">
+              <span className="text-sm font-medium text-text-800">Cumulative P&L vs. Date</span>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-0.5 bg-gray-500" style={{ borderTop: '1px dashed' }} />
-              <span>{analysisData.benchmark_symbol}</span>
+            <div style={{ height: 280 }}>
+              <PnLComparisonChart
+                data={pnlChartData}
+                height={280}
+                formatAsCurrency={true}
+              />
             </div>
-          </div>
+          </Card>
+
+          {/* Return % Comparison Chart */}
+          <Card noPadding className="overflow-hidden">
+            <div className="px-3 py-2 border-b border-panel-500">
+              <span className="text-sm font-medium text-text-800">Return % vs. Date</span>
+            </div>
+            <div style={{ height: 250 }}>
+              <PnLComparisonChart
+                data={returnChartData}
+                height={250}
+                formatAsPercent={true}
+              />
+            </div>
+          </Card>
         </div>
-        <div ref={equityChartRef} className="bg-panel-700" />
-      </Card>
 
-      {/* Return Comparison Chart */}
-      <Card noPadding className="mb-6 overflow-hidden">
-        <div className="p-4 border-b border-panel-500 flex items-center justify-between">
-          <CardTitle>Cumulative Returns (%)</CardTitle>
-          <div className="flex items-center gap-4 text-xs text-text-400">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-0.5 bg-profit-500" />
-              <span>Strategy</span>
+        {/* Summary Statistics Column */}
+        <div className="lg:col-span-1">
+          <Card className="h-full">
+            <CardTitle className="text-sm mb-3">Summary Statistics</CardTitle>
+            <div className="space-y-2 text-sm">
+              <StatRow label="Initial Capital" value={formatCurrency(analysisData.initial_capital)} />
+              <StatRow label="Trading Days" value={analysisData.trading_days.toString()} />
+              <StatRow label="Risk-Free Rate" value="3.64%" />
+              <StatRow
+                label="Max Drawdown"
+                value={`-${risk_metrics.max_drawdown_pct.toFixed(2)}%`}
+                color="loss"
+              />
+              <StatRow
+                label="Annualized Return"
+                value={`${totalReturn >= 0 ? '+' : ''}${(totalReturn * (252 / Math.max(analysisData.trading_days, 1))).toFixed(2)}%`}
+                color={totalReturn >= 0 ? 'profit' : 'loss'}
+              />
+              <StatRow
+                label={`${analysisData.benchmark_symbol} Return`}
+                value={`${benchmarkReturn >= 0 ? '+' : ''}${benchmarkReturn.toFixed(2)}%`}
+                color={benchmarkReturn >= 0 ? 'profit' : 'loss'}
+              />
+              <StatRow
+                label="Sharpe Ratio"
+                value={risk_metrics.sharpe_ratio.toFixed(2)}
+                color={risk_metrics.sharpe_ratio >= 1 ? 'profit' : risk_metrics.sharpe_ratio >= 0 ? 'neutral' : 'loss'}
+              />
+              <StatRow
+                label="Sortino Ratio"
+                value={risk_metrics.sortino_ratio.toFixed(2)}
+                color={risk_metrics.sortino_ratio >= 1.5 ? 'profit' : risk_metrics.sortino_ratio >= 0 ? 'neutral' : 'loss'}
+              />
+              <StatRow
+                label="Calmar Ratio"
+                value={risk_metrics.calmar_ratio.toFixed(2)}
+                color={risk_metrics.calmar_ratio >= 1 ? 'profit' : risk_metrics.calmar_ratio >= 0 ? 'neutral' : 'loss'}
+              />
             </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-0.5 bg-gray-500" style={{ borderTop: '1px dashed' }} />
-              <span>{analysisData.benchmark_symbol}</span>
-            </div>
-          </div>
+          </Card>
         </div>
-        <div ref={returnChartRef} className="bg-panel-700" />
-      </Card>
+      </div>
 
       {/* Daily Breakdown Table */}
       <Card noPadding>
-        <div className="p-4 border-b border-panel-500">
-          <CardTitle>Daily Breakdown</CardTitle>
-        </div>
-        <div className="overflow-x-auto max-h-96">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead align="right">Daily P&L</TableHead>
-                <TableHead align="right">Return %</TableHead>
-                <TableHead align="right">Trades</TableHead>
-                <TableHead align="right">Cumulative P&L</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {daily_breakdown.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-text-400">
+        <div className="overflow-x-auto max-h-64">
+          <table className="w-full text-xs">
+            <thead className="bg-panel-700 sticky top-0">
+              <tr>
+                <th className="px-2 py-1.5 text-left text-text-400 font-medium">DATE</th>
+                <th className="px-2 py-1.5 text-right text-text-400 font-medium">VTI CLOSE</th>
+                <th className="px-2 py-1.5 text-right text-text-400 font-medium">BAH VALUE</th>
+                <th className="px-2 py-1.5 text-right text-text-400 font-medium">BAH CUM</th>
+                <th className="px-2 py-1.5 text-right text-text-400 font-medium">BAH DAILY %</th>
+                <th className="px-2 py-1.5 text-right text-text-400 font-medium">BAH DD</th>
+                <th className="px-2 py-1.5 text-right text-text-400 font-medium">BAH %</th>
+                <th className="px-2 py-1.5 text-right text-text-400 font-medium">DIFF %</th>
+                <th className="px-2 py-1.5 text-right text-text-400 font-medium">ALGO %</th>
+                <th className="px-2 py-1.5 text-right text-text-400 font-medium">ALGO VALUE</th>
+                <th className="px-2 py-1.5 text-right text-text-400 font-medium">ALGO P&L</th>
+                <th className="px-2 py-1.5 text-right text-text-400 font-medium">DAILY P&L</th>
+                <th className="px-2 py-1.5 text-right text-text-400 font-medium">DAILY %</th>
+                <th className="px-2 py-1.5 text-right text-text-400 font-medium">ALGO DD</th>
+              </tr>
+            </thead>
+            <tbody>
+              {equity_curve.length === 0 ? (
+                <tr>
+                  <td colSpan={14} className="px-2 py-4 text-center text-text-400">
                     No trading data available
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ) : (
-                daily_breakdown.slice().reverse().map((day) => (
-                  <TableRow key={day.date}>
-                    <TableCell className="font-medium text-text-700">
-                      {new Date(day.date).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </TableCell>
-                    <TableCell
-                      align="right"
-                      className={`font-mono tabular-nums ${
-                        day.pnl > 0 ? 'text-profit-500' :
-                        day.pnl < 0 ? 'text-loss-500' :
-                        'text-text-400'
-                      }`}
-                    >
-                      {formatCurrency(day.pnl, true)}
-                    </TableCell>
-                    <TableCell
-                      align="right"
-                      className={`font-mono tabular-nums ${
-                        day.return_pct > 0 ? 'text-profit-500' :
-                        day.return_pct < 0 ? 'text-loss-500' :
-                        'text-text-400'
-                      }`}
-                    >
-                      {formatPercent(day.return_pct, true)}
-                    </TableCell>
-                    <TableCell align="right" className="font-mono tabular-nums">
-                      {day.trade_count}
-                    </TableCell>
-                    <TableCell
-                      align="right"
-                      className={`font-mono tabular-nums font-semibold ${
-                        day.cumulative_pnl > 0 ? 'text-profit-500' :
-                        day.cumulative_pnl < 0 ? 'text-loss-500' :
-                        'text-text-400'
-                      }`}
-                    >
-                      {formatCurrency(day.cumulative_pnl, true)}
-                    </TableCell>
-                  </TableRow>
-                ))
+                equity_curve.map((point, index) => {
+                  const prevPoint = index > 0 ? equity_curve[index - 1] : null;
+                  const dailyPnl = prevPoint ? point.cumulative_pnl - prevPoint.cumulative_pnl : point.cumulative_pnl;
+                  const dailyPct = prevPoint ? point.cumulative_return_pct - prevPoint.cumulative_return_pct : point.cumulative_return_pct;
+                  const bahDailyPct = prevPoint ? point.benchmark_return_pct - prevPoint.benchmark_return_pct : point.benchmark_return_pct;
+                  const diff = point.cumulative_return_pct - point.benchmark_return_pct;
+                  const bahValue = analysisData.initial_capital * (1 + point.benchmark_return_pct / 100);
+                  const bahCum = bahValue - analysisData.initial_capital;
+
+                  return (
+                    <tr key={point.date} className="border-t border-panel-500/30 hover:bg-panel-500/20">
+                      <td className="px-2 py-1 font-mono text-text-600">{point.date}</td>
+                      <td className="px-2 py-1 text-right font-mono tabular-nums text-text-600">
+                        ${point.benchmark_equity.toFixed(2)}
+                      </td>
+                      <td className="px-2 py-1 text-right font-mono tabular-nums text-text-600">
+                        ${bahValue.toFixed(2)}
+                      </td>
+                      <td className={`px-2 py-1 text-right font-mono tabular-nums ${bahCum >= 0 ? 'text-profit-500' : 'text-loss-500'}`}>
+                        ${bahCum.toFixed(2)}
+                      </td>
+                      <td className={`px-2 py-1 text-right font-mono tabular-nums ${bahDailyPct >= 0 ? 'text-profit-500' : 'text-loss-500'}`}>
+                        {bahDailyPct >= 0 ? '+' : ''}{bahDailyPct.toFixed(2)}%
+                      </td>
+                      <td className="px-2 py-1 text-right font-mono tabular-nums text-text-400">0.00%</td>
+                      <td className={`px-2 py-1 text-right font-mono tabular-nums ${point.benchmark_return_pct >= 0 ? 'text-profit-500' : 'text-loss-500'}`}>
+                        {point.benchmark_return_pct >= 0 ? '+' : ''}{point.benchmark_return_pct.toFixed(2)}%
+                      </td>
+                      <td className={`px-2 py-1 text-right font-mono tabular-nums ${diff >= 0 ? 'text-profit-500' : 'text-loss-500'}`}>
+                        {diff >= 0 ? '+' : ''}{diff.toFixed(2)}%
+                      </td>
+                      <td className={`px-2 py-1 text-right font-mono tabular-nums ${point.cumulative_return_pct >= 0 ? 'text-profit-500' : 'text-loss-500'}`}>
+                        {point.cumulative_return_pct >= 0 ? '+' : ''}{point.cumulative_return_pct.toFixed(2)}%
+                      </td>
+                      <td className="px-2 py-1 text-right font-mono tabular-nums text-text-600">
+                        ${point.equity.toFixed(2)}
+                      </td>
+                      <td className={`px-2 py-1 text-right font-mono tabular-nums ${point.cumulative_pnl >= 0 ? 'text-profit-500' : 'text-loss-500'}`}>
+                        ${point.cumulative_pnl.toFixed(2)}
+                      </td>
+                      <td className={`px-2 py-1 text-right font-mono tabular-nums ${dailyPnl >= 0 ? 'text-profit-500' : 'text-loss-500'}`}>
+                        ${dailyPnl.toFixed(2)}
+                      </td>
+                      <td className={`px-2 py-1 text-right font-mono tabular-nums ${dailyPct >= 0 ? 'text-profit-500' : 'text-loss-500'}`}>
+                        {dailyPct >= 0 ? '+' : ''}{dailyPct.toFixed(2)}%
+                      </td>
+                      <td className="px-2 py-1 text-right font-mono tabular-nums text-text-400">0.00%</td>
+                    </tr>
+                  );
+                })
               )}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       </Card>
     </PageContainer>
+  );
+}
+
+// Helper component for stat rows
+function StatRow({
+  label,
+  value,
+  color = 'neutral'
+}: {
+  label: string;
+  value: string;
+  color?: 'profit' | 'loss' | 'neutral';
+}) {
+  const colorClass = {
+    profit: 'text-profit-500',
+    loss: 'text-loss-500',
+    neutral: 'text-text-800',
+  }[color];
+
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-text-400">{label}</span>
+      <span className={`font-mono tabular-nums font-medium ${colorClass}`}>{value}</span>
+    </div>
   );
 }

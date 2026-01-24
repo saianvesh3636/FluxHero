@@ -11,7 +11,7 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
-    '^lightweight-charts$': '<rootDir>/__mocks__/lightweight-charts.js',
+    '^lightweight-charts$': '<rootDir>/components/charts/__mocks__/lightweight-charts.js',
   },
   testMatch: [
     '**/__tests__/**/*.[jt]s?(x)',

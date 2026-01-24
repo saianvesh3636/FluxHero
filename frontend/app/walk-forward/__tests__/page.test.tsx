@@ -17,7 +17,7 @@ import WalkForwardPage from '../page';
 // Mock fetch
 global.fetch = jest.fn();
 
-// Mock ResizeObserver for lightweight-charts
+// Mock ResizeObserver for charts
 class ResizeObserverMock {
   observe() {}
   unobserve() {}
