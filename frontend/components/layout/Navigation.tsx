@@ -20,7 +20,6 @@ export interface NavigationProps {
 }
 
 const defaultNavItems: NavItem[] = [
-  { label: 'Home', href: '/' },
   { label: 'Trades', href: '/trades' },
   { label: 'Analytics', href: '/analytics' },
   { label: 'Backtest', href: '/backtest' },

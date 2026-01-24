@@ -34,8 +34,9 @@ export interface PositionsTableProps {
 }
 
 /**
- * PositionsTable - displays positions in a table format
+ * PositionsTable - Compact table displaying positions
  * Follows design system: table styling, color-coded P&L
+ * Optimized for information density
  */
 export function PositionsTable({
   positions,
@@ -47,16 +48,14 @@ export function PositionsTable({
 }: PositionsTableProps) {
   if (isLoading) {
     return (
-      <div className={cn('bg-panel-600 rounded-2xl overflow-hidden', className)}>
-        <div className="p-4">
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex gap-4">
-                <div className="h-4 w-16 bg-panel-500 rounded" />
-                <div className="h-4 w-12 bg-panel-500 rounded" />
-                <div className="h-4 w-20 bg-panel-500 rounded" />
-                <div className="h-4 w-20 bg-panel-500 rounded" />
-                <div className="h-4 w-24 bg-panel-500 rounded" />
+      <div className={cn('bg-panel-600 overflow-hidden', className)}>
+        <div className="p-2">
+          <div className="space-y-1">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex gap-2">
+                <div className="h-3 w-12 bg-panel-500 rounded" />
+                <div className="h-3 w-8 bg-panel-500 rounded" />
+                <div className="h-3 w-16 bg-panel-500 rounded" />
               </div>
             ))}
           </div>
@@ -70,90 +69,91 @@ export function PositionsTable({
   };
 
   return (
-    <div className={cn('bg-panel-600 rounded-2xl overflow-hidden', className)}>
-      <Table>
-        <TableHeader>
-          <TableRow isHoverable={false}>
-            <TableHead>Symbol</TableHead>
-            <TableHead>Side</TableHead>
-            <TableHead className="text-right">Qty</TableHead>
-            <TableHead className="text-right">Entry</TableHead>
-            <TableHead className="text-right">Current</TableHead>
-            <TableHead className="text-right">P&L</TableHead>
-            <TableHead className="text-right">P&L %</TableHead>
-            {showSellButton && <TableHead className="text-center">Action</TableHead>}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+    <div className={cn('bg-panel-600 overflow-hidden', className)}>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="bg-panel-700/50">
+            <th className="px-2 py-1.5 text-left text-text-400 font-medium">Symbol</th>
+            <th className="px-2 py-1.5 text-left text-text-400 font-medium">Side</th>
+            <th className="px-2 py-1.5 text-right text-text-400 font-medium">Qty</th>
+            <th className="px-2 py-1.5 text-right text-text-400 font-medium">Entry</th>
+            <th className="px-2 py-1.5 text-right text-text-400 font-medium">Current</th>
+            <th className="px-2 py-1.5 text-right text-text-400 font-medium">P&L</th>
+            <th className="px-2 py-1.5 text-right text-text-400 font-medium">%</th>
+            {showSellButton && <th className="px-2 py-1.5 text-center text-text-400 font-medium">Action</th>}
+          </tr>
+        </thead>
+        <tbody>
           {positions.length === 0 ? (
-            <TableEmpty colSpan={showSellButton ? 8 : 7} message="No open positions" />
+            <tr>
+              <td colSpan={showSellButton ? 8 : 7} className="px-2 py-3 text-center text-text-400 text-xs">
+                No open positions
+              </td>
+            </tr>
           ) : (
             positions.map((position, index) => {
               const side = normalizeSide(position.side);
               return (
-                <TableRow
+                <tr
                   key={`${position.symbol}-${index}`}
-                  className={onRowClick ? 'cursor-pointer' : ''}
+                  className={cn(
+                    'border-t border-panel-500/30 hover:bg-panel-500/20',
+                    onRowClick && 'cursor-pointer'
+                  )}
                   onClick={() => onRowClick?.(position)}
                 >
-                  <TableCell>
-                    <span className="font-medium text-text-900">
-                      {position.symbol}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={side === 'long' ? 'success' : 'error'}
-                      size="sm"
-                    >
+                  <td className="px-2 py-1.5 font-medium text-text-800">
+                    {position.symbol}
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <span className={cn(
+                      'text-xs font-medium',
+                      side === 'long' ? 'text-profit-500' : 'text-loss-500'
+                    )}>
                       {side.toUpperCase()}
-                    </Badge>
-                  </TableCell>
-                  <TableCell numeric>
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5 text-right font-mono tabular-nums text-text-600">
                     {Math.abs(position.quantity)}
-                  </TableCell>
-                  <TableCell numeric>
+                  </td>
+                  <td className="px-2 py-1.5 text-right font-mono tabular-nums text-text-600">
                     ${formatPrice(position.entryPrice)}
-                  </TableCell>
-                  <TableCell numeric className="text-text-900">
+                  </td>
+                  <td className="px-2 py-1.5 text-right font-mono tabular-nums text-text-800">
                     ${formatPrice(position.currentPrice)}
-                  </TableCell>
-                  <TableCell numeric>
-                    <PLBadge value={position.pnl} />
-                  </TableCell>
-                  <TableCell
-                    numeric
-                    className={cn(
-                      position.pnlPercent > 0
-                        ? 'text-profit-500'
-                        : position.pnlPercent < 0
-                        ? 'text-loss-500'
-                        : 'text-text-500'
-                    )}
-                  >
+                  </td>
+                  <td className={cn(
+                    'px-2 py-1.5 text-right font-mono tabular-nums font-medium',
+                    position.pnl > 0 ? 'text-profit-500' : position.pnl < 0 ? 'text-loss-500' : 'text-text-400'
+                  )}>
+                    {position.pnl > 0 ? '+' : ''}{formatCurrency(position.pnl)}
+                  </td>
+                  <td className={cn(
+                    'px-2 py-1.5 text-right font-mono tabular-nums',
+                    position.pnlPercent > 0 ? 'text-profit-500' : position.pnlPercent < 0 ? 'text-loss-500' : 'text-text-400'
+                  )}>
                     {position.pnlPercent > 0 && '+'}
                     {formatPercent(position.pnlPercent)}
-                  </TableCell>
+                  </td>
                   {showSellButton && (
-                    <TableCell className="text-center">
-                      <Button
-                        variant="danger"
-                        size="sm"
+                    <td className="px-2 py-1.5 text-center">
+                      <button
+                        className="px-2 py-0.5 text-xs font-medium bg-loss-500 hover:bg-loss-600 text-white rounded transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
                           onSellPosition?.(position);
                         }}
                       >
                         Sell
-                      </Button>
-                    </TableCell>
+                      </button>
+                    </td>
                   )}
-                </TableRow>
+                </tr>
               );
             })
           )}
-        </TableBody>
-      </Table>
+        </tbody>
+      </table>
     </div>
   );
 }

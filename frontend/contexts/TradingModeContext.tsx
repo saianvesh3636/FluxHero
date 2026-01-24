@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { apiClient } from '../utils/api';
 
@@ -29,7 +29,7 @@ const TradingModeContext = createContext<TradingModeContextValue | null>(null);
 
 const STORAGE_KEY = 'fluxhero_trading_mode';
 
-export function TradingModeProvider({ children }: { children: ReactNode }) {
+function TradingModeProviderInner({ children }: { children: ReactNode }) {
   const [modeState, setModeState] = useState<ModeState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -147,6 +147,28 @@ export function TradingModeProvider({ children }: { children: ReactNode }) {
     }}>
       {children}
     </TradingModeContext.Provider>
+  );
+}
+
+// Wrapper component with Suspense boundary for useSearchParams
+export function TradingModeProvider({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={
+      <TradingModeContext.Provider value={{
+        mode: 'paper',
+        modeState: null,
+        isLive: false,
+        isPaper: true,
+        isLoading: true,
+        error: null,
+        switchMode: async () => {},
+        refreshModeState: async () => {},
+      }}>
+        {children}
+      </TradingModeContext.Provider>
+    }>
+      <TradingModeProviderInner>{children}</TradingModeProviderInner>
+    </Suspense>
   );
 }
 

@@ -35,3 +35,6 @@ export type {
   RiskParameters,
   ValidationCheck,
 } from './TradeReasonCard';
+
+export { OrderEntryModal } from './OrderEntryModal';
+export type { OrderEntryModalProps } from './OrderEntryModal';
