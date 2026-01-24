@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { WebSocketProvider } from '../contexts/WebSocketContext';
+import { TradingModeProvider } from '../contexts/TradingModeContext';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { AppShell } from '../components/layout';
 
@@ -23,9 +24,11 @@ export default function RootLayout({
       <body className="bg-panel-900 text-text-800 antialiased">
         <ErrorBoundary>
           <WebSocketProvider url="/ws/prices">
-            <AppShell>
-              {children}
-            </AppShell>
+            <TradingModeProvider>
+              <AppShell>
+                {children}
+              </AppShell>
+            </TradingModeProvider>
           </WebSocketProvider>
         </ErrorBoundary>
       </body>

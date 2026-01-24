@@ -102,11 +102,42 @@ See `docs/COMPARISON_SENTINEL_TRADER.md` for full comparison analysis.
 
 ---
 
+## Phase G: Trade Analytics & Visualization (HIGH PRIORITY)
+
+See `docs/TRADE_ANALYTICS_REQUIREMENTS.md` for full requirements document.
+
+- [ ] Create trade box primitive (frontend/lib/charts/TradePrimitive.ts) - implement ISeriesPrimitive interface from lightweight-charts v5, draw colored semi-transparent rectangle from entry time to exit time with stop/target price bounds, green box for profit trades (rgba 16,185,129,0.15), red box for loss trades (rgba 239,68,68,0.15), dashed horizontal lines for stop loss (red) and take profit (green), solid white line for entry price.
+
+- [ ] Create enhanced trade markers (frontend/lib/charts/tradeMarkers.ts) - utility functions using createSeriesMarkers() API, createBuyMarker(time, price) returns green upward arrow below candle with "BUY @ $XX.XX" label, createSellMarker(time, price) returns red downward arrow above candle with "SELL @ $XX.XX" label, createEntryMarker() blue circle, createExitMarker() orange circle.
+
+- [ ] Create trade detail chart page (frontend/app/trades/[id]/page.tsx) - dynamic route page that fetches trade data and surrounding candles from GET /api/trades/{id}/chart-data, renders candlestick chart using lightweight-charts with TradePrimitive overlay, includes KAMA line and ATR bands, shows trade info panel (symbol, side, qty, entry/exit times, P&L, strategy, regime), add Previous/Next trade navigation arrows.
+
+- [ ] Add trade chart data API endpoint (backend/api/server.py) - add GET /api/trades/{id}/chart-data that returns trade details plus 50 candles before entry and 20 after exit, include calculated indicators (KAMA, ATR bands) for the candle range, use existing yahoo_provider.py for price data, return Pydantic TradeChartDataResponse model.
+
+- [ ] Create live P&L analysis page (frontend/app/live/analysis/page.tsx) - two charts: cumulative P&L (algo green line vs benchmark orange line) and return % comparison (algo/benchmark/diff), summary statistics panel with Sharpe/Sortino/Calmar/MaxDD/AnnualizedReturn, daily breakdown table with benchmark comparison, export HTML button, 5-second auto-refresh.
+
+- [ ] Add live analysis API endpoint (backend/api/server.py) - add GET /api/live/analysis that calculates real-time P&L metrics including Sharpe/Sortino/Calmar ratios, fetches VTI benchmark data from yahoo_provider.py, returns equity curve and daily breakdown with benchmark comparison, use existing metrics.py calculations.
+
+- [ ] Create daily trade grouping component (frontend/components/trading/DailyTradeGroup.tsx) - expandable accordion component that groups trades by date, header shows date + realized P&L + unrealized P&L + trade count + daily return %, click to expand shows individual trade rows, green/red background tint based on daily P&L, use React useState for expand state.
+
+- [ ] Add daily summary API endpoint (backend/api/server.py) - add GET /api/live/daily-summary that groups trades by date with aggregated metrics per day, calculate realized/unrealized P&L per day, include open positions with current prices, return totals object with closed_count/open_count/total_pnl/annualized_return.
+
+- [ ] Create trade summary footer component (frontend/components/trading/TradeSummaryFooter.tsx) - fixed bottom bar component showing Closed count, Open count, Realized P&L (green/red), Unrealized P&L (green/red), Total P&L, Return %, vs BAH diff, benchmark value, Annualized return %, use Tailwind fixed positioning and panel-800 background.
+
+- [ ] Create trade reason card component (frontend/components/trading/TradeReasonCard.tsx) - card component displaying signal reason text, strategy/regime badges, technical indicators at entry (RSI, ADX, KAMA slope, ATR, R²), risk parameters (position size, risk amount, stop/target, R:R ratio), validation checks with checkmark/X icons (noise filter, volume, spread, gap).
+
+- [ ] Add link to trade chart from history page (frontend/app/history/page.tsx) - modify existing trade history table to add clickable chart icon in each row that navigates to /trades/{id}, update "Details" expand to include "View Chart" button, use Next.js Link component for client-side navigation.
+
+- [ ] Add link to analysis from live page (frontend/app/live/page.tsx) - add "Analysis" button in page header linking to /live/analysis, add analysis preview card showing key metrics (Total P&L, Return %, Sharpe) with "View Full Analysis" link, integrate TradeSummaryFooter component at bottom of page.
+
+---
+
 ## Dependencies
 
 - Phase B (Paper Trading) depends on Phase A (Multi-Broker) for BrokerInterface abstraction
 - Phase D (Audit Logging) is standalone but benefits from having broker/trade operations to log
 - Phase F (Manual Trading) can use audit logging from Phase D for trade logging
+- Phase G (Trade Analytics) is standalone - uses existing lightweight-charts library and trade data
 
 ---
 

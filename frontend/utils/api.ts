@@ -225,6 +225,74 @@ export interface HealthResponse {
   total_requests: number;
 }
 
+// ============================================================================
+// Mode Management Interfaces
+// ============================================================================
+
+/**
+ * Mode state response (ModeStateResponse model)
+ */
+export interface ModeStateResponse {
+  active_mode: 'live' | 'paper';
+  last_mode_change: string | null;
+  paper_balance: number;
+  paper_realized_pnl: number;
+  is_live_broker_configured: boolean;
+}
+
+/**
+ * Request to place an order
+ */
+export interface PlaceOrderRequest {
+  symbol: string;
+  qty: number;
+  side: 'buy' | 'sell';
+  order_type?: 'market' | 'limit';
+  limit_price?: number | null;
+}
+
+/**
+ * Response from placing an order
+ */
+export interface PlaceOrderResponse {
+  order_id: string;
+  symbol: string;
+  qty: number;
+  side: string;
+  status: string;
+  filled_price: number | null;
+  mode: 'live' | 'paper';
+}
+
+/**
+ * Backtest result summary for list view
+ */
+export interface BacktestResultSummary {
+  id: number | null;
+  run_id: string;
+  symbol: string;
+  strategy_mode: string;
+  start_date: string;
+  end_date: string;
+  total_return_pct: number | null;
+  sharpe_ratio: number | null;
+  max_drawdown_pct: number | null;
+  win_rate: number | null;
+  num_trades: number | null;
+  created_at: string;
+}
+
+/**
+ * Detailed backtest result
+ */
+export interface BacktestResultDetail extends BacktestResultSummary {
+  initial_capital: number;
+  final_equity: number;
+  equity_curve_json: string | null;
+  trades_json: string | null;
+  config_json: string | null;
+}
+
 /**
  * Candle data for charts
  */
@@ -659,6 +727,230 @@ class ApiClient {
   async getPaperTrades(): Promise<PaperTradeHistoryResponse> {
     return this.fetchJson<PaperTradeHistoryResponse>(`${API_BASE_URL}/paper/trades`);
   }
+
+  // ============================================================================
+  // Trade Analytics Methods (Phase G)
+  // ============================================================================
+
+  /**
+   * Get chart data for a specific trade
+   * Returns candles, indicators, and trade details for visualization
+   */
+  async getTradeChartData(tradeId: number): Promise<TradeChartDataResponse> {
+    return this.fetchJson<TradeChartDataResponse>(`${API_BASE_URL}/trades/${tradeId}/chart-data`);
+  }
+
+  /**
+   * Get daily trade summary with grouping for a specific mode
+   * @param mode - Trading mode ('live' or 'paper')
+   * @param days - Number of days to include (default 30)
+   */
+  async getDailySummary(mode: 'live' | 'paper' = 'live', days: number = 30): Promise<DailySummaryResponse> {
+    return this.fetchJson<DailySummaryResponse>(`${API_BASE_URL}/${mode}/daily-summary?days=${days}`);
+  }
+
+  /**
+   * Get trading analysis with performance metrics for a specific mode
+   * @param mode - Trading mode ('live' or 'paper')
+   * @param benchmark - Benchmark symbol for comparison (default VTI)
+   */
+  async getAnalysis(mode: 'live' | 'paper' = 'live', benchmark: string = 'VTI'): Promise<LiveAnalysisResponse> {
+    return this.fetchJson<LiveAnalysisResponse>(`${API_BASE_URL}/${mode}/analysis?benchmark=${benchmark}`);
+  }
+
+  /**
+   * Get live trading analysis with performance metrics (alias for backward compatibility)
+   * @param benchmark - Benchmark symbol for comparison (default VTI)
+   */
+  async getLiveAnalysis(benchmark: string = 'VTI'): Promise<LiveAnalysisResponse> {
+    return this.getAnalysis('live', benchmark);
+  }
+
+  // ============================================================================
+  // Mode Management Methods
+  // ============================================================================
+
+  /**
+   * Get current trading mode state
+   */
+  async getModeState(): Promise<ModeStateResponse> {
+    return this.fetchJson<ModeStateResponse>(`${API_BASE_URL}/mode`);
+  }
+
+  /**
+   * Switch trading mode
+   * @param mode - Target mode ('live' or 'paper')
+   * @param confirmLive - Must be true to switch to live mode
+   */
+  async switchMode(mode: 'live' | 'paper', confirmLive: boolean = false): Promise<ModeStateResponse> {
+    return this.fetchJson<ModeStateResponse>(`${API_BASE_URL}/mode`, {
+      method: 'POST',
+      body: JSON.stringify({ mode, confirm_live: confirmLive }),
+    });
+  }
+
+  /**
+   * Get positions for a specific mode
+   */
+  async getPositionsForMode(mode: 'live' | 'paper'): Promise<Position[]> {
+    const response = await this.fetchJson<PositionResponse[]>(`${API_BASE_URL}/${mode}/positions`);
+    return response.map(pos => ({
+      id: pos.id,
+      symbol: pos.symbol,
+      side: pos.side > 0 ? 'long' : 'short',
+      quantity: Math.abs(pos.shares || 0),
+      entry_price: pos.entry_price,
+      current_price: pos.current_price,
+      pnl: pos.unrealized_pnl,
+      pnl_percent: pos.entry_price > 0 && pos.shares > 0
+        ? (pos.unrealized_pnl / (pos.entry_price * pos.shares)) * 100
+        : 0,
+      stop_loss: pos.stop_loss,
+      take_profit: pos.take_profit,
+      entry_time: pos.entry_time,
+      updated_at: pos.updated_at,
+    } as Position));
+  }
+
+  /**
+   * Get trades for a specific mode with pagination
+   */
+  async getTradesForMode(
+    mode: 'live' | 'paper',
+    page: number = 1,
+    pageSize: number = 20
+  ): Promise<{ trades: Trade[]; totalCount: number; totalPages: number }> {
+    const response = await this.fetchJson<TradeHistoryResponse>(
+      `${API_BASE_URL}/${mode}/trades?page=${page}&page_size=${pageSize}`
+    );
+    return {
+      trades: response.trades.map(t => ({
+        id: t.id,
+        symbol: t.symbol,
+        side: t.side === 1 ? 'buy' : 'sell',
+        entry_price: t.entry_price,
+        exit_price: t.exit_price,
+        entry_time: t.entry_time,
+        exit_time: t.exit_time,
+        shares: t.shares,
+        realized_pnl: t.realized_pnl,
+        status: t.status === 0 ? 'open' : 'closed',
+        strategy: t.strategy,
+        regime: t.regime,
+        signal_reason: t.signal_reason,
+        stop_loss: t.stop_loss,
+        take_profit: t.take_profit,
+      } as Trade)),
+      totalCount: response.total_count,
+      totalPages: response.total_pages,
+    };
+  }
+
+  /**
+   * Get account info for a specific mode
+   */
+  async getAccountForMode(mode: 'live' | 'paper'): Promise<AccountInfo> {
+    const response = await this.fetchJson<AccountInfoResponse>(`${API_BASE_URL}/${mode}/account`);
+    return {
+      equity: response.equity,
+      cash: response.cash,
+      buying_power: response.buying_power,
+      total_pnl: response.total_pnl,
+      daily_pnl: response.daily_pnl,
+      num_positions: response.num_positions,
+    };
+  }
+
+  /**
+   * Place an order in paper trading mode
+   * @param order - Order details (symbol, qty, side, order_type, limit_price)
+   */
+  async placePaperOrder(order: PlaceOrderRequest): Promise<PlaceOrderResponse> {
+    return this.fetchJson<PlaceOrderResponse>(`${API_BASE_URL}/paper/orders`, {
+      method: 'POST',
+      body: JSON.stringify(order),
+    });
+  }
+
+  /**
+   * Place an order in live trading mode
+   * CAUTION: This places real orders with real money!
+   * @param order - Order details (symbol, qty, side, order_type, limit_price)
+   * @param confirmLiveTrade - Must be true to execute live trades
+   */
+  async placeLiveOrder(order: PlaceOrderRequest, confirmLiveTrade: boolean = false): Promise<PlaceOrderResponse> {
+    const headers: Record<string, string> = {};
+    if (confirmLiveTrade) {
+      headers['X-Confirm-Live-Trade'] = 'true';
+    }
+    return this.fetchJson<PlaceOrderResponse>(`${API_BASE_URL}/live/orders`, {
+      method: 'POST',
+      body: JSON.stringify(order),
+      headers,
+    });
+  }
+
+  /**
+   * Place an order for a specific mode
+   * @param mode - Trading mode ('live' or 'paper')
+   * @param order - Order details
+   * @param confirmLiveTrade - Must be true for live mode
+   */
+  async placeOrder(
+    mode: 'live' | 'paper',
+    order: PlaceOrderRequest,
+    confirmLiveTrade: boolean = false
+  ): Promise<PlaceOrderResponse> {
+    if (mode === 'live') {
+      return this.placeLiveOrder(order, confirmLiveTrade);
+    }
+    return this.placePaperOrder(order);
+  }
+
+  /**
+   * Sell a position (convenience method)
+   * @param mode - Trading mode
+   * @param symbol - Symbol to sell
+   * @param qty - Quantity to sell
+   * @param confirmLiveTrade - Must be true for live mode
+   */
+  async sellPosition(
+    mode: 'live' | 'paper',
+    symbol: string,
+    qty: number,
+    confirmLiveTrade: boolean = false
+  ): Promise<PlaceOrderResponse> {
+    return this.placeOrder(mode, {
+      symbol,
+      qty,
+      side: 'sell',
+      order_type: 'market',
+    }, confirmLiveTrade);
+  }
+
+  /**
+   * Get backtest results list
+   */
+  async getBacktestResults(limit: number = 50): Promise<BacktestResultSummary[]> {
+    return this.fetchJson<BacktestResultSummary[]>(`${API_BASE_URL}/backtest/results?limit=${limit}`);
+  }
+
+  /**
+   * Get detailed backtest result by run_id
+   */
+  async getBacktestResultDetail(runId: string): Promise<BacktestResultDetail> {
+    return this.fetchJson<BacktestResultDetail>(`${API_BASE_URL}/backtest/results/${runId}`);
+  }
+
+  /**
+   * Clear all trading data (for fresh start)
+   */
+  async clearAllTradingData(confirm: boolean = false): Promise<{ status: string; message: string }> {
+    return this.fetchJson<{ status: string; message: string }>(
+      `${API_BASE_URL}/data/clear?confirm=${confirm}`,
+      { method: 'POST' }
+    );
+  }
 }
 
 export const apiClient = new ApiClient();
@@ -804,4 +1096,128 @@ export interface PaperResetResponse {
   account_id: string;
   initial_balance: number;
   timestamp: string;
+}
+
+// ============================================================================
+// Trade Analytics Interfaces (Phase G)
+// ============================================================================
+
+/**
+ * OHLCV candle data for charts
+ */
+export interface ChartCandleData {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+/**
+ * Indicator values at each candle
+ */
+export interface IndicatorData {
+  time: number;
+  kama: number | null;
+  atr_upper: number | null;
+  atr_lower: number | null;
+}
+
+/**
+ * Trade chart data response
+ */
+export interface TradeChartDataResponse {
+  trade: TradeResponse;
+  candles: ChartCandleData[];
+  indicators: IndicatorData[];
+  entry_index: number;
+  exit_index: number | null;
+}
+
+/**
+ * Daily trade breakdown
+ */
+export interface DailyTradeBreakdown {
+  date: string;
+  trades: TradeResponse[];
+  trade_count: number;
+  realized_pnl: number;
+  win_count: number;
+  loss_count: number;
+  daily_return_pct: number;
+}
+
+/**
+ * Summary totals across all trades
+ */
+export interface TotalsSummary {
+  closed_count: number;
+  open_count: number;
+  realized_pnl: number;
+  unrealized_pnl: number;
+  total_pnl: number;
+  total_return_pct: number;
+  win_rate: number;
+}
+
+/**
+ * Daily summary response
+ */
+export interface DailySummaryResponse {
+  daily_groups: DailyTradeBreakdown[];
+  totals: TotalsSummary;
+  open_positions: PositionResponse[];
+}
+
+/**
+ * Equity curve point
+ */
+export interface EquityCurvePoint {
+  date: string;
+  equity: number;
+  benchmark_equity: number;
+  daily_pnl: number;
+  cumulative_pnl: number;
+  cumulative_return_pct: number;
+  benchmark_return_pct: number;
+}
+
+/**
+ * Risk-adjusted performance metrics
+ */
+export interface RiskMetrics {
+  sharpe_ratio: number;
+  sortino_ratio: number;
+  calmar_ratio: number;
+  max_drawdown: number;
+  max_drawdown_pct: number;
+  win_rate: number;
+  profit_factor: number;
+  avg_win: number;
+  avg_loss: number;
+}
+
+/**
+ * Daily P&L breakdown
+ */
+export interface DailyBreakdown {
+  date: string;
+  pnl: number;
+  return_pct: number;
+  trade_count: number;
+  cumulative_pnl: number;
+}
+
+/**
+ * Live analysis response
+ */
+export interface LiveAnalysisResponse {
+  equity_curve: EquityCurvePoint[];
+  risk_metrics: RiskMetrics;
+  daily_breakdown: DailyBreakdown[];
+  initial_capital: number;
+  current_equity: number;
+  benchmark_symbol: string;
+  trading_days: number;
 }

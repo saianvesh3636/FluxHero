@@ -28,7 +28,7 @@ import os
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -52,6 +52,9 @@ from backend.core.config import get_settings
 from backend.storage.sqlite_store import (
     SQLiteStore,
     TradeStatus,
+    TradingMode,
+    ModeState,
+    BacktestResult,
 )
 
 if TYPE_CHECKING:
@@ -150,6 +153,89 @@ class SystemStatusResponse(BaseModel):
     websocket_connected: bool
     data_feed_active: bool
     message: str = ""
+
+
+# ============================================================================
+# Mode Management Models
+# ============================================================================
+
+
+class ModeStateResponse(BaseModel):
+    """Response model for trading mode state"""
+
+    active_mode: str  # "live" or "paper"
+    last_mode_change: str | None
+    paper_balance: float
+    paper_realized_pnl: float
+    is_live_broker_configured: bool
+
+
+class SwitchModeRequest(BaseModel):
+    """Request to switch trading mode"""
+
+    mode: str = Field(..., description="Target mode: 'live' or 'paper'")
+    confirm_live: bool = Field(default=False, description="Must be True to switch to live")
+
+
+class PlaceOrderRequest(BaseModel):
+    """Request to place an order"""
+
+    symbol: str
+    qty: int
+    side: str = Field(..., description="'buy' or 'sell'")
+    order_type: str = Field(default="market", description="'market' or 'limit'")
+    limit_price: float | None = None
+
+
+class PlaceOrderResponse(BaseModel):
+    """Response for placed order"""
+
+    order_id: str
+    symbol: str
+    qty: int
+    side: str
+    status: str
+    filled_price: float | None
+    mode: str
+
+
+class BacktestResultSummaryResponse(BaseModel):
+    """Summary response for backtest results list"""
+
+    id: int | None
+    run_id: str
+    symbol: str
+    strategy_mode: str
+    start_date: str
+    end_date: str
+    total_return_pct: float | None
+    sharpe_ratio: float | None
+    max_drawdown_pct: float | None
+    win_rate: float | None
+    num_trades: int | None
+    created_at: str
+
+
+class BacktestResultDetailResponse(BaseModel):
+    """Detailed response for a single backtest result"""
+
+    id: int | None
+    run_id: str
+    symbol: str
+    strategy_mode: str
+    start_date: str
+    end_date: str
+    initial_capital: float
+    final_equity: float
+    total_return_pct: float | None
+    sharpe_ratio: float | None
+    max_drawdown_pct: float | None
+    win_rate: float | None
+    num_trades: int | None
+    equity_curve_json: str | None
+    trades_json: str | None
+    config_json: str | None
+    created_at: str
 
 
 class BacktestRequest(BaseModel):
@@ -300,6 +386,121 @@ class WalkForwardResponse(BaseModel):
     # Configuration used
     train_bars: int
     test_bars: int
+
+
+# ============================================================================
+# Trade Analytics Response Models (Phase G)
+# ============================================================================
+
+
+class CandleData(BaseModel):
+    """OHLCV candle data for charts"""
+
+    time: int  # Unix timestamp in seconds
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int = 0
+
+
+class IndicatorData(BaseModel):
+    """Indicator values at each candle"""
+
+    time: int
+    kama: float | None = None
+    atr_upper: float | None = None
+    atr_lower: float | None = None
+
+
+class TradeChartDataResponse(BaseModel):
+    """Response for trade chart data with candles and indicators"""
+
+    trade: TradeResponse
+    candles: list[CandleData]
+    indicators: list[IndicatorData]
+    entry_index: int
+    exit_index: int | None
+
+
+class DailyTradeBreakdown(BaseModel):
+    """Trades grouped by date with aggregated metrics"""
+
+    date: str  # YYYY-MM-DD
+    trades: list[TradeResponse]
+    trade_count: int
+    realized_pnl: float
+    win_count: int
+    loss_count: int
+    daily_return_pct: float
+
+
+class TotalsSummary(BaseModel):
+    """Summary totals across all trades"""
+
+    closed_count: int
+    open_count: int
+    realized_pnl: float
+    unrealized_pnl: float
+    total_pnl: float
+    total_return_pct: float
+    win_rate: float
+
+
+class DailySummaryResponse(BaseModel):
+    """Response for daily trade summary with grouping"""
+
+    daily_groups: list[DailyTradeBreakdown]
+    totals: TotalsSummary
+    open_positions: list[PositionResponse]
+
+
+class EquityCurvePoint(BaseModel):
+    """Single point on equity curve"""
+
+    date: str  # YYYY-MM-DD
+    equity: float
+    benchmark_equity: float
+    daily_pnl: float
+    cumulative_pnl: float
+    cumulative_return_pct: float
+    benchmark_return_pct: float
+
+
+class RiskMetrics(BaseModel):
+    """Risk-adjusted performance metrics"""
+
+    sharpe_ratio: float
+    sortino_ratio: float
+    calmar_ratio: float
+    max_drawdown: float
+    max_drawdown_pct: float
+    win_rate: float
+    profit_factor: float
+    avg_win: float
+    avg_loss: float
+
+
+class DailyBreakdown(BaseModel):
+    """Daily P&L breakdown for analysis"""
+
+    date: str
+    pnl: float
+    return_pct: float
+    trade_count: int
+    cumulative_pnl: float
+
+
+class LiveAnalysisResponse(BaseModel):
+    """Response for live trading analysis dashboard"""
+
+    equity_curve: list[EquityCurvePoint]
+    risk_metrics: RiskMetrics
+    daily_breakdown: list[DailyBreakdown]
+    initial_capital: float
+    current_equity: float
+    benchmark_symbol: str
+    trading_days: int
 
 
 # ============================================================================
@@ -1753,6 +1954,534 @@ async def get_test_candles(
     return app_state.test_data[symbol_upper]
 
 
+# ============================================================================
+# Mode Management Endpoints
+# ============================================================================
+
+
+def _is_live_broker_configured() -> bool:
+    """Check if live broker credentials are configured."""
+    settings = get_settings()
+    return bool(settings.alpaca_api_key and settings.alpaca_api_secret)
+
+
+@app.get("/api/mode", response_model=ModeStateResponse)
+async def get_mode_state():
+    """
+    Get the current trading mode state.
+
+    Returns:
+    - active_mode: 'live' or 'paper'
+    - last_mode_change: timestamp of last mode change
+    - paper_balance: current paper trading balance
+    - paper_realized_pnl: total realized P&L in paper mode
+    - is_live_broker_configured: whether live broker is available
+    """
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    mode_state = await app_state.sqlite_store.get_mode_state()
+
+    return ModeStateResponse(
+        active_mode=mode_state.active_mode,
+        last_mode_change=mode_state.last_mode_change,
+        paper_balance=mode_state.paper_balance,
+        paper_realized_pnl=mode_state.paper_realized_pnl,
+        is_live_broker_configured=_is_live_broker_configured(),
+    )
+
+
+@app.post("/api/mode", response_model=ModeStateResponse)
+async def switch_mode(request: SwitchModeRequest):
+    """
+    Switch trading mode between live and paper.
+
+    Requirements:
+    - To switch to live mode, confirm_live must be True
+    - Live broker must be configured to switch to live mode
+
+    Raises:
+    - 400: Invalid mode or confirmation not provided
+    - 503: Database not initialized
+    """
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    # Validate mode
+    if request.mode not in ("live", "paper"):
+        raise HTTPException(status_code=400, detail="Mode must be 'live' or 'paper'")
+
+    target_mode = TradingMode.LIVE if request.mode == "live" else TradingMode.PAPER
+
+    # Safety check for live mode
+    if target_mode == TradingMode.LIVE:
+        if not request.confirm_live:
+            raise HTTPException(
+                status_code=400,
+                detail="Live mode requires explicit confirmation (confirm_live=true)",
+            )
+        if not _is_live_broker_configured():
+            raise HTTPException(
+                status_code=400,
+                detail="Live broker is not configured. Add broker credentials first.",
+            )
+
+    # Switch mode
+    await app_state.sqlite_store.set_active_mode(target_mode)
+    logger.info(f"Trading mode switched to {target_mode.value}")
+
+    # Return updated state
+    mode_state = await app_state.sqlite_store.get_mode_state()
+
+    return ModeStateResponse(
+        active_mode=mode_state.active_mode,
+        last_mode_change=mode_state.last_mode_change,
+        paper_balance=mode_state.paper_balance,
+        paper_realized_pnl=mode_state.paper_realized_pnl,
+        is_live_broker_configured=_is_live_broker_configured(),
+    )
+
+
+# ============================================================================
+# Mode-Specific Endpoints: Positions
+# ============================================================================
+
+
+@app.get("/api/live/positions", response_model=list[PositionResponse])
+async def get_live_positions():
+    """Get all positions from live trading."""
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    positions = await app_state.sqlite_store.get_positions_for_mode(TradingMode.LIVE)
+
+    return [
+        PositionResponse(
+            id=pos.id,
+            symbol=pos.symbol,
+            side=pos.side,
+            shares=pos.shares,
+            entry_price=pos.entry_price,
+            current_price=pos.current_price,
+            unrealized_pnl=pos.unrealized_pnl,
+            stop_loss=pos.stop_loss,
+            take_profit=pos.take_profit,
+            entry_time=pos.entry_time,
+            updated_at=pos.updated_at,
+        )
+        for pos in positions
+    ]
+
+
+@app.get("/api/paper/positions", response_model=list[PositionResponse])
+async def get_paper_positions():
+    """Get all positions from paper trading."""
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    positions = await app_state.sqlite_store.get_positions_for_mode(TradingMode.PAPER)
+
+    return [
+        PositionResponse(
+            id=pos.id,
+            symbol=pos.symbol,
+            side=pos.side,
+            shares=pos.shares,
+            entry_price=pos.entry_price,
+            current_price=pos.current_price,
+            unrealized_pnl=pos.unrealized_pnl,
+            stop_loss=pos.stop_loss,
+            take_profit=pos.take_profit,
+            entry_time=pos.entry_time,
+            updated_at=pos.updated_at,
+        )
+        for pos in positions
+    ]
+
+
+# ============================================================================
+# Mode-Specific Endpoints: Trades
+# ============================================================================
+
+
+@app.get("/api/live/trades", response_model=TradeHistoryResponse)
+async def get_live_trades(
+    page: int = Query(default=1, ge=1, description="Page number"),
+    page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
+):
+    """Get trade history from live trading with pagination."""
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    trades, total_count = await app_state.sqlite_store.get_trades_paginated_for_mode(
+        TradingMode.LIVE, page, page_size
+    )
+    total_pages = (total_count + page_size - 1) // page_size
+
+    return TradeHistoryResponse(
+        trades=[
+            TradeResponse(
+                id=t.id,
+                symbol=t.symbol,
+                side=t.side,
+                entry_price=t.entry_price,
+                exit_price=t.exit_price,
+                entry_time=t.entry_time,
+                exit_time=t.exit_time,
+                shares=t.shares,
+                realized_pnl=t.realized_pnl,
+                status=t.status,
+                strategy=t.strategy or "",
+                regime=t.regime or "",
+                signal_reason=t.signal_reason or "",
+                stop_loss=t.stop_loss,
+                take_profit=t.take_profit,
+            )
+            for t in trades
+        ],
+        total_count=total_count,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
+
+
+@app.get("/api/paper/trades", response_model=TradeHistoryResponse)
+async def get_paper_trades(
+    page: int = Query(default=1, ge=1, description="Page number"),
+    page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
+):
+    """Get trade history from paper trading with pagination."""
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    trades, total_count = await app_state.sqlite_store.get_trades_paginated_for_mode(
+        TradingMode.PAPER, page, page_size
+    )
+    total_pages = (total_count + page_size - 1) // page_size
+
+    return TradeHistoryResponse(
+        trades=[
+            TradeResponse(
+                id=t.id,
+                symbol=t.symbol,
+                side=t.side,
+                entry_price=t.entry_price,
+                exit_price=t.exit_price,
+                entry_time=t.entry_time,
+                exit_time=t.exit_time,
+                shares=t.shares,
+                realized_pnl=t.realized_pnl,
+                status=t.status,
+                strategy=t.strategy or "",
+                regime=t.regime or "",
+                signal_reason=t.signal_reason or "",
+                stop_loss=t.stop_loss,
+                take_profit=t.take_profit,
+            )
+            for t in trades
+        ],
+        total_count=total_count,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
+
+
+# ============================================================================
+# Mode-Specific Endpoints: Account
+# ============================================================================
+
+
+@app.get("/api/live/account", response_model=AccountInfoResponse)
+async def get_live_account():
+    """Get account info for live trading."""
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    # Get positions and trades for live mode
+    positions = await app_state.sqlite_store.get_positions_for_mode(TradingMode.LIVE)
+    trades, _ = await app_state.sqlite_store.get_trades_paginated_for_mode(
+        TradingMode.LIVE, page=1, page_size=1000
+    )
+
+    # Calculate metrics
+    total_unrealized = sum(p.unrealized_pnl for p in positions)
+    total_realized = sum(t.realized_pnl or 0 for t in trades if t.status == TradeStatus.CLOSED)
+
+    # For live account, we'd normally get this from the broker
+    # For now, use a placeholder - in production this would query the broker
+    initial_equity = 100000.0  # Placeholder
+    current_equity = initial_equity + total_realized + total_unrealized
+
+    return AccountInfoResponse(
+        equity=current_equity,
+        cash=current_equity - sum(p.current_price * p.shares for p in positions),
+        buying_power=current_equity * 2,  # Assume 2x margin
+        total_pnl=total_realized + total_unrealized,
+        daily_pnl=total_unrealized,  # Simplified - would need proper daily tracking
+        num_positions=len(positions),
+    )
+
+
+@app.get("/api/paper/account", response_model=AccountInfoResponse)
+async def get_paper_account_info():
+    """Get account info for paper trading."""
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    # Get mode state for paper balance
+    mode_state = await app_state.sqlite_store.get_mode_state()
+
+    # Get positions and calculate unrealized P&L
+    positions = await app_state.sqlite_store.get_positions_for_mode(TradingMode.PAPER)
+    total_unrealized = sum(p.unrealized_pnl for p in positions)
+    position_value = sum(p.current_price * p.shares for p in positions)
+
+    current_equity = mode_state.paper_balance + total_unrealized
+
+    return AccountInfoResponse(
+        equity=current_equity,
+        cash=mode_state.paper_balance - position_value,
+        buying_power=(mode_state.paper_balance - position_value) * 2,
+        total_pnl=mode_state.paper_realized_pnl + total_unrealized,
+        daily_pnl=total_unrealized,
+        num_positions=len(positions),
+    )
+
+
+# ============================================================================
+# Mode-Specific Endpoints: Order Placement
+# ============================================================================
+
+
+@app.post("/api/paper/orders", response_model=PlaceOrderResponse)
+async def place_paper_order(request: PlaceOrderRequest):
+    """
+    Place an order in paper trading mode.
+
+    Executes via PaperBroker for simulated trading.
+
+    Args:
+        request: Order details (symbol, qty, side, order_type, limit_price)
+
+    Returns:
+        PlaceOrderResponse with order execution details
+    """
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    try:
+        from backend.execution.broker_base import OrderSide, OrderType
+
+        # Get paper broker
+        paper_broker = await _get_paper_broker()
+
+        # Parse side
+        side = OrderSide.BUY if request.side.lower() == "buy" else OrderSide.SELL
+
+        # Parse order type
+        order_type = OrderType.MARKET
+        if request.order_type.lower() == "limit":
+            order_type = OrderType.LIMIT
+
+        # Place the order
+        order = await paper_broker.place_order(
+            symbol=request.symbol.upper(),
+            qty=request.qty,
+            side=side,
+            order_type=order_type,
+            limit_price=request.limit_price,
+        )
+
+        # Return response
+        return PlaceOrderResponse(
+            order_id=order.order_id,
+            symbol=order.symbol,
+            qty=order.qty,
+            side=request.side.lower(),
+            status=order.status.name.lower(),
+            filled_price=order.filled_price,
+            mode="paper",
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to place paper order: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to place order: {str(e)}")
+
+
+@app.post("/api/live/orders", response_model=PlaceOrderResponse)
+async def place_live_order(
+    request: PlaceOrderRequest,
+    x_confirm_live_trade: str | None = Header(default=None, alias="X-Confirm-Live-Trade"),
+):
+    """
+    Place an order in live trading mode.
+
+    CAUTION: This places real orders with real money.
+    Requires X-Confirm-Live-Trade: true header for safety.
+
+    Args:
+        request: Order details (symbol, qty, side, order_type, limit_price)
+        x_confirm_live_trade: Safety header - must be "true" to execute
+
+    Returns:
+        PlaceOrderResponse with order execution details
+    """
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    # Safety check - require explicit confirmation header
+    if x_confirm_live_trade != "true":
+        raise HTTPException(
+            status_code=400,
+            detail="Live trading requires X-Confirm-Live-Trade: true header"
+        )
+
+    # Check if live broker is configured
+    if not app_state.broker:
+        raise HTTPException(
+            status_code=503,
+            detail="Live broker not configured. Please configure broker in settings."
+        )
+
+    try:
+        from backend.execution.broker_base import OrderSide, OrderType
+
+        # Parse side
+        side = OrderSide.BUY if request.side.lower() == "buy" else OrderSide.SELL
+
+        # Parse order type
+        order_type = OrderType.MARKET
+        if request.order_type.lower() == "limit":
+            order_type = OrderType.LIMIT
+
+        # Place the order via live broker
+        order = await app_state.broker.place_order(
+            symbol=request.symbol.upper(),
+            qty=request.qty,
+            side=side,
+            order_type=order_type,
+            limit_price=request.limit_price,
+        )
+
+        # Return response
+        return PlaceOrderResponse(
+            order_id=order.order_id,
+            symbol=order.symbol,
+            qty=order.qty,
+            side=request.side.lower(),
+            status=order.status.name.lower(),
+            filled_price=order.filled_price,
+            mode="live",
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to place live order: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to place order: {str(e)}")
+
+
+# ============================================================================
+# Backtest Results Endpoints
+# ============================================================================
+
+
+@app.get("/api/backtest/results", response_model=list[BacktestResultSummaryResponse])
+async def get_backtest_results(
+    limit: int = Query(default=50, ge=1, le=200, description="Max results to return"),
+):
+    """Get list of backtest results (for viewing in paper mode)."""
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    results = await app_state.sqlite_store.get_backtest_results(limit=limit)
+
+    return [
+        BacktestResultSummaryResponse(
+            id=r.id,
+            run_id=r.run_id,
+            symbol=r.symbol,
+            strategy_mode=r.strategy_mode,
+            start_date=r.start_date,
+            end_date=r.end_date,
+            total_return_pct=r.total_return_pct,
+            sharpe_ratio=r.sharpe_ratio,
+            max_drawdown_pct=r.max_drawdown_pct,
+            win_rate=r.win_rate,
+            num_trades=r.num_trades,
+            created_at=r.created_at,
+        )
+        for r in results
+    ]
+
+
+@app.get("/api/backtest/results/{run_id}", response_model=BacktestResultDetailResponse)
+async def get_backtest_result_detail(run_id: str):
+    """Get detailed backtest result by run_id."""
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    result = await app_state.sqlite_store.get_backtest_result(run_id)
+
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Backtest result not found: {run_id}")
+
+    return BacktestResultDetailResponse(
+        id=result.id,
+        run_id=result.run_id,
+        symbol=result.symbol,
+        strategy_mode=result.strategy_mode,
+        start_date=result.start_date,
+        end_date=result.end_date,
+        initial_capital=result.initial_capital,
+        final_equity=result.final_equity,
+        total_return_pct=result.total_return_pct,
+        sharpe_ratio=result.sharpe_ratio,
+        max_drawdown_pct=result.max_drawdown_pct,
+        win_rate=result.win_rate,
+        num_trades=result.num_trades,
+        equity_curve_json=result.equity_curve_json,
+        trades_json=result.trades_json,
+        config_json=result.config_json,
+        created_at=result.created_at,
+    )
+
+
+# ============================================================================
+# Data Management Endpoint
+# ============================================================================
+
+
+@app.post("/api/data/clear")
+async def clear_all_trading_data(
+    confirm: bool = Query(default=False, description="Must be true to confirm data deletion"),
+):
+    """
+    Clear all trading data for fresh start.
+    This removes all trades, positions, and backtest results.
+    Resets paper balance to default.
+
+    WARNING: This action is irreversible!
+    """
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    if not confirm:
+        raise HTTPException(
+            status_code=400,
+            detail="Must confirm data deletion with confirm=true",
+        )
+
+    await app_state.sqlite_store.clear_all_trading_data()
+    logger.warning("All trading data cleared by user request")
+
+    return {"status": "success", "message": "All trading data has been cleared"}
+
+
 @app.get("/health")
 async def health_check():
     """
@@ -2346,64 +3075,8 @@ async def _get_paper_broker() -> "PaperBroker":
     return _paper_broker
 
 
-@app.get("/api/paper/account", response_model=PaperAccountResponse)
-async def get_paper_account():
-    """
-    Get paper trading account information.
-
-    Returns current account balance, buying power, equity, positions,
-    and P&L metrics. This endpoint uses the same response format as
-    live broker account endpoints for UI compatibility.
-
-    Returns:
-        PaperAccountResponse: Account balance, positions, and P&L data
-    """
-    try:
-        paper_broker = await _get_paper_broker()
-
-        # Get account info
-        account = await paper_broker.get_account()
-
-        # Get positions
-        positions = await paper_broker.get_positions()
-
-        # Get P&L
-        realized_pnl = await paper_broker.get_realized_pnl()
-        unrealized_pnl = await paper_broker.get_unrealized_pnl()
-
-        # Build position responses
-        position_responses = [
-            PaperPositionResponse(
-                symbol=pos.symbol,
-                qty=pos.qty,
-                entry_price=pos.entry_price,
-                current_price=pos.current_price,
-                market_value=pos.market_value,
-                unrealized_pnl=pos.unrealized_pnl,
-                cost_basis=pos.entry_price * pos.qty,
-            )
-            for pos in positions
-        ]
-
-        app_state.update_timestamp()
-
-        return PaperAccountResponse(
-            account_id=account.account_id,
-            balance=account.balance,
-            buying_power=account.buying_power,
-            equity=account.equity,
-            cash=account.cash,
-            positions_value=account.positions_value,
-            realized_pnl=realized_pnl,
-            unrealized_pnl=unrealized_pnl,
-            positions=position_responses,
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get paper account: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get paper account: {str(e)}")
+# Note: /api/paper/account is defined in Mode-Specific Endpoints section
+# using AccountInfoResponse for consistency with /api/live/account
 
 
 @app.post("/api/paper/reset", response_model=PaperResetResponse)
@@ -2485,6 +3158,570 @@ async def get_paper_trades():
     except Exception as e:
         logger.error(f"Failed to get paper trades: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get paper trades: {str(e)}")
+
+
+# ============================================================================
+# Trade Analytics Endpoints (Phase G)
+# ============================================================================
+
+
+@app.get("/api/trades/{trade_id}/chart-data", response_model=TradeChartDataResponse)
+async def get_trade_chart_data(trade_id: int):
+    """
+    Get chart data for a specific trade.
+
+    Returns the trade details along with candles before/after the trade
+    and indicator overlays (KAMA, ATR bands).
+
+    Args:
+        trade_id: The trade ID to fetch chart data for
+
+    Returns:
+        TradeChartDataResponse with candles, indicators, and trade info
+    """
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    # Fetch the trade
+    all_trades = await app_state.sqlite_store.get_recent_trades(limit=1000)
+    trade = next((t for t in all_trades if t.id == trade_id), None)
+
+    if not trade:
+        raise HTTPException(status_code=404, detail=f"Trade {trade_id} not found")
+
+    # Convert trade to response model
+    trade_response = TradeResponse(
+        id=trade.id,
+        symbol=trade.symbol,
+        side=trade.side,
+        entry_price=trade.entry_price,
+        entry_time=trade.entry_time,
+        exit_price=trade.exit_price,
+        exit_time=trade.exit_time,
+        shares=trade.shares,
+        stop_loss=trade.stop_loss,
+        take_profit=trade.take_profit,
+        realized_pnl=trade.realized_pnl,
+        status=trade.status,
+        strategy=trade.strategy,
+        regime=trade.regime,
+        signal_reason=trade.signal_reason,
+    )
+
+    # Parse entry/exit times
+    from datetime import timedelta
+
+    try:
+        entry_dt = datetime.fromisoformat(trade.entry_time.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        entry_dt = datetime.now() - timedelta(days=7)
+
+    exit_dt = None
+    if trade.exit_time:
+        try:
+            exit_dt = datetime.fromisoformat(trade.exit_time.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            pass
+
+    # Calculate date range: 50 candles before entry, 20 after exit (or current)
+    candles_before = 50
+    candles_after = 20
+    start_date = (entry_dt - timedelta(days=candles_before + 10)).strftime("%Y-%m-%d")
+    end_date = (
+        (exit_dt or datetime.now()) + timedelta(days=candles_after + 10)
+    ).strftime("%Y-%m-%d")
+
+    # Fetch historical data
+    candles: list[CandleData] = []
+    indicators: list[IndicatorData] = []
+
+    try:
+        from backend.data.yahoo_provider import YahooDataProvider
+
+        provider = YahooDataProvider()
+        hist_data = await provider.fetch_historical_data(
+            trade.symbol, start_date, end_date, interval="1d"
+        )
+
+        if hist_data and hist_data.bars:
+            import numpy as np
+            from backend.computation.adaptive_ema import compute_kama
+            from backend.computation.volatility import compute_atr
+
+            closes = np.array([bar.close for bar in hist_data.bars], dtype=np.float64)
+            highs = np.array([bar.high for bar in hist_data.bars], dtype=np.float64)
+            lows = np.array([bar.low for bar in hist_data.bars], dtype=np.float64)
+
+            # Compute indicators
+            kama_values = compute_kama(closes, period=10, fast_span=2, slow_span=30)
+            atr_values = compute_atr(highs, lows, closes, period=14)
+
+            for i, bar in enumerate(hist_data.bars):
+                timestamp = int(
+                    datetime.strptime(hist_data.dates[i], "%Y-%m-%d").timestamp()
+                )
+                candles.append(
+                    CandleData(
+                        time=timestamp,
+                        open=bar.open,
+                        high=bar.high,
+                        low=bar.low,
+                        close=bar.close,
+                        volume=bar.volume,
+                    )
+                )
+
+                kama = float(kama_values[i]) if not np.isnan(kama_values[i]) else None
+                atr = float(atr_values[i]) if not np.isnan(atr_values[i]) else None
+
+                indicators.append(
+                    IndicatorData(
+                        time=timestamp,
+                        kama=kama,
+                        atr_upper=kama + (atr * 2.5) if kama and atr else None,
+                        atr_lower=kama - (atr * 2.5) if kama and atr else None,
+                    )
+                )
+
+    except Exception as e:
+        logger.warning(f"Failed to fetch chart data for {trade.symbol}: {e}")
+
+    # Find entry/exit indices in the candle array
+    entry_ts = int(entry_dt.timestamp())
+    exit_ts = int(exit_dt.timestamp()) if exit_dt else None
+
+    entry_index = 0
+    exit_index = None
+
+    for i, candle in enumerate(candles):
+        if candle.time <= entry_ts:
+            entry_index = i
+        if exit_ts and candle.time <= exit_ts:
+            exit_index = i
+
+    app_state.update_timestamp()
+
+    return TradeChartDataResponse(
+        trade=trade_response,
+        candles=candles,
+        indicators=indicators,
+        entry_index=entry_index,
+        exit_index=exit_index,
+    )
+
+
+async def _get_daily_summary_for_mode(
+    mode: TradingMode,
+    days: int = 30
+) -> DailySummaryResponse:
+    """
+    Internal helper to get daily summary for a specific trading mode.
+
+    Args:
+        mode: TradingMode.LIVE or TradingMode.PAPER
+        days: Number of days of history to include
+
+    Returns:
+        DailySummaryResponse with daily groups and totals
+    """
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    # Fetch trades and positions for the specified mode
+    trades_result = await app_state.sqlite_store.get_trades_paginated_for_mode(
+        mode, page=1, page_size=1000
+    )
+    all_trades = trades_result[0]  # (trades, total_count)
+    positions = await app_state.sqlite_store.get_positions_for_mode(mode)
+
+    # Filter to closed trades within date range
+    cutoff_date = datetime.now() - timedelta(days=days)
+    closed_trades = []
+    open_trades = []
+
+    for trade in all_trades:
+        if trade.status == TradeStatus.CLOSED:
+            try:
+                exit_dt = datetime.fromisoformat(
+                    trade.exit_time.replace("Z", "+00:00")
+                ) if trade.exit_time else None
+                if exit_dt and exit_dt >= cutoff_date:
+                    closed_trades.append(trade)
+            except (ValueError, AttributeError):
+                pass
+        elif trade.status == TradeStatus.OPEN:
+            open_trades.append(trade)
+
+    # Group by date
+    from collections import defaultdict
+
+    daily_map: dict[str, list] = defaultdict(list)
+
+    for trade in closed_trades:
+        try:
+            exit_dt = datetime.fromisoformat(trade.exit_time.replace("Z", "+00:00"))
+            date_key = exit_dt.strftime("%Y-%m-%d")
+            daily_map[date_key].append(trade)
+        except (ValueError, AttributeError):
+            pass
+
+    # Build daily groups
+    daily_groups: list[DailyTradeBreakdown] = []
+    total_realized = 0.0
+    total_wins = 0
+    total_losses = 0
+
+    for date_key in sorted(daily_map.keys(), reverse=True):
+        trades_on_day = daily_map[date_key]
+        day_pnl = sum(t.realized_pnl or 0 for t in trades_on_day)
+        wins = sum(1 for t in trades_on_day if (t.realized_pnl or 0) > 0)
+        losses = sum(1 for t in trades_on_day if (t.realized_pnl or 0) < 0)
+
+        total_realized += day_pnl
+        total_wins += wins
+        total_losses += losses
+
+        trade_responses = [
+            TradeResponse(
+                id=t.id,
+                symbol=t.symbol,
+                side=t.side,
+                entry_price=t.entry_price,
+                entry_time=t.entry_time,
+                exit_price=t.exit_price,
+                exit_time=t.exit_time,
+                shares=t.shares,
+                stop_loss=t.stop_loss,
+                take_profit=t.take_profit,
+                realized_pnl=t.realized_pnl,
+                status=t.status,
+                strategy=t.strategy,
+                regime=t.regime,
+                signal_reason=t.signal_reason,
+            )
+            for t in trades_on_day
+        ]
+
+        daily_groups.append(
+            DailyTradeBreakdown(
+                date=date_key,
+                trades=trade_responses,
+                trade_count=len(trades_on_day),
+                realized_pnl=day_pnl,
+                win_count=wins,
+                loss_count=losses,
+                daily_return_pct=0.0,  # Would need account equity to calculate
+            )
+        )
+
+    # Calculate unrealized P&L from positions
+    unrealized_pnl = sum(p.unrealized_pnl for p in positions)
+
+    # Build position responses
+    position_responses = [
+        PositionResponse(
+            id=p.id,
+            symbol=p.symbol,
+            side=p.side,
+            shares=p.shares,
+            entry_price=p.entry_price,
+            current_price=p.current_price,
+            unrealized_pnl=p.unrealized_pnl,
+            stop_loss=p.stop_loss,
+            take_profit=p.take_profit,
+            entry_time=p.entry_time,
+            updated_at=p.updated_at,
+        )
+        for p in positions
+    ]
+
+    # Calculate totals
+    total_count = total_wins + total_losses
+    win_rate = (total_wins / total_count * 100) if total_count > 0 else 0.0
+
+    totals = TotalsSummary(
+        closed_count=len(closed_trades),
+        open_count=len(open_trades),
+        realized_pnl=total_realized,
+        unrealized_pnl=unrealized_pnl,
+        total_pnl=total_realized + unrealized_pnl,
+        total_return_pct=0.0,  # Would need initial capital to calculate
+        win_rate=win_rate,
+    )
+
+    app_state.update_timestamp()
+
+    return DailySummaryResponse(
+        daily_groups=daily_groups,
+        totals=totals,
+        open_positions=position_responses,
+    )
+
+
+@app.get("/api/live/daily-summary", response_model=DailySummaryResponse)
+async def get_live_daily_summary(
+    days: int = Query(default=30, ge=1, le=365, description="Number of days to include")
+):
+    """
+    Get LIVE trades grouped by date with aggregated daily metrics.
+
+    Returns daily trade groups with P&L, win/loss counts, and totals.
+    Also includes current open positions for live trading.
+
+    Args:
+        days: Number of days of history to include (default 30)
+
+    Returns:
+        DailySummaryResponse with daily groups and totals
+    """
+    return await _get_daily_summary_for_mode(TradingMode.LIVE, days)
+
+
+@app.get("/api/paper/daily-summary", response_model=DailySummaryResponse)
+async def get_paper_daily_summary(
+    days: int = Query(default=30, ge=1, le=365, description="Number of days to include")
+):
+    """
+    Get PAPER trades grouped by date with aggregated daily metrics.
+
+    Returns daily trade groups with P&L, win/loss counts, and totals.
+    Also includes current open positions for paper trading.
+
+    Args:
+        days: Number of days of history to include (default 30)
+
+    Returns:
+        DailySummaryResponse with daily groups and totals
+    """
+    return await _get_daily_summary_for_mode(TradingMode.PAPER, days)
+
+
+async def _get_analysis_for_mode(
+    mode: TradingMode,
+    benchmark: str = "VTI"
+) -> LiveAnalysisResponse:
+    """
+    Internal helper to get trading analysis for a specific mode.
+
+    Args:
+        mode: TradingMode.LIVE or TradingMode.PAPER
+        benchmark: Symbol to use as benchmark
+
+    Returns:
+        LiveAnalysisResponse with comprehensive analysis data
+    """
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    # Fetch trades and positions for the specified mode
+    trades_result = await app_state.sqlite_store.get_trades_paginated_for_mode(
+        mode, page=1, page_size=1000
+    )
+    all_trades = trades_result[0]
+    positions = await app_state.sqlite_store.get_positions_for_mode(mode)
+
+    # Get closed trades sorted by exit time
+    closed_trades = [t for t in all_trades if t.status == TradeStatus.CLOSED]
+    closed_trades.sort(
+        key=lambda t: t.exit_time or "", reverse=False
+    )
+
+    # Assume initial capital (could be stored in config)
+    initial_capital = 10000.0
+
+    # Build equity curve from trades
+    equity_curve: list[EquityCurvePoint] = []
+    daily_breakdown: list[DailyBreakdown] = []
+
+    if closed_trades:
+        from collections import defaultdict
+
+        # Group trades by date
+        daily_pnls: dict[str, float] = defaultdict(float)
+        daily_counts: dict[str, int] = defaultdict(int)
+
+        for trade in closed_trades:
+            try:
+                exit_dt = datetime.fromisoformat(trade.exit_time.replace("Z", "+00:00"))
+                date_key = exit_dt.strftime("%Y-%m-%d")
+                daily_pnls[date_key] += trade.realized_pnl or 0
+                daily_counts[date_key] += 1
+            except (ValueError, AttributeError):
+                pass
+
+        # Build equity curve
+        sorted_dates = sorted(daily_pnls.keys())
+        cumulative_pnl = 0.0
+
+        for date_key in sorted_dates:
+            cumulative_pnl += daily_pnls[date_key]
+            equity = initial_capital + cumulative_pnl
+            return_pct = (cumulative_pnl / initial_capital) * 100
+
+            equity_curve.append(
+                EquityCurvePoint(
+                    date=date_key,
+                    equity=equity,
+                    benchmark_equity=initial_capital,  # Placeholder
+                    daily_pnl=daily_pnls[date_key],
+                    cumulative_pnl=cumulative_pnl,
+                    cumulative_return_pct=return_pct,
+                    benchmark_return_pct=0.0,  # Placeholder
+                )
+            )
+
+            daily_breakdown.append(
+                DailyBreakdown(
+                    date=date_key,
+                    pnl=daily_pnls[date_key],
+                    return_pct=(daily_pnls[date_key] / initial_capital) * 100,
+                    trade_count=daily_counts[date_key],
+                    cumulative_pnl=cumulative_pnl,
+                )
+            )
+
+    # Fetch benchmark data for comparison
+    try:
+        from backend.data.yahoo_provider import YahooDataProvider
+
+        if equity_curve:
+            provider = YahooDataProvider()
+            start_date = equity_curve[0].date
+            end_date = equity_curve[-1].date
+
+            benchmark_data = await provider.fetch_historical_data(
+                benchmark, start_date, end_date, interval="1d"
+            )
+
+            if benchmark_data and benchmark_data.bars:
+                initial_benchmark = benchmark_data.bars[0].close
+                benchmark_map = {
+                    benchmark_data.dates[i]: bar.close
+                    for i, bar in enumerate(benchmark_data.bars)
+                }
+
+                for point in equity_curve:
+                    if point.date in benchmark_map:
+                        bench_price = benchmark_map[point.date]
+                        bench_return = (
+                            (bench_price - initial_benchmark) / initial_benchmark
+                        ) * 100
+                        point.benchmark_return_pct = bench_return
+                        point.benchmark_equity = initial_capital * (1 + bench_return / 100)
+    except Exception as e:
+        logger.warning(f"Failed to fetch benchmark data: {e}")
+
+    # Calculate risk metrics
+    import numpy as np
+
+    pnls = [t.realized_pnl or 0 for t in closed_trades]
+    wins = [p for p in pnls if p > 0]
+    losses = [p for p in pnls if p < 0]
+
+    # Simple risk calculations
+    sharpe = 0.0
+    sortino = 0.0
+    calmar = 0.0
+    max_dd = 0.0
+    max_dd_pct = 0.0
+
+    if pnls:
+        returns = np.array(pnls) / initial_capital
+        avg_return = np.mean(returns)
+        std_return = np.std(returns) if len(returns) > 1 else 0.001
+
+        sharpe = (avg_return / std_return) * np.sqrt(252) if std_return > 0 else 0.0
+
+        # Sortino (downside deviation)
+        negative_returns = returns[returns < 0]
+        downside_std = np.std(negative_returns) if len(negative_returns) > 1 else 0.001
+        sortino = (avg_return / downside_std) * np.sqrt(252) if downside_std > 0 else 0.0
+
+        # Max drawdown
+        equity_values = [initial_capital]
+        for pnl in pnls:
+            equity_values.append(equity_values[-1] + pnl)
+
+        peak = equity_values[0]
+        for eq in equity_values:
+            if eq > peak:
+                peak = eq
+            dd = peak - eq
+            if dd > max_dd:
+                max_dd = dd
+                max_dd_pct = (dd / peak) * 100 if peak > 0 else 0
+
+        # Calmar
+        total_return = (equity_values[-1] - initial_capital) / initial_capital
+        calmar = (total_return / (max_dd_pct / 100)) if max_dd_pct > 0 else 0.0
+
+    win_rate = (len(wins) / len(pnls) * 100) if pnls else 0.0
+    avg_win = np.mean(wins) if wins else 0.0
+    avg_loss = abs(np.mean(losses)) if losses else 0.0
+    profit_factor = (sum(wins) / abs(sum(losses))) if losses and sum(losses) != 0 else 0.0
+
+    risk_metrics = RiskMetrics(
+        sharpe_ratio=round(sharpe, 2),
+        sortino_ratio=round(sortino, 2),
+        calmar_ratio=round(calmar, 2),
+        max_drawdown=max_dd,
+        max_drawdown_pct=round(max_dd_pct, 2),
+        win_rate=round(win_rate, 1),
+        profit_factor=round(profit_factor, 2),
+        avg_win=round(avg_win, 2),
+        avg_loss=round(avg_loss, 2),
+    )
+
+    # Current equity
+    current_equity = initial_capital + sum(pnls) + sum(p.unrealized_pnl for p in positions)
+
+    app_state.update_timestamp()
+
+    return LiveAnalysisResponse(
+        equity_curve=equity_curve,
+        risk_metrics=risk_metrics,
+        daily_breakdown=daily_breakdown,
+        initial_capital=initial_capital,
+        current_equity=current_equity,
+        benchmark_symbol=benchmark,
+        trading_days=len(equity_curve),
+    )
+
+
+@app.get("/api/live/analysis", response_model=LiveAnalysisResponse)
+async def get_live_analysis(
+    benchmark: str = Query(default="VTI", description="Benchmark symbol for comparison")
+):
+    """
+    Get LIVE trading analysis with performance metrics and benchmark comparison.
+
+    Returns equity curve, risk metrics, and daily breakdown with benchmark overlay.
+
+    Args:
+        benchmark: Symbol to use as benchmark (default VTI)
+
+    Returns:
+        LiveAnalysisResponse with comprehensive analysis data
+    """
+    return await _get_analysis_for_mode(TradingMode.LIVE, benchmark)
+
+
+@app.get("/api/paper/analysis", response_model=LiveAnalysisResponse)
+async def get_paper_analysis(
+    benchmark: str = Query(default="VTI", description="Benchmark symbol for comparison")
+):
+    """
+    Get PAPER trading analysis with performance metrics and benchmark comparison.
+
+    Returns equity curve, risk metrics, and daily breakdown with benchmark overlay.
+
+    Args:
+        benchmark: Symbol to use as benchmark (default VTI)
+
+    Returns:
+        LiveAnalysisResponse with comprehensive analysis data
+    """
+    return await _get_analysis_for_mode(TradingMode.PAPER, benchmark)
 
 
 # ============================================================================

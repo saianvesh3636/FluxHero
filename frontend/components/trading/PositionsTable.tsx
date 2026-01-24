@@ -10,6 +10,7 @@ import {
   TableEmpty,
 } from '../ui/Table';
 import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
 import { PLDisplay, PLBadge } from './PLDisplay';
 
 export interface PositionRow {
@@ -27,6 +28,8 @@ export interface PositionsTableProps {
   positions: PositionRow[];
   isLoading?: boolean;
   onRowClick?: (position: PositionRow) => void;
+  onSellPosition?: (position: PositionRow) => void;
+  showSellButton?: boolean;
   className?: string;
 }
 
@@ -38,6 +41,8 @@ export function PositionsTable({
   positions,
   isLoading = false,
   onRowClick,
+  onSellPosition,
+  showSellButton = false,
   className,
 }: PositionsTableProps) {
   if (isLoading) {
@@ -76,11 +81,12 @@ export function PositionsTable({
             <TableHead className="text-right">Current</TableHead>
             <TableHead className="text-right">P&L</TableHead>
             <TableHead className="text-right">P&L %</TableHead>
+            {showSellButton && <TableHead className="text-center">Action</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {positions.length === 0 ? (
-            <TableEmpty colSpan={7} message="No open positions" />
+            <TableEmpty colSpan={showSellButton ? 8 : 7} message="No open positions" />
           ) : (
             positions.map((position, index) => {
               const side = normalizeSide(position.side);
@@ -128,6 +134,20 @@ export function PositionsTable({
                     {position.pnlPercent > 0 && '+'}
                     {formatPercent(position.pnlPercent)}
                   </TableCell>
+                  {showSellButton && (
+                    <TableCell className="text-center">
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSellPosition?.(position);
+                        }}
+                      >
+                        Sell
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })

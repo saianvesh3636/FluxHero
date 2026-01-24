@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import { apiClient, Position, AccountInfo as ApiAccountInfo, SystemStatus } from '../../utils/api';
 import { PageContainer, PageHeader, StatsGrid } from '../../components/layout';
 import { Card, CardTitle, Button, Badge, StatusDot, Skeleton } from '../../components/ui';
-import { AccountSummary, PositionsTable, PLDisplay } from '../../components/trading';
+import { AccountSummary, PositionsTable, PLDisplay, TradeSummaryFooter } from '../../components/trading';
 import type { AccountInfo } from '../../components/trading';
 import type { PositionRow } from '../../components/trading';
 import { formatCurrency, formatPercent } from '../../lib/utils';
@@ -123,6 +124,11 @@ export default function LiveTradingPage() {
         subtitle={`Last updated: ${lastUpdate.toLocaleTimeString()}`}
         actions={
           <div className="flex items-center gap-3">
+            <Link href="/live/analysis">
+              <Button variant="secondary">
+                Analysis
+              </Button>
+            </Link>
             <StatusDot
               status={systemStatus?.status === 'active' ? 'connected' : 'disconnected'}
               showLabel
@@ -213,11 +219,25 @@ export default function LiveTradingPage() {
 
       {/* Account Summary */}
       {accountData && (
-        <div>
+        <div className="mb-20">
           <h2 className="text-xl font-semibold text-text-900 mb-4">Account Summary</h2>
           <AccountSummary account={accountData} />
         </div>
       )}
+
+      {/* Trade Summary Footer */}
+      <TradeSummaryFooter
+        closedCount={0}
+        openCount={positions.length}
+        realizedPnl={accountInfo?.total_pnl || 0}
+        unrealizedPnl={positions.reduce((sum, p) => sum + p.pnl, 0)}
+        totalPnl={(accountInfo?.total_pnl || 0) + positions.reduce((sum, p) => sum + p.pnl, 0)}
+        totalReturnPct={
+          accountInfo?.equity
+            ? ((accountInfo.total_pnl || 0) / (accountInfo.equity - (accountInfo.total_pnl || 0))) * 100
+            : 0
+        }
+      />
     </PageContainer>
   );
 }

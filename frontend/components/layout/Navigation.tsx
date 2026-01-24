@@ -19,10 +19,9 @@ export interface NavigationProps {
 
 const defaultNavItems: NavItem[] = [
   { label: 'Home', href: '/' },
-  { label: 'Live', href: '/live' },
+  { label: 'Trades', href: '/trades' },
   { label: 'Analytics', href: '/analytics' },
   { label: 'Backtest', href: '/backtest' },
-  { label: 'History', href: '/history' },
   { label: 'Signals', href: '/signals' },
   { label: 'Settings', href: '/settings' },
 ];

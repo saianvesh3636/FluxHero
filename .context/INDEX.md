@@ -14,6 +14,7 @@
 | Task list | `@FLUXHERO_TASKS.md` | To see all tasks |
 | Change log | `@CHANGELOG.md` | For recent changes |
 | Architecture | `@.context/discovery/architecture.md` | When exploring codebase |
+| Requirements | `@TRADE_ANALYTICS_REQUIREMENTS.md` |
 | Assumptions | `@docs/ASSUMPTIONS.md` | For trading system assumptions |
 
 ### Available Modules

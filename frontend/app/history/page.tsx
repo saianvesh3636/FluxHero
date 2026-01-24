@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import { apiClient, Trade } from '../../utils/api';
 import { PageContainer, PageHeader } from '../../components/layout';
 import { Card, CardTitle, Button, Badge, Skeleton, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui';
@@ -216,13 +217,14 @@ export default function HistoryPage() {
                 <TableHead align="right">P&L</TableHead>
                 <TableHead align="right">Return</TableHead>
                 <TableHead>Strategy</TableHead>
+                <TableHead align="center">Chart</TableHead>
                 <TableHead align="center">Details</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {trades.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-text-400">
+                  <TableCell colSpan={10} className="text-center py-8 text-text-400">
                     No trades found
                   </TableCell>
                 </TableRow>
@@ -295,6 +297,25 @@ export default function HistoryPage() {
                           {trade.strategy || 'N/A'}
                         </TableCell>
                         <TableCell align="center">
+                          {trade.id !== null && (
+                            <Link
+                              href={`/trades/${trade.id}`}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg bg-panel-500 hover:bg-accent-500 text-text-400 hover:text-white transition-colors"
+                              title="View Chart"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                className="w-4 h-4"
+                              >
+                                <path d="M12 9a1 1 0 01-1-1V3c0-.553.45-1.008.997-.93a7.004 7.004 0 015.933 5.933c.078.547-.378.997-.93.997h-5z" />
+                                <path d="M8.003 4.07C8.55 3.992 9 4.447 9 5v5a1 1 0 001 1h5c.552 0 1.008.45.93.997A7.001 7.001 0 012 11a7.002 7.002 0 016.003-6.93z" />
+                              </svg>
+                            </Link>
+                          )}
+                        </TableCell>
+                        <TableCell align="center">
                           <button
                             onClick={() => trade.id !== null && toggleTradeDetails(trade.id)}
                             className="w-8 h-8 flex items-center justify-center rounded-lg bg-panel-500 hover:bg-panel-400 text-text-400 hover:text-text-900"
@@ -307,7 +328,7 @@ export default function HistoryPage() {
                       {/* Expanded Trade Details */}
                       {isExpanded && (
                         <TableRow className="bg-panel-600">
-                          <TableCell colSpan={9}>
+                          <TableCell colSpan={10}>
                             <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                               <div>
                                 <span className="text-xs text-text-400 block mb-1">Signal Reason</span>
@@ -333,6 +354,15 @@ export default function HistoryPage() {
                                   {trade.take_profit ? formatCurrency(trade.take_profit) : 'N/A'}
                                 </span>
                               </div>
+                              {trade.id !== null && (
+                                <div className="md:col-span-4 pt-3 border-t border-panel-500 mt-2">
+                                  <Link href={`/trades/${trade.id}`}>
+                                    <Button variant="primary" className="w-full sm:w-auto">
+                                      View Chart
+                                    </Button>
+                                  </Link>
+                                </div>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>

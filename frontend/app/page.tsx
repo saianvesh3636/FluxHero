@@ -76,9 +76,9 @@ export default function Home() {
       {/* Feature Cards */}
       <CardGrid columns={2} className="mb-8">
         <FeatureCard
-          title="Live Trading"
-          description="Monitor open positions and real-time P&L"
-          href="/live"
+          title="Trading"
+          description="Monitor positions, trades, and real-time P&L"
+          href="/trades"
           icon={<ChartIcon />}
         />
         <FeatureCard
@@ -94,9 +94,9 @@ export default function Home() {
           icon={<BacktestIcon />}
         />
         <FeatureCard
-          title="Trade History"
-          description="View past trades and export data"
-          href="/history"
+          title="Signals"
+          description="View and manage trading signals"
+          href="/signals"
           icon={<HistoryIcon />}
         />
       </CardGrid>

@@ -22,7 +22,7 @@ import logging
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from enum import IntEnum
+from enum import IntEnum, Enum
 from pathlib import Path
 from typing import Any
 
@@ -44,6 +44,13 @@ class TradeStatus(IntEnum):
     OPEN = 0
     CLOSED = 1
     CANCELLED = 2
+
+
+class TradingMode(str, Enum):
+    """Trading mode for separating live vs paper trading data."""
+
+    LIVE = "live"
+    PAPER = "paper"
 
 
 @dataclass
@@ -97,6 +104,40 @@ class Setting:
     value: str = ""
     description: str = ""
     updated_at: str = ""
+
+
+@dataclass
+class BacktestResult:
+    """Backtest result data class."""
+
+    id: int | None = None
+    run_id: str = ""
+    symbol: str = ""
+    strategy_mode: str = ""
+    start_date: str = ""
+    end_date: str = ""
+    initial_capital: float = 0.0
+    final_equity: float = 0.0
+    total_return_pct: float | None = None
+    sharpe_ratio: float | None = None
+    max_drawdown_pct: float | None = None
+    win_rate: float | None = None
+    num_trades: int | None = None
+    equity_curve_json: str | None = None
+    trades_json: str | None = None
+    config_json: str | None = None
+    created_at: str = ""
+
+
+@dataclass
+class ModeState:
+    """Trading mode state data class."""
+
+    id: int = 1
+    active_mode: str = "paper"
+    last_mode_change: str | None = None
+    paper_balance: float = 100000.0
+    paper_realized_pnl: float = 0.0
 
 
 class SQLiteStore:
@@ -228,6 +269,165 @@ class SQLiteStore:
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_trades_entry_time
             ON trades(entry_time)
+        """)
+
+        # ==================== Mode-Separated Tables ====================
+
+        # Create live_trades table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS live_trades (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL,
+                side INTEGER NOT NULL,
+                entry_price REAL NOT NULL,
+                entry_time TEXT NOT NULL,
+                exit_price REAL,
+                exit_time TEXT,
+                shares INTEGER NOT NULL,
+                stop_loss REAL NOT NULL,
+                take_profit REAL,
+                realized_pnl REAL,
+                status INTEGER NOT NULL DEFAULT 0,
+                strategy TEXT NOT NULL,
+                regime TEXT,
+                signal_reason TEXT,
+                signal_explanation TEXT,
+                broker_order_id TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
+
+        # Create paper_trades table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS paper_trades (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL,
+                side INTEGER NOT NULL,
+                entry_price REAL NOT NULL,
+                entry_time TEXT NOT NULL,
+                exit_price REAL,
+                exit_time TEXT,
+                shares INTEGER NOT NULL,
+                stop_loss REAL NOT NULL,
+                take_profit REAL,
+                realized_pnl REAL,
+                status INTEGER NOT NULL DEFAULT 0,
+                strategy TEXT NOT NULL,
+                regime TEXT,
+                signal_reason TEXT,
+                signal_explanation TEXT,
+                slippage_applied REAL DEFAULT 0.0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
+
+        # Create live_positions table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS live_positions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL UNIQUE,
+                side INTEGER NOT NULL,
+                shares INTEGER NOT NULL,
+                entry_price REAL NOT NULL,
+                current_price REAL NOT NULL,
+                unrealized_pnl REAL NOT NULL,
+                stop_loss REAL NOT NULL,
+                take_profit REAL,
+                entry_time TEXT NOT NULL,
+                broker_position_id TEXT,
+                updated_at TEXT NOT NULL
+            )
+        """)
+
+        # Create paper_positions table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS paper_positions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL UNIQUE,
+                side INTEGER NOT NULL,
+                shares INTEGER NOT NULL,
+                entry_price REAL NOT NULL,
+                current_price REAL NOT NULL,
+                unrealized_pnl REAL NOT NULL,
+                stop_loss REAL NOT NULL,
+                take_profit REAL,
+                entry_time TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
+
+        # Create backtest_results table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS backtest_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id TEXT NOT NULL UNIQUE,
+                symbol TEXT NOT NULL,
+                strategy_mode TEXT NOT NULL,
+                start_date TEXT NOT NULL,
+                end_date TEXT NOT NULL,
+                initial_capital REAL NOT NULL,
+                final_equity REAL NOT NULL,
+                total_return_pct REAL,
+                sharpe_ratio REAL,
+                max_drawdown_pct REAL,
+                win_rate REAL,
+                num_trades INTEGER,
+                equity_curve_json TEXT,
+                trades_json TEXT,
+                config_json TEXT,
+                created_at TEXT NOT NULL
+            )
+        """)
+
+        # Create mode_state table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS mode_state (
+                id INTEGER PRIMARY KEY DEFAULT 1,
+                active_mode TEXT NOT NULL DEFAULT 'paper',
+                last_mode_change TEXT,
+                paper_balance REAL DEFAULT 100000.0,
+                paper_realized_pnl REAL DEFAULT 0.0
+            )
+        """)
+
+        # Initialize mode_state with default row if empty
+        cursor = conn.execute("SELECT COUNT(*) FROM mode_state")
+        if cursor.fetchone()[0] == 0:
+            conn.execute("""
+                INSERT INTO mode_state (id, active_mode, paper_balance, paper_realized_pnl)
+                VALUES (1, 'paper', 100000.0, 0.0)
+            """)
+
+        # Create indexes for mode-separated tables
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_live_trades_symbol
+            ON live_trades(symbol)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_live_trades_status
+            ON live_trades(status)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_live_trades_entry_time
+            ON live_trades(entry_time)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_paper_trades_symbol
+            ON paper_trades(symbol)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_paper_trades_status
+            ON paper_trades(status)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_paper_trades_entry_time
+            ON paper_trades(entry_time)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_backtest_results_symbol
+            ON backtest_results(symbol)
         """)
 
         # Start async write worker
@@ -776,6 +976,498 @@ class SQLiteStore:
             "Database size retrieved", extra={"size_bytes": size, "db_path": str(self.db_path)}
         )
         return size
+
+    # ==================== Mode-Aware Trade Operations ====================
+
+    def _get_trades_table(self, mode: TradingMode) -> str:
+        """Get the correct trades table name for the given mode."""
+        return "live_trades" if mode == TradingMode.LIVE else "paper_trades"
+
+    def _get_positions_table(self, mode: TradingMode) -> str:
+        """Get the correct positions table name for the given mode."""
+        return "live_positions" if mode == TradingMode.LIVE else "paper_positions"
+
+    def _insert_trade_for_mode_sync(self, trade: Trade, mode: TradingMode) -> int:
+        """Synchronous trade insert for mode (called by async wrapper)."""
+        table = self._get_trades_table(mode)
+        conn = self._get_connection()
+        now = datetime.utcnow().isoformat()
+
+        # Build insert based on mode-specific columns
+        if mode == TradingMode.LIVE:
+            cursor = conn.execute(
+                f"""
+                INSERT INTO {table} (
+                    symbol, side, entry_price, entry_time, exit_price, exit_time,
+                    shares, stop_loss, take_profit, realized_pnl, status, strategy,
+                    regime, signal_reason, signal_explanation, broker_order_id,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    trade.symbol,
+                    trade.side,
+                    trade.entry_price,
+                    trade.entry_time,
+                    trade.exit_price,
+                    trade.exit_time,
+                    trade.shares,
+                    trade.stop_loss,
+                    trade.take_profit,
+                    trade.realized_pnl,
+                    trade.status,
+                    trade.strategy,
+                    trade.regime,
+                    trade.signal_reason,
+                    trade.signal_explanation,
+                    None,  # broker_order_id
+                    now,
+                    now,
+                ),
+            )
+        else:
+            cursor = conn.execute(
+                f"""
+                INSERT INTO {table} (
+                    symbol, side, entry_price, entry_time, exit_price, exit_time,
+                    shares, stop_loss, take_profit, realized_pnl, status, strategy,
+                    regime, signal_reason, signal_explanation, slippage_applied,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    trade.symbol,
+                    trade.side,
+                    trade.entry_price,
+                    trade.entry_time,
+                    trade.exit_price,
+                    trade.exit_time,
+                    trade.shares,
+                    trade.stop_loss,
+                    trade.take_profit,
+                    trade.realized_pnl,
+                    trade.status,
+                    trade.strategy,
+                    trade.regime,
+                    trade.signal_reason,
+                    trade.signal_explanation,
+                    0.0,  # slippage_applied
+                    now,
+                    now,
+                ),
+            )
+
+        trade_id = cursor.lastrowid
+        logger.info(
+            f"Trade added to {table}",
+            extra={"trade_id": trade_id, "symbol": trade.symbol, "mode": mode.value},
+        )
+        return trade_id
+
+    async def add_trade_for_mode(self, trade: Trade, mode: TradingMode) -> int:
+        """Add a trade to the mode-specific table."""
+        return await self._async_write(self._insert_trade_for_mode_sync, trade, mode)
+
+    def _update_trade_for_mode_sync(
+        self, trade_id: int, mode: TradingMode, updates: dict
+    ) -> None:
+        """Synchronous trade update for mode."""
+        table = self._get_trades_table(mode)
+        conn = self._get_connection()
+        now = datetime.utcnow().isoformat()
+
+        fields = []
+        values = []
+        for key, value in updates.items():
+            fields.append(f"{key} = ?")
+            values.append(value)
+
+        fields.append("updated_at = ?")
+        values.append(now)
+        values.append(trade_id)
+
+        query = f"UPDATE {table} SET {', '.join(fields)} WHERE id = ?"
+        conn.execute(query, values)
+
+        logger.info(
+            f"Trade updated in {table}",
+            extra={"trade_id": trade_id, "mode": mode.value, "fields": list(updates.keys())},
+        )
+
+    async def update_trade_for_mode(
+        self, trade_id: int, mode: TradingMode, **kwargs
+    ) -> None:
+        """Update a trade in the mode-specific table."""
+        await self._async_write(self._update_trade_for_mode_sync, trade_id, mode, kwargs)
+
+    async def get_trade_for_mode(self, trade_id: int, mode: TradingMode) -> Trade | None:
+        """Get a trade by ID from the mode-specific table."""
+        table = self._get_trades_table(mode)
+        conn = self._get_connection()
+        cursor = conn.execute(f"SELECT * FROM {table} WHERE id = ?", (trade_id,))
+        row = cursor.fetchone()
+
+        if row:
+            # Convert row to dict and handle mode-specific columns
+            row_dict = dict(row)
+            # Remove mode-specific columns not in Trade dataclass
+            row_dict.pop("broker_order_id", None)
+            row_dict.pop("slippage_applied", None)
+            return Trade(**row_dict)
+        return None
+
+    async def get_recent_trades_for_mode(
+        self, mode: TradingMode, limit: int = 50
+    ) -> list[Trade]:
+        """Get recent trades from the mode-specific table."""
+        table = self._get_trades_table(mode)
+        conn = self._get_connection()
+        cursor = conn.execute(
+            f"SELECT * FROM {table} ORDER BY entry_time DESC LIMIT ?", (limit,)
+        )
+
+        trades = []
+        for row in cursor.fetchall():
+            row_dict = dict(row)
+            row_dict.pop("broker_order_id", None)
+            row_dict.pop("slippage_applied", None)
+            trades.append(Trade(**row_dict))
+
+        logger.debug(
+            f"Fetched trades from {table}",
+            extra={"count": len(trades), "mode": mode.value},
+        )
+        return trades
+
+    async def get_open_trades_for_mode(self, mode: TradingMode) -> list[Trade]:
+        """Get all open trades from the mode-specific table."""
+        table = self._get_trades_table(mode)
+        conn = self._get_connection()
+        cursor = conn.execute(
+            f"SELECT * FROM {table} WHERE status = ? ORDER BY entry_time DESC",
+            (TradeStatus.OPEN,),
+        )
+
+        trades = []
+        for row in cursor.fetchall():
+            row_dict = dict(row)
+            row_dict.pop("broker_order_id", None)
+            row_dict.pop("slippage_applied", None)
+            trades.append(Trade(**row_dict))
+
+        return trades
+
+    async def get_trades_count_for_mode(self, mode: TradingMode) -> int:
+        """Get total trade count for mode."""
+        table = self._get_trades_table(mode)
+        conn = self._get_connection()
+        cursor = conn.execute(f"SELECT COUNT(*) FROM {table}")
+        return cursor.fetchone()[0]
+
+    async def get_trades_paginated_for_mode(
+        self, mode: TradingMode, page: int = 1, page_size: int = 20
+    ) -> tuple[list[Trade], int]:
+        """Get paginated trades from the mode-specific table."""
+        table = self._get_trades_table(mode)
+        conn = self._get_connection()
+
+        # Get total count
+        cursor = conn.execute(f"SELECT COUNT(*) FROM {table}")
+        total_count = cursor.fetchone()[0]
+
+        # Get paginated results
+        offset = (page - 1) * page_size
+        cursor = conn.execute(
+            f"SELECT * FROM {table} ORDER BY entry_time DESC LIMIT ? OFFSET ?",
+            (page_size, offset),
+        )
+
+        trades = []
+        for row in cursor.fetchall():
+            row_dict = dict(row)
+            row_dict.pop("broker_order_id", None)
+            row_dict.pop("slippage_applied", None)
+            trades.append(Trade(**row_dict))
+
+        return trades, total_count
+
+    # ==================== Mode-Aware Position Operations ====================
+
+    def _upsert_position_for_mode_sync(self, position: Position, mode: TradingMode) -> None:
+        """Synchronous position upsert for mode."""
+        table = self._get_positions_table(mode)
+        conn = self._get_connection()
+        now = datetime.utcnow().isoformat()
+
+        if mode == TradingMode.LIVE:
+            conn.execute(
+                f"""
+                INSERT INTO {table} (
+                    symbol, side, shares, entry_price, current_price, unrealized_pnl,
+                    stop_loss, take_profit, entry_time, broker_position_id, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(symbol) DO UPDATE SET
+                    side = excluded.side,
+                    shares = excluded.shares,
+                    entry_price = excluded.entry_price,
+                    current_price = excluded.current_price,
+                    unrealized_pnl = excluded.unrealized_pnl,
+                    stop_loss = excluded.stop_loss,
+                    take_profit = excluded.take_profit,
+                    updated_at = excluded.updated_at
+            """,
+                (
+                    position.symbol,
+                    position.side,
+                    position.shares,
+                    position.entry_price,
+                    position.current_price,
+                    position.unrealized_pnl,
+                    position.stop_loss,
+                    position.take_profit,
+                    position.entry_time,
+                    None,  # broker_position_id
+                    now,
+                ),
+            )
+        else:
+            conn.execute(
+                f"""
+                INSERT INTO {table} (
+                    symbol, side, shares, entry_price, current_price, unrealized_pnl,
+                    stop_loss, take_profit, entry_time, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(symbol) DO UPDATE SET
+                    side = excluded.side,
+                    shares = excluded.shares,
+                    entry_price = excluded.entry_price,
+                    current_price = excluded.current_price,
+                    unrealized_pnl = excluded.unrealized_pnl,
+                    stop_loss = excluded.stop_loss,
+                    take_profit = excluded.take_profit,
+                    updated_at = excluded.updated_at
+            """,
+                (
+                    position.symbol,
+                    position.side,
+                    position.shares,
+                    position.entry_price,
+                    position.current_price,
+                    position.unrealized_pnl,
+                    position.stop_loss,
+                    position.take_profit,
+                    position.entry_time,
+                    now,
+                ),
+            )
+
+        logger.info(
+            f"Position upserted in {table}",
+            extra={"symbol": position.symbol, "mode": mode.value},
+        )
+
+    async def upsert_position_for_mode(self, position: Position, mode: TradingMode) -> None:
+        """Insert or update position in the mode-specific table."""
+        await self._async_write(self._upsert_position_for_mode_sync, position, mode)
+
+    def _delete_position_for_mode_sync(self, symbol: str, mode: TradingMode) -> None:
+        """Synchronous position delete for mode."""
+        table = self._get_positions_table(mode)
+        conn = self._get_connection()
+        conn.execute(f"DELETE FROM {table} WHERE symbol = ?", (symbol,))
+        logger.info(f"Position deleted from {table}", extra={"symbol": symbol, "mode": mode.value})
+
+    async def delete_position_for_mode(self, symbol: str, mode: TradingMode) -> None:
+        """Delete position from the mode-specific table."""
+        await self._async_write(self._delete_position_for_mode_sync, symbol, mode)
+
+    async def get_positions_for_mode(self, mode: TradingMode) -> list[Position]:
+        """Get all positions from the mode-specific table."""
+        table = self._get_positions_table(mode)
+        conn = self._get_connection()
+        cursor = conn.execute(f"SELECT * FROM {table} ORDER BY entry_time DESC")
+
+        positions = []
+        for row in cursor.fetchall():
+            row_dict = dict(row)
+            row_dict.pop("broker_position_id", None)
+            positions.append(Position(**row_dict))
+
+        logger.debug(
+            f"Fetched positions from {table}",
+            extra={"count": len(positions), "mode": mode.value},
+        )
+        return positions
+
+    # ==================== Mode State Operations ====================
+
+    async def get_active_mode(self) -> TradingMode:
+        """Get the currently active trading mode."""
+        conn = self._get_connection()
+        cursor = conn.execute("SELECT active_mode FROM mode_state WHERE id = 1")
+        row = cursor.fetchone()
+
+        if row:
+            mode_str = row["active_mode"]
+            return TradingMode.LIVE if mode_str == "live" else TradingMode.PAPER
+
+        return TradingMode.PAPER
+
+    def _set_active_mode_sync(self, mode: TradingMode) -> None:
+        """Synchronous mode state update."""
+        conn = self._get_connection()
+        now = datetime.utcnow().isoformat()
+
+        conn.execute(
+            """
+            UPDATE mode_state
+            SET active_mode = ?, last_mode_change = ?
+            WHERE id = 1
+        """,
+            (mode.value, now),
+        )
+
+        logger.info("Trading mode changed", extra={"new_mode": mode.value})
+
+    async def set_active_mode(self, mode: TradingMode) -> None:
+        """Set the active trading mode."""
+        await self._async_write(self._set_active_mode_sync, mode)
+
+    async def get_mode_state(self) -> ModeState:
+        """Get the complete mode state."""
+        conn = self._get_connection()
+        cursor = conn.execute("SELECT * FROM mode_state WHERE id = 1")
+        row = cursor.fetchone()
+
+        if row:
+            return ModeState(**dict(row))
+
+        return ModeState()
+
+    def _update_paper_balance_sync(self, realized_pnl: float) -> None:
+        """Synchronous paper balance update."""
+        conn = self._get_connection()
+
+        conn.execute(
+            """
+            UPDATE mode_state
+            SET paper_balance = paper_balance + ?,
+                paper_realized_pnl = paper_realized_pnl + ?
+            WHERE id = 1
+        """,
+            (realized_pnl, realized_pnl),
+        )
+
+    async def update_paper_balance(self, realized_pnl: float) -> None:
+        """Update paper trading balance with realized P&L."""
+        await self._async_write(self._update_paper_balance_sync, realized_pnl)
+
+    # ==================== Backtest Results Operations ====================
+
+    def _save_backtest_result_sync(self, result: BacktestResult) -> str:
+        """Synchronous backtest result insert."""
+        conn = self._get_connection()
+        now = datetime.utcnow().isoformat()
+
+        import uuid
+
+        run_id = result.run_id or str(uuid.uuid4())
+
+        conn.execute(
+            """
+            INSERT INTO backtest_results (
+                run_id, symbol, strategy_mode, start_date, end_date,
+                initial_capital, final_equity, total_return_pct, sharpe_ratio,
+                max_drawdown_pct, win_rate, num_trades, equity_curve_json,
+                trades_json, config_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+            (
+                run_id,
+                result.symbol,
+                result.strategy_mode,
+                result.start_date,
+                result.end_date,
+                result.initial_capital,
+                result.final_equity,
+                result.total_return_pct,
+                result.sharpe_ratio,
+                result.max_drawdown_pct,
+                result.win_rate,
+                result.num_trades,
+                result.equity_curve_json,
+                result.trades_json,
+                result.config_json,
+                now,
+            ),
+        )
+
+        logger.info(
+            "Backtest result saved",
+            extra={"run_id": run_id, "symbol": result.symbol},
+        )
+        return run_id
+
+    async def save_backtest_result(self, result: BacktestResult) -> str:
+        """Save a backtest result."""
+        return await self._async_write(self._save_backtest_result_sync, result)
+
+    async def get_backtest_results(self, limit: int = 50) -> list[BacktestResult]:
+        """Get recent backtest results."""
+        conn = self._get_connection()
+        cursor = conn.execute(
+            "SELECT * FROM backtest_results ORDER BY created_at DESC LIMIT ?",
+            (limit,),
+        )
+
+        results = [BacktestResult(**dict(row)) for row in cursor.fetchall()]
+        logger.debug("Fetched backtest results", extra={"count": len(results)})
+        return results
+
+    async def get_backtest_result(self, run_id: str) -> BacktestResult | None:
+        """Get a specific backtest result by run_id."""
+        conn = self._get_connection()
+        cursor = conn.execute(
+            "SELECT * FROM backtest_results WHERE run_id = ?", (run_id,)
+        )
+        row = cursor.fetchone()
+
+        return BacktestResult(**dict(row)) if row else None
+
+    # ==================== Data Management Operations ====================
+
+    def _clear_all_trading_data_sync(self) -> None:
+        """Synchronous clear all trading data."""
+        conn = self._get_connection()
+
+        # Clear all mode-separated tables
+        conn.execute("DELETE FROM live_trades")
+        conn.execute("DELETE FROM paper_trades")
+        conn.execute("DELETE FROM live_positions")
+        conn.execute("DELETE FROM paper_positions")
+        conn.execute("DELETE FROM backtest_results")
+
+        # Reset mode state
+        conn.execute(
+            """
+            UPDATE mode_state
+            SET active_mode = 'paper',
+                last_mode_change = NULL,
+                paper_balance = 100000.0,
+                paper_realized_pnl = 0.0
+            WHERE id = 1
+        """
+        )
+
+        # Also clear legacy tables
+        conn.execute("DELETE FROM trades")
+        conn.execute("DELETE FROM positions")
+
+        logger.info("All trading data cleared")
+
+    async def clear_all_trading_data(self) -> None:
+        """Clear all trading data (for fresh start)."""
+        await self._async_write(self._clear_all_trading_data_sync)
 
     async def close(self) -> None:
         """

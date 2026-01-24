@@ -20,3 +20,18 @@ export type { TradeRowProps, TradeData } from './TradeRow';
 
 export { SymbolSearch } from './SymbolSearch';
 export type { default as SymbolSearchProps } from './SymbolSearch';
+
+// Trade Analytics Components (Phase G)
+export { TradeSummaryFooter } from './TradeSummaryFooter';
+export type { TradeSummaryFooterProps } from './TradeSummaryFooter';
+
+export { DailyTradeGroup } from './DailyTradeGroup';
+export type { DailyTradeGroupProps } from './DailyTradeGroup';
+
+export { TradeReasonCard } from './TradeReasonCard';
+export type {
+  TradeReasonCardProps,
+  TechnicalIndicators,
+  RiskParameters,
+  ValidationCheck,
+} from './TradeReasonCard';
