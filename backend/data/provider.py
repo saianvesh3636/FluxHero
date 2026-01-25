@@ -233,6 +233,37 @@ class DataProvider(ABC):
         """
         pass
 
+    @abstractmethod
+    async def fetch_max_available(
+        self,
+        symbol: str,
+        interval: str = "1d",
+    ) -> HistoricalData:
+        """
+        Fetch maximum available historical data for a symbol.
+
+        Unlike fetch_historical_data which requires date ranges, this method
+        fetches all available data the provider has for the symbol/interval.
+
+        Each provider determines what "max" means:
+        - Yahoo Finance: Uses period="max" (all available history)
+        - Alpaca: Free tier has 5 years, paid has more
+        - Other providers: Whatever their API supports
+
+        Args:
+            symbol: Ticker symbol (e.g., "SPY", "AAPL")
+            interval: Data interval ("1d", "1h", etc.)
+
+        Returns:
+            HistoricalData with all available bars
+
+        Raises:
+            SymbolNotFoundError: If symbol doesn't exist
+            UnsupportedIntervalError: If interval not supported
+            DataProviderError: On other errors
+        """
+        pass
+
 
 # Provider registry
 _providers: dict[ProviderType, type[DataProvider]] = {}

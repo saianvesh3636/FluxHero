@@ -16,6 +16,7 @@ import {
   WalkForwardRequest,
   WalkForwardResponse,
   WalkForwardWindowMetrics,
+  ReportResponse,
 } from '../../utils/api';
 
 // Form config (camelCase for UI)
@@ -428,9 +429,44 @@ interface BacktestResultsModalProps {
   results: BacktestResultResponse;
   onClose: () => void;
   onExport: () => void;
+  backtestRunId?: string;
 }
 
-function BacktestResultsModal({ results, onClose, onExport }: BacktestResultsModalProps) {
+function BacktestResultsModal({ results, onClose, onExport, backtestRunId }: BacktestResultsModalProps) {
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [generatedReport, setGeneratedReport] = useState<ReportResponse | null>(null);
+
+  const handleGenerateReport = async () => {
+    setIsGeneratingReport(true);
+    setReportError(null);
+
+    try {
+      const response = await apiClient.generateReport({
+        backtest_run_id: backtestRunId || undefined,
+        benchmark: 'SPY',
+        title: `Backtest Report - ${results.symbol}`,
+      });
+      setGeneratedReport(response);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.detail : 'Failed to generate report';
+      setReportError(message);
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    if (generatedReport) {
+      try {
+        await apiClient.downloadReport(generatedReport.report_id);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.detail : 'Failed to download report';
+        setReportError(message);
+      }
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-panel-900/90 flex items-center justify-center z-50 p-5">
       <div className="bg-panel-700 rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
@@ -539,12 +575,41 @@ function BacktestResultsModal({ results, onClose, onExport }: BacktestResultsMod
             </Card>
           </div>
 
-          {/* Export Button */}
-          <div className="mb-6">
-            <Button variant="primary" onClick={onExport}>
+          {/* Export & Report Buttons */}
+          <div className="mb-6 flex flex-wrap gap-3">
+            <Button variant="secondary" onClick={onExport}>
               Export Equity Curve (CSV)
             </Button>
+            <Button
+              variant="primary"
+              onClick={handleGenerateReport}
+              disabled={isGeneratingReport}
+            >
+              {isGeneratingReport ? 'Generating Report...' : 'Generate QuantStats Report'}
+            </Button>
           </div>
+
+          {/* Report Generation Result */}
+          {reportError && (
+            <div className="mb-6 p-4 bg-loss-500/20 border border-loss-500 rounded-xl">
+              <p className="text-loss-500">{reportError}</p>
+            </div>
+          )}
+          {generatedReport && (
+            <div className="mb-6 p-4 bg-profit-500/20 border border-profit-500 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-profit-500 font-medium">{generatedReport.title}</p>
+                  <p className="text-sm text-text-400">
+                    Generated: {new Date(generatedReport.generated_at).toLocaleString()}
+                  </p>
+                </div>
+                <Button variant="primary" onClick={handleDownloadReport}>
+                  Download HTML Report
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Equity Curve Summary */}
           <div>
@@ -599,9 +664,44 @@ interface WalkForwardResultsModalProps {
   results: WalkForwardResponse;
   onClose: () => void;
   onExport: () => void;
+  backtestRunId?: string;
 }
 
-function WalkForwardResultsModal({ results, onClose, onExport }: WalkForwardResultsModalProps) {
+function WalkForwardResultsModal({ results, onClose, onExport, backtestRunId }: WalkForwardResultsModalProps) {
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [generatedReport, setGeneratedReport] = useState<ReportResponse | null>(null);
+
+  const handleGenerateReport = async () => {
+    setIsGeneratingReport(true);
+    setReportError(null);
+
+    try {
+      const response = await apiClient.generateReport({
+        backtest_run_id: backtestRunId || undefined,
+        benchmark: 'SPY',
+        title: `Walk-Forward Report - ${results.symbol}`,
+      });
+      setGeneratedReport(response);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.detail : 'Failed to generate report';
+      setReportError(message);
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    if (generatedReport) {
+      try {
+        await apiClient.downloadReport(generatedReport.report_id);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.detail : 'Failed to download report';
+        setReportError(message);
+      }
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-panel-900/90 flex items-center justify-center z-50 p-5">
       <div className="bg-panel-700 rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
@@ -743,6 +843,39 @@ function WalkForwardResultsModal({ results, onClose, onExport }: WalkForwardResu
               />
             </Card>
           </div>
+
+          {/* Report Generation */}
+          <div className="mb-6 flex flex-wrap gap-3">
+            <Button
+              variant="primary"
+              onClick={handleGenerateReport}
+              disabled={isGeneratingReport}
+            >
+              {isGeneratingReport ? 'Generating Report...' : 'Generate QuantStats Report'}
+            </Button>
+          </div>
+
+          {/* Report Generation Result */}
+          {reportError && (
+            <div className="mb-6 p-4 bg-loss-500/20 border border-loss-500 rounded-xl">
+              <p className="text-loss-500">{reportError}</p>
+            </div>
+          )}
+          {generatedReport && (
+            <div className="mb-6 p-4 bg-profit-500/20 border border-profit-500 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-profit-500 font-medium">{generatedReport.title}</p>
+                  <p className="text-sm text-text-400">
+                    Generated: {new Date(generatedReport.generated_at).toLocaleString()}
+                  </p>
+                </div>
+                <Button variant="primary" onClick={handleDownloadReport}>
+                  Download HTML Report
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Per-Window Results Table */}
           <div className="mb-6">

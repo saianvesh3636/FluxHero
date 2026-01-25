@@ -43,6 +43,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from backend.api.auth import validate_websocket_auth
 from backend.api.rate_limit import RateLimitMiddleware
+from backend.api.routes.reports import router as reports_router
 from backend.backtesting.engine import (
     BacktestConfig,
     BacktestEngine,
@@ -851,6 +852,14 @@ async def log_requests(request: Request, call_next):
 
 
 # ============================================================================
+# Include Routers
+# ============================================================================
+
+# Reports API (QuantStats integration, tearsheets, enhanced metrics)
+app.include_router(reports_router)
+
+
+# ============================================================================
 # REST API Endpoints
 # ============================================================================
 
@@ -868,6 +877,8 @@ async def root():
             "account": "/api/account",
             "status": "/api/status",
             "backtest": "/api/backtest",
+            "reports": "/api/reports",
+            "metrics": "/api/reports/metrics",
             "websocket": "/ws/prices",
         },
     }

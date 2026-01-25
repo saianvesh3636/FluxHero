@@ -38,3 +38,6 @@ export type {
 
 export { OrderEntryModal } from './OrderEntryModal';
 export type { OrderEntryModalProps } from './OrderEntryModal';
+
+export { TradeReviewModal } from './TradeReviewModal';
+export type { TradeReviewModalProps } from './TradeReviewModal';

@@ -12,6 +12,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { apiClient, ApiError, ReportResponse } from '../../../utils/api';
 import { useRouter } from 'next/navigation';
 import { PageContainer, PageHeader, StatsGrid } from '../../../components/layout';
 import { Card, CardTitle, Button, Badge, Skeleton, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../components/ui';
@@ -66,6 +67,8 @@ export default function LiveAnalysisPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState<ReportResponse | null>(null);
 
   const isFetchingRef = useRef(false);
 
@@ -104,6 +107,37 @@ export default function LiveAnalysisPage() {
     const interval = setInterval(fetchAnalysis, 5000);
     return () => clearInterval(interval);
   }, [fetchAnalysis]);
+
+  // Generate QuantStats report
+  const handleGenerateReport = async () => {
+    setIsGeneratingReport(true);
+    setReportSuccess(null);
+
+    try {
+      const response = await apiClient.generateReport({
+        mode: 'live',
+        benchmark: analysisData?.benchmark_symbol || 'SPY',
+        title: 'Live Trading Performance Report',
+      });
+      setReportSuccess(response);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.detail : 'Failed to generate report';
+      setError(message);
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    if (reportSuccess) {
+      try {
+        await apiClient.downloadReport(reportSuccess.report_id);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.detail : 'Failed to download report';
+        setError(message);
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -207,14 +241,43 @@ export default function LiveAnalysisPage() {
           subtitle={`Performance analytics vs ${analysisData.benchmark_symbol}`}
         />
         <div className="flex items-center gap-3">
-          <Button variant="secondary" size="sm" onClick={() => {}}>
-            Export HTML
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleGenerateReport}
+            disabled={isGeneratingReport}
+          >
+            {isGeneratingReport ? 'Generating...' : 'Generate Report'}
           </Button>
           <Button variant="primary" size="sm" onClick={() => router.push('/trades')}>
             Live Trades
           </Button>
         </div>
       </div>
+
+      {/* Report Generated Success Banner */}
+      {reportSuccess && (
+        <div className="mb-4 px-3 py-2 rounded-lg border-l-4 border-profit-500 bg-profit-500/10 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-profit-500 font-medium text-sm">{reportSuccess.title}</span>
+            <span className="text-text-400 text-xs">Generated successfully</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownloadReport}
+              className="px-2 py-1 text-xs font-medium bg-profit-500 hover:bg-profit-600 text-white rounded"
+            >
+              Download HTML
+            </button>
+            <button
+              onClick={() => setReportSuccess(null)}
+              className="px-2 py-1 text-xs font-medium bg-panel-500 hover:bg-panel-400 text-text-400 rounded"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Layout: Charts on left, Stats on right */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">

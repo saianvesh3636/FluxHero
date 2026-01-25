@@ -1048,9 +1048,208 @@ class ApiClient {
       { method: 'POST' }
     );
   }
+
+  // ==========================================================================
+  // Reports API (QuantStats Integration)
+  // ==========================================================================
+
+  /**
+   * Generate HTML tearsheet report
+   * Returns report info with download URL
+   */
+  async generateReport(request: ReportRequest): Promise<ReportResponse> {
+    return this.fetchJson<ReportResponse>(`${API_BASE_URL}/reports/generate`, {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  /**
+   * Download report as HTML file
+   * Uses blob download pattern for file download
+   */
+  async downloadReport(reportId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/reports/download/${reportId}`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new ApiError(response.status, 'Failed to download report');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fluxhero_report_${reportId}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Get list of available reports
+   */
+  async listReports(): Promise<ReportListResponse> {
+    return this.fetchJson<ReportListResponse>(`${API_BASE_URL}/reports/list`);
+  }
+
+  /**
+   * Delete a specific report
+   */
+  async deleteReport(reportId: string): Promise<{ status: string; report_id: string }> {
+    return this.fetchJson<{ status: string; report_id: string }>(
+      `${API_BASE_URL}/reports/${reportId}`,
+      { method: 'DELETE' }
+    );
+  }
+
+  /**
+   * Get enhanced metrics (60+ metrics with QuantStats)
+   */
+  async getEnhancedMetrics(
+    mode: 'live' | 'paper' = 'paper',
+    benchmark: string = 'SPY',
+    backtestRunId?: string
+  ): Promise<EnhancedMetricsResponse> {
+    const params = new URLSearchParams({ mode, benchmark });
+    if (backtestRunId) {
+      params.set('backtest_run_id', backtestRunId);
+    }
+    return this.fetchJson<EnhancedMetricsResponse>(
+      `${API_BASE_URL}/reports/metrics?${params}`
+    );
+  }
+
+  /**
+   * Review a single trade with full details
+   */
+  async reviewTrade(tradeId: number, mode: 'live' | 'paper' = 'paper'): Promise<TradeReviewResponse> {
+    return this.fetchJson<TradeReviewResponse>(
+      `${API_BASE_URL}/reports/trade/${tradeId}/review?mode=${mode}`
+    );
+  }
 }
 
 export const apiClient = new ApiClient();
+
+
+// ============================================================================
+// Report Types (QuantStats Integration)
+// ============================================================================
+
+/**
+ * Request model for report generation
+ */
+export interface ReportRequest {
+  backtest_run_id?: string | null;
+  mode?: 'live' | 'paper';
+  benchmark?: string;
+  title?: string;
+}
+
+/**
+ * Response model for report generation
+ */
+export interface ReportResponse {
+  report_id: string;
+  download_url: string;
+  generated_at: string;
+  expires_at: string;
+  title: string;
+}
+
+/**
+ * Report metadata for listing
+ */
+export interface ReportListItem {
+  report_id: string;
+  filename: string;
+  created_at: string;
+  size_bytes: number;
+  download_url: string;
+}
+
+/**
+ * Response for list reports endpoint
+ */
+export interface ReportListResponse {
+  reports: ReportListItem[];
+  total_count: number;
+}
+
+/**
+ * Trade review response for individual trade analysis
+ */
+export interface TradeReviewResponse {
+  trade_id: number;
+  symbol: string;
+  side: string;  // "LONG" or "SHORT"
+  status: string;  // "OPEN", "CLOSED", "CANCELLED"
+
+  // Entry details
+  entry_price: number;
+  entry_time: string;
+  shares: number;
+
+  // Exit details (if closed)
+  exit_price: number | null;
+  exit_time: string | null;
+
+  // P&L
+  realized_pnl: number | null;
+  return_pct: number | null;
+  holding_period_days: number | null;
+
+  // Strategy info
+  strategy: string;
+  regime: string | null;
+  signal_reason: string | null;
+  signal_explanation: string | null;
+
+  // Risk management
+  stop_loss: number;
+  take_profit: number | null;
+}
+
+/**
+ * Enhanced metrics response (60+ metrics)
+ */
+export interface EnhancedMetricsResponse {
+  // Tier 1 - High Priority (Numba-optimized)
+  sortino_ratio: number;
+  calmar_ratio: number;
+  profit_factor: number;
+  value_at_risk_95: number;
+  cvar_95: number;
+  alpha: number;
+  beta: number;
+  kelly_criterion: number;
+  recovery_factor: number;
+  ulcer_index: number;
+
+  // Tier 2 - Useful
+  max_consecutive_wins: number;
+  max_consecutive_losses: number;
+  skewness: number;
+  kurtosis: number;
+  tail_ratio: number;
+  information_ratio: number;
+  r_squared: number;
+
+  // Standard metrics
+  sharpe_ratio: number;
+  max_drawdown_pct: number;
+  win_rate: number;
+  avg_win_loss_ratio: number;
+  total_return_pct: number;
+  annualized_return_pct: number;
+
+  // Metadata
+  periods_analyzed: number;
+  benchmark_symbol: string;
+}
 
 // Alias for backwards compatibility
 export const api = apiClient;

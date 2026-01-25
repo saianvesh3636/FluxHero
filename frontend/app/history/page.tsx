@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { apiClient, Trade } from '../../utils/api';
+import { apiClient, Trade, ApiError, ReportResponse } from '../../utils/api';
 import { PageContainer, PageHeader } from '../../components/layout';
 import { Card, CardTitle, Button, Badge, Skeleton, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui';
 import { formatCurrency, formatPercent } from '../../lib/utils';
@@ -105,10 +105,45 @@ export default function HistoryPage() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [expandedTradeId, setExpandedTradeId] = useState<number | null>(null);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState<ReportResponse | null>(null);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   // Track if a fetch is already in progress to prevent duplicate calls
   const isFetchingRef = useRef(false);
   const lastFetchedPageRef = useRef<number | null>(null);
+
+  // Generate report handler
+  const handleGenerateReport = async () => {
+    setIsGeneratingReport(true);
+    setReportError(null);
+    setReportSuccess(null);
+
+    try {
+      const response = await apiClient.generateReport({
+        mode: 'paper',
+        benchmark: 'SPY',
+        title: 'Trade History Report',
+      });
+      setReportSuccess(response);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.detail : 'Failed to generate report';
+      setReportError(message);
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    if (reportSuccess) {
+      try {
+        await apiClient.downloadReport(reportSuccess.report_id);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.detail : 'Failed to download';
+        setReportError(message);
+      }
+    }
+  };
 
   // Fetch trades from API
   const fetchTrades = useCallback(async (page: number) => {
@@ -177,9 +212,18 @@ export default function HistoryPage() {
         title="Trade History"
         subtitle={`${totalCount} total trades - Page ${currentPage} of ${totalPages}`}
         actions={
-          <Button variant="primary" onClick={handleExport} disabled={loading || trades.length === 0}>
-            Export CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={handleGenerateReport}
+              disabled={isGeneratingReport || trades.length === 0}
+            >
+              {isGeneratingReport ? 'Generating...' : 'Generate Report'}
+            </Button>
+            <Button variant="primary" onClick={handleExport} disabled={loading || trades.length === 0}>
+              Export CSV
+            </Button>
+          </div>
         }
       />
 
@@ -196,6 +240,34 @@ export default function HistoryPage() {
             </Button>
           </div>
         </Card>
+      )}
+
+      {/* Report Success Banner */}
+      {reportSuccess && (
+        <div className="mb-6 px-4 py-3 rounded-lg border-l-4 border-profit-500 bg-profit-500/10 flex items-center justify-between">
+          <div>
+            <span className="text-profit-500 font-medium">{reportSuccess.title}</span>
+            <span className="text-text-400 text-sm ml-2">Generated successfully</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="primary" size="sm" onClick={handleDownloadReport}>
+              Download HTML
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setReportSuccess(null)}>
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Report Error Banner */}
+      {reportError && (
+        <div className="mb-6 px-4 py-3 rounded-lg border-l-4 border-loss-500 bg-loss-500/10 flex items-center justify-between">
+          <span className="text-loss-500">{reportError}</span>
+          <Button variant="secondary" size="sm" onClick={() => setReportError(null)}>
+            Dismiss
+          </Button>
+        </div>
       )}
 
       {/* Trades Table */}
