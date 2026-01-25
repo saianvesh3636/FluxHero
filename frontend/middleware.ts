@@ -23,12 +23,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(newUrl);
   }
 
-  // Redirect /live/analysis to /trades/analysis?mode=live
-  if (url.pathname === '/live/analysis') {
-    const newUrl = new URL('/trades/analysis', request.url);
-    newUrl.searchParams.set('mode', 'live');
-    return NextResponse.redirect(newUrl);
-  }
+  // NOTE: /live/analysis is kept as-is since /trades/analysis doesn't exist yet
+  // Uncomment below when /trades/analysis page is created:
+  // if (url.pathname === '/live/analysis') {
+  //   const newUrl = new URL('/trades/analysis', request.url);
+  //   newUrl.searchParams.set('mode', 'live');
+  //   return NextResponse.redirect(newUrl);
+  // }
 
   // Redirect /history to /trades (maintains current mode)
   if (url.pathname === '/history') {
@@ -45,5 +46,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/live', '/live/analysis', '/history'],
+  matcher: ['/live', '/history'],
 };

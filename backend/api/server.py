@@ -2757,6 +2757,183 @@ async def get_backtest_result_detail(run_id: str):
     )
 
 
+class BacktestChartMarker(BaseModel):
+    """A trade marker for the backtest chart"""
+    trade_id: int
+    time: int  # Unix timestamp
+    price: float
+    type: str  # 'entry' or 'exit'
+    side: str  # 'long' or 'short'
+    pnl: float | None = None
+
+
+class BacktestChartDataResponse(BaseModel):
+    """Response for backtest chart data with all trades"""
+    run_id: str
+    symbol: str
+    start_date: str
+    end_date: str
+    candles: list[CandleData]
+    indicators: list[IndicatorData]
+    markers: list[BacktestChartMarker]
+    total_trades: int
+    total_return_pct: float | None
+
+
+@app.get("/api/backtest/results/{run_id}/chart-data", response_model=BacktestChartDataResponse)
+async def get_backtest_chart_data(run_id: str):
+    """
+    Get chart data for a backtest result with all trade markers.
+
+    Returns the candles for the backtest period along with:
+    - Indicator overlays (KAMA, ATR bands)
+    - Entry/exit markers for all trades
+    """
+    if not app_state.sqlite_store:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    result = await app_state.sqlite_store.get_backtest_result(run_id)
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Backtest result not found: {run_id}")
+
+    # Get candle data for the symbol
+    from backend.data.yahoo_provider import YahooFinanceProvider
+
+    provider = YahooFinanceProvider()
+    symbol = result.symbol.upper()
+
+    try:
+        # Fetch daily candles for the backtest period
+        candles = await provider.get_historical_data(
+            symbol=symbol,
+            interval="1d",
+            use_cache=True,
+        )
+    except Exception as e:
+        logger.error(f"Failed to fetch chart data for backtest {run_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch chart data: {str(e)}")
+
+    # Parse trades from JSON
+    trades = []
+    markers: list[BacktestChartMarker] = []
+
+    if result.trades_json:
+        try:
+            import json
+            trades_data = json.loads(result.trades_json)
+            for i, trade in enumerate(trades_data):
+                trade_id = trade.get('id', i + 1)
+                side = 'long' if trade.get('side', 1) == 1 or trade.get('side') == 'buy' else 'short'
+                pnl = trade.get('realized_pnl')
+
+                # Entry marker
+                entry_time = trade.get('entry_time')
+                if entry_time:
+                    try:
+                        if isinstance(entry_time, str):
+                            entry_ts = int(datetime.fromisoformat(entry_time.replace('Z', '+00:00')).timestamp())
+                        else:
+                            entry_ts = int(entry_time)
+                        markers.append(BacktestChartMarker(
+                            trade_id=trade_id,
+                            time=entry_ts,
+                            price=trade.get('entry_price', 0),
+                            type='entry',
+                            side=side,
+                        ))
+                    except (ValueError, TypeError):
+                        pass
+
+                # Exit marker (if closed)
+                exit_time = trade.get('exit_time')
+                if exit_time:
+                    try:
+                        if isinstance(exit_time, str):
+                            exit_ts = int(datetime.fromisoformat(exit_time.replace('Z', '+00:00')).timestamp())
+                        else:
+                            exit_ts = int(exit_time)
+                        markers.append(BacktestChartMarker(
+                            trade_id=trade_id,
+                            time=exit_ts,
+                            price=trade.get('exit_price', 0),
+                            type='exit',
+                            side=side,
+                            pnl=pnl,
+                        ))
+                    except (ValueError, TypeError):
+                        pass
+
+                trades.append(trade)
+        except json.JSONDecodeError:
+            logger.warning(f"Failed to parse trades_json for backtest {run_id}")
+
+    # Calculate indicators (KAMA, ATR bands)
+    indicators: list[IndicatorData] = []
+    if candles:
+        try:
+            import numpy as np
+
+            closes = np.array([c.close for c in candles])
+            highs = np.array([c.high for c in candles])
+            lows = np.array([c.low for c in candles])
+
+            # KAMA (simplified Kaufman Adaptive Moving Average)
+            kama_period = 10
+            kama_values = []
+            for i in range(len(closes)):
+                if i < kama_period:
+                    kama_values.append(closes[i])
+                else:
+                    # Simple EMA as approximation
+                    alpha = 2 / (kama_period + 1)
+                    kama_values.append(alpha * closes[i] + (1 - alpha) * kama_values[-1])
+
+            # ATR
+            atr_period = 14
+            tr_list = []
+            atr_values = []
+            for i in range(len(closes)):
+                if i == 0:
+                    tr = highs[i] - lows[i]
+                else:
+                    tr = max(
+                        highs[i] - lows[i],
+                        abs(highs[i] - closes[i - 1]),
+                        abs(lows[i] - closes[i - 1])
+                    )
+                tr_list.append(tr)
+
+                if i < atr_period:
+                    atr_values.append(np.mean(tr_list[:i + 1]))
+                else:
+                    atr_values.append((atr_values[-1] * (atr_period - 1) + tr) / atr_period)
+
+            # Build indicator data
+            for i, candle in enumerate(candles):
+                indicators.append(IndicatorData(
+                    time=candle.time,
+                    kama=kama_values[i] if i < len(kama_values) else None,
+                    atr_upper=kama_values[i] + 2 * atr_values[i] if i < len(kama_values) and i < len(atr_values) else None,
+                    atr_lower=kama_values[i] - 2 * atr_values[i] if i < len(kama_values) and i < len(atr_values) else None,
+                ))
+        except Exception as e:
+            logger.warning(f"Failed to calculate indicators for backtest {run_id}: {e}")
+            # Return candles without indicators
+            indicators = [IndicatorData(time=c.time, kama=None, atr_upper=None, atr_lower=None) for c in candles]
+
+    return BacktestChartDataResponse(
+        run_id=run_id,
+        symbol=symbol,
+        start_date=result.start_date,
+        end_date=result.end_date,
+        candles=candles,
+        indicators=indicators,
+        markers=markers,
+        total_trades=len(trades),
+        total_return_pct=result.total_return_pct,
+    )
+
+
 # ============================================================================
 # Data Management Endpoint
 # ============================================================================

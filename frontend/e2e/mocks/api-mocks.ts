@@ -104,6 +104,45 @@ export const mockIndicators = {
   volatility_state: 'NORMAL',
 };
 
+// Mock Live Analysis data
+export const mockLiveAnalysis = {
+  equity_curve: [
+    { date: '2025-01-10', equity: 10000, benchmark_equity: 10000, daily_pnl: 0, cumulative_pnl: 0, cumulative_return_pct: 0, benchmark_return_pct: 0 },
+    { date: '2025-01-13', equity: 10150, benchmark_equity: 10050, daily_pnl: 150, cumulative_pnl: 150, cumulative_return_pct: 1.5, benchmark_return_pct: 0.5 },
+    { date: '2025-01-14', equity: 10280, benchmark_equity: 10120, daily_pnl: 130, cumulative_pnl: 280, cumulative_return_pct: 2.8, benchmark_return_pct: 1.2 },
+    { date: '2025-01-15', equity: 10180, benchmark_equity: 10080, daily_pnl: -100, cumulative_pnl: 180, cumulative_return_pct: 1.8, benchmark_return_pct: 0.8 },
+    { date: '2025-01-16', equity: 10350, benchmark_equity: 10150, daily_pnl: 170, cumulative_pnl: 350, cumulative_return_pct: 3.5, benchmark_return_pct: 1.5 },
+    { date: '2025-01-17', equity: 10520, benchmark_equity: 10200, daily_pnl: 170, cumulative_pnl: 520, cumulative_return_pct: 5.2, benchmark_return_pct: 2.0 },
+    { date: '2025-01-21', equity: 10480, benchmark_equity: 10180, daily_pnl: -40, cumulative_pnl: 480, cumulative_return_pct: 4.8, benchmark_return_pct: 1.8 },
+    { date: '2025-01-22', equity: 10650, benchmark_equity: 10250, daily_pnl: 170, cumulative_pnl: 650, cumulative_return_pct: 6.5, benchmark_return_pct: 2.5 },
+  ],
+  risk_metrics: {
+    sharpe_ratio: 1.85,
+    sortino_ratio: 2.42,
+    calmar_ratio: 3.15,
+    max_drawdown: -100,
+    max_drawdown_pct: -0.97,
+    win_rate: 0.72,
+    profit_factor: 2.35,
+    avg_win: 155,
+    avg_loss: -70,
+  },
+  daily_breakdown: [
+    { date: '2025-01-10', pnl: 0, return_pct: 0, trade_count: 0, cumulative_pnl: 0 },
+    { date: '2025-01-13', pnl: 150, return_pct: 1.5, trade_count: 2, cumulative_pnl: 150 },
+    { date: '2025-01-14', pnl: 130, return_pct: 1.28, trade_count: 1, cumulative_pnl: 280 },
+    { date: '2025-01-15', pnl: -100, return_pct: -0.97, trade_count: 1, cumulative_pnl: 180 },
+    { date: '2025-01-16', pnl: 170, return_pct: 1.67, trade_count: 2, cumulative_pnl: 350 },
+    { date: '2025-01-17', pnl: 170, return_pct: 1.64, trade_count: 1, cumulative_pnl: 520 },
+    { date: '2025-01-21', pnl: -40, return_pct: -0.38, trade_count: 1, cumulative_pnl: 480 },
+    { date: '2025-01-22', pnl: 170, return_pct: 1.62, trade_count: 2, cumulative_pnl: 650 },
+  ],
+  initial_capital: 10000,
+  current_equity: 10650,
+  benchmark_symbol: 'VTI',
+  trading_days: 8,
+};
+
 /**
  * Setup API mocks for a page
  * Call this in test.beforeEach to mock all API endpoints
@@ -169,6 +208,24 @@ export async function setupApiMocks(page: Page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(mockIndicators),
+    });
+  });
+
+  // Mock /api/live/analysis endpoint
+  await page.route('**/api/live/analysis**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockLiveAnalysis),
+    });
+  });
+
+  // Mock /api/paper/analysis endpoint (same mock data)
+  await page.route('**/api/paper/analysis**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockLiveAnalysis),
     });
   });
 

@@ -5,6 +5,8 @@ export { AppShell } from './AppShell';
 export { Navigation } from './Navigation';
 export type { NavigationProps, NavItem } from './Navigation';
 
+export { Sidebar, SidebarProvider, MobileMenuButton, useSidebar } from './Sidebar';
+
 export { PageContainer } from './PageContainer';
 export type { PageContainerProps } from './PageContainer';
 

@@ -1040,6 +1040,13 @@ class ApiClient {
   }
 
   /**
+   * Get chart data for a backtest result with all trade markers
+   */
+  async getBacktestChartData(runId: string): Promise<BacktestChartDataResponse> {
+    return this.fetchJson<BacktestChartDataResponse>(`${API_BASE_URL}/backtest/results/${runId}/chart-data`);
+  }
+
+  /**
    * Clear all trading data (for fresh start)
    */
   async clearAllTradingData(confirm: boolean = false): Promise<{ status: string; message: string }> {
@@ -1516,4 +1523,31 @@ export interface LiveAnalysisResponse {
   current_equity: number;
   benchmark_symbol: string;
   trading_days: number;
+}
+
+/**
+ * Backtest chart marker for trade visualization
+ */
+export interface BacktestChartMarker {
+  trade_id: number;
+  time: number;
+  price: number;
+  type: 'entry' | 'exit';
+  side: 'long' | 'short';
+  pnl?: number;
+}
+
+/**
+ * Backtest chart data response with all trade markers
+ */
+export interface BacktestChartDataResponse {
+  run_id: string;
+  symbol: string;
+  start_date: string;
+  end_date: string;
+  candles: ChartCandleData[];
+  indicators: IndicatorData[];
+  markers: BacktestChartMarker[];
+  total_trades: number;
+  total_return_pct: number | null;
 }

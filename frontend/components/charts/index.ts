@@ -56,6 +56,9 @@ export type { PnLComparisonChartProps } from './composed/PnLComparisonChart';
 export { TradeDetailChart } from './composed/TradeDetailChart';
 export type { TradeDetailChartProps } from './composed/TradeDetailChart';
 
+export { MultiTradeChart } from './composed/MultiTradeChart';
+export type { MultiTradeChartProps, TradeMarker } from './composed/MultiTradeChart';
+
 // Types
 export type {
   BaseChartProps,
