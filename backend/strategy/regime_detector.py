@@ -638,6 +638,13 @@ def detect_regime(
     regression_period: int = 50,
     apply_persistence: bool = True,
     confirmation_bars: int = 3,
+    # Calibratable threshold parameters (can be overridden with calibrated values)
+    adx_trend_threshold: float = 25.0,
+    adx_ranging_threshold: float = 20.0,
+    r2_trend_threshold: float = 0.6,
+    r2_ranging_threshold: float = 0.4,
+    vol_high_threshold: float = 1.5,
+    vol_low_threshold: float = 0.7,
 ) -> dict:
     """
     Complete regime detection pipeline combining all metrics.
@@ -659,6 +666,12 @@ def detect_regime(
         regression_period: Period for linear regression (default: 50)
         apply_persistence: Whether to apply regime persistence filter (default: True)
         confirmation_bars: Bars required to confirm regime change (default: 3)
+        adx_trend_threshold: ADX threshold for trending regime (default: 25.0, calibratable)
+        adx_ranging_threshold: ADX threshold for ranging regime (default: 20.0, calibratable)
+        r2_trend_threshold: R² threshold for trending regime (default: 0.6, calibratable)
+        r2_ranging_threshold: R² threshold for ranging regime (default: 0.4, calibratable)
+        vol_high_threshold: ATR ratio for high volatility (default: 1.5, calibratable)
+        vol_low_threshold: ATR ratio for low volatility (default: 0.7, calibratable)
 
     Returns:
         Dictionary with:
@@ -680,8 +693,14 @@ def detect_regime(
     # Calculate linear regression
     regression_slope, r_squared = calculate_linear_regression(close, period=regression_period)
 
-    # Classify trend regime
-    trend_regime = classify_trend_regime(adx, r_squared)
+    # Classify trend regime using calibratable thresholds
+    trend_regime = classify_trend_regime(
+        adx, r_squared,
+        adx_trend_threshold=adx_trend_threshold,
+        adx_ranging_threshold=adx_ranging_threshold,
+        r2_trend_threshold=r2_trend_threshold,
+        r2_ranging_threshold=r2_ranging_threshold,
+    )
 
     # Apply persistence filter if requested
     if apply_persistence:
@@ -689,8 +708,12 @@ def detect_regime(
     else:
         trend_regime_confirmed = trend_regime
 
-    # Classify volatility regime
-    volatility_regime = classify_volatility_regime(atr, atr_ma)
+    # Classify volatility regime using calibratable thresholds
+    volatility_regime = classify_volatility_regime(
+        atr, atr_ma,
+        high_vol_threshold=vol_high_threshold,
+        low_vol_threshold=vol_low_threshold,
+    )
 
     return {
         "adx": adx,
