@@ -24,6 +24,7 @@ dependencies = [
     "pyarrow>=15.0.0",
     # Quantitative Analysis
     "quantstats>=0.0.62",
+    "plotly>=5.18.0",
     "scipy>=1.12.0",
     "scikit-learn>=1.4.0",
     "yfinance>=0.2.36",
@@ -58,6 +59,10 @@ dev-dependencies = [
     "ruff>=0.2.0",
     "mypy>=1.8.0",
     "ipdb>=0.13.13",
+    # Jupyter for testing
+    "jupyter>=1.0.0",
+    "ipykernel>=6.29.0",
+    "matplotlib>=3.8.0",
 ]
 
 [tool.pytest.ini_options]

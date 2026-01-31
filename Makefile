@@ -11,8 +11,10 @@
 
 .PHONY: help dev dev-backend dev-debug dev-frontend stop stop-backend stop-frontend \
         test test-unit test-integration test-parallel lint format typecheck \
-        install install-backend install-frontend clean logs \
-        docker-build docker-up docker-down docker-logs docker-shell-backend docker-clean
+        install install-backend install-frontend clean logs notebook notebook-lab \
+        docker-build docker-up docker-down docker-logs docker-shell-backend docker-clean \
+        backtest backtest-optimize backtest-live backtest-quick backtest-compare \
+        backtest-full backtest-report backtest-report-full backtest-all backtest-all-quick
 
 # Colors for terminal output
 CYAN := \033[0;36m
@@ -49,6 +51,18 @@ help:
 	@echo "  make stop             Stop all running services"
 	@echo "  make logs             Show backend logs"
 	@echo ""
+	@echo "$(GREEN)Backtesting:$(NC)"
+	@echo "  make backtest-live           Run backtest with live Yahoo data (SPY, 1yr)"
+	@echo "  make backtest-live SYMBOL=X  Backtest custom symbol"
+	@echo "  make backtest-quick          Quick 6-month backtest"
+	@echo "  make backtest-compare        Compare SPY, QQQ, IWM, DIA"
+	@echo "  make backtest-full           Full 2-year analysis"
+	@echo "  make backtest-report         Generate HTML tearsheet report"
+	@echo "  make backtest-report-full    Full report with Monte Carlo"
+	@echo "  make backtest-all            Compare ALL strategies (with report)"
+	@echo "  make backtest-all-quick      Quick compare ALL strategies"
+	@echo "  make backtest-optimize       Walk-forward grid search"
+	@echo ""
 	@echo "$(GREEN)Testing:$(NC)"
 	@echo "  make test             Run all tests (parallel)"
 	@echo "  make test-unit        Run unit tests only"
@@ -61,6 +75,10 @@ help:
 	@echo "  make format           Auto-format code with ruff"
 	@echo "  make typecheck        Run mypy type checking"
 	@echo "  make check            Run all quality checks (lint + typecheck)"
+	@echo ""
+	@echo "$(GREEN)Notebooks:$(NC)"
+	@echo "  make notebook         Start Jupyter Notebook"
+	@echo "  make notebook-lab     Start Jupyter Lab"
 	@echo ""
 	@echo "$(GREEN)Setup:$(NC)"
 	@echo "  make install          Install all dependencies"
@@ -192,6 +210,92 @@ test-coverage:
 test-watch:
 	@echo "$(CYAN)Running tests in watch mode...$(NC)"
 	$(PYTEST) -f -v
+
+# ============================================================================
+# Backtesting
+# ============================================================================
+
+# Easy backtest with real Yahoo Finance data
+# Usage:
+#   make backtest-live                    # SPY, 1 year
+#   make backtest-live SYMBOL=AAPL        # Custom symbol
+#   make backtest-live SYMBOLS=SPY,QQQ    # Compare multiple
+#   make backtest-quick                   # Quick 6-month test
+
+SYMBOL ?= SPY
+SYMBOLS ?= SPY,QQQ,IWM,DIA
+START_DATE ?=
+END_DATE ?=
+
+backtest-live:
+	@echo "$(CYAN)Running backtest with live Yahoo Finance data...$(NC)"
+ifdef SYMBOLS
+	$(PYTHON) scripts/run_backtest.py --symbols $(SYMBOLS)
+else ifdef START_DATE
+	$(PYTHON) scripts/run_backtest.py --symbol $(SYMBOL) --start $(START_DATE)
+else
+	$(PYTHON) scripts/run_backtest.py --symbol $(SYMBOL)
+endif
+
+backtest-quick:
+	@echo "$(CYAN)Running quick 6-month backtest...$(NC)"
+	$(PYTHON) scripts/run_backtest.py --symbol $(SYMBOL) --quick
+
+backtest-compare:
+	@echo "$(CYAN)Comparing multiple symbols with Monte Carlo validation...$(NC)"
+	$(PYTHON) scripts/run_backtest.py --symbols $(SYMBOLS) --monte-carlo --report
+
+backtest-full:
+	@echo "$(CYAN)Running full 2-year backtest analysis...$(NC)"
+	$(PYTHON) scripts/run_backtest.py --symbol $(SYMBOL) --full
+
+backtest-report:
+	@echo "$(CYAN)Running backtest with HTML report + Monte Carlo validation...$(NC)"
+	$(PYTHON) scripts/run_backtest.py --symbol $(SYMBOL) --report --monte-carlo --diagnostics
+
+backtest-report-full:
+	@echo "$(CYAN)Running full 2-year analysis with report + Monte Carlo...$(NC)"
+	$(PYTHON) scripts/run_backtest.py --symbol $(SYMBOL) --full --report --monte-carlo --diagnostics
+
+backtest-all:
+	@echo "$(CYAN)Comparing ALL strategies on $(SYMBOL)...$(NC)"
+	$(PYTHON) scripts/run_backtest.py --symbol $(SYMBOL) --all-strategies --report --monte-carlo
+
+backtest-all-quick:
+	@echo "$(CYAN)Quick comparison of ALL strategies on $(SYMBOL)...$(NC)"
+	$(PYTHON) scripts/run_backtest.py --symbol $(SYMBOL) --all-strategies --quick
+
+# Original synthetic data backtest
+backtest:
+	@echo "$(CYAN)Running SPY backtest with synthetic data...$(NC)"
+	$(PYTHON) scripts/run_spy_backtest.py
+
+backtest-optimize:
+	@echo "$(CYAN)Running walk-forward grid search optimization...$(NC)"
+	$(PYTHON) scripts/run_grid_search.py
+
+# ============================================================================
+# Notebooks
+# ============================================================================
+
+JUPYTER := $(VENV)/bin/jupyter
+
+notebook: notebook-kernel
+	@echo "$(CYAN)Starting Jupyter Notebook...$(NC)"
+	@$(JUPYTER) notebook notebooks/
+
+notebook-lab: notebook-kernel
+	@echo "$(CYAN)Starting Jupyter Lab...$(NC)"
+	@$(JUPYTER) lab notebooks/
+
+notebook-kernel:
+	@if [ ! -f $(JUPYTER) ]; then \
+		echo "$(CYAN)Installing Jupyter (first time)...$(NC)"; \
+		$(UV) sync; \
+	fi
+	@echo "$(CYAN)Registering Jupyter kernel...$(NC)"
+	@$(PYTHON) -m ipykernel install --user --name=fluxhero --display-name="FluxHero"
+	@echo "$(GREEN)Kernel 'FluxHero' registered$(NC)"
 
 # ============================================================================
 # Code Quality

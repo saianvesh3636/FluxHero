@@ -184,19 +184,26 @@ def generate_mean_reversion_signals(
     rsi: np.ndarray,
     bollinger_lower: np.ndarray,
     bollinger_middle: np.ndarray,
-    rsi_oversold: float = 30.0,
-    rsi_overbought: float = 70.0,
+    bollinger_upper: np.ndarray | None = None,
+    rsi_oversold: float = 35.0,
+    rsi_overbought: float = 65.0,
+    bb_entry_threshold: float = 0.15,
+    use_or_logic: bool = True,
 ) -> np.ndarray:
     """
     Generate mean-reversion entry and exit signals.
 
-    Entry Logic (R6.2.1):
-        LONG: RSI < 30 AND price touches lower Bollinger Band
-        SHORT: RSI > 70 AND price touches upper Bollinger Band
+    Entry Logic (Configurable):
+        If use_or_logic=True (default, relaxed for more trades):
+            LONG: RSI < rsi_oversold OR %B < bb_entry_threshold
+            SHORT: RSI > rsi_overbought OR %B > (1 - bb_entry_threshold)
+        If use_or_logic=False (original strict AND logic):
+            LONG: RSI < rsi_oversold AND price <= lower Bollinger Band
+            SHORT: RSI > rsi_overbought AND price >= upper Bollinger Band
 
     Exit Logic (R6.2.2):
-        EXIT LONG: Price returns to 20-period SMA (middle band) OR RSI > 70
-        EXIT SHORT: Price returns to 20-period SMA (middle band) OR RSI < 30
+        EXIT LONG: Price returns to 20-period SMA (middle band) OR RSI > rsi_overbought
+        EXIT SHORT: Price returns to 20-period SMA (middle band) OR RSI < rsi_oversold
 
     Parameters
     ----------
@@ -208,10 +215,17 @@ def generate_mean_reversion_signals(
         Lower Bollinger Band values
     bollinger_middle : np.ndarray (float64)
         Middle Bollinger Band (20-period SMA)
+    bollinger_upper : np.ndarray (float64), optional
+        Upper Bollinger Band values (for short entries and %B calculation)
     rsi_oversold : float
-        RSI threshold for oversold condition (default: 30)
+        RSI threshold for oversold condition (default: 35, relaxed from 30)
     rsi_overbought : float
-        RSI threshold for overbought condition (default: 70)
+        RSI threshold for overbought condition (default: 65, relaxed from 70)
+    bb_entry_threshold : float
+        Bollinger %B threshold for entry (default: 0.15, meaning %B < 0.15 for long)
+    use_or_logic : bool
+        If True, use OR logic between RSI and BB conditions (more trades).
+        If False, use original AND logic (fewer trades).
 
     Returns
     -------
@@ -235,24 +249,55 @@ def generate_mean_reversion_signals(
         if np.isnan(bollinger_lower[i]) or np.isnan(bollinger_middle[i]):
             continue
 
+        # Calculate Bollinger %B for entry conditions
+        bb_width = bollinger_middle[i] * 2.0 - bollinger_lower[i] - bollinger_lower[i]
+        if bollinger_upper is not None and not np.isnan(bollinger_upper[i]):
+            bb_width = bollinger_upper[i] - bollinger_lower[i]
+
+        # Avoid division by zero
+        if bb_width < 1e-10:
+            bb_pct_b = 0.5  # Neutral if bands are collapsed
+        else:
+            bb_pct_b = (prices[i] - bollinger_lower[i]) / bb_width
+
         # ENTRY SIGNALS (only if not in position)
         if not in_long and not in_short:
-            # Long entry: RSI < 30 AND price at/below lower Bollinger Band
-            if rsi[i] < rsi_oversold and prices[i] <= bollinger_lower[i]:
-                signals[i] = SIGNAL_LONG
-                in_long = True
-            # Short entry: RSI > 70 AND price at/above upper Bollinger Band
-            # Note: For mean reversion, we need upper band too, but we can infer it
-            # or use bollinger_upper if provided. For now, focus on long only.
+            if use_or_logic:
+                # Relaxed OR logic: RSI oversold OR price near lower band
+                rsi_oversold_cond = rsi[i] < rsi_oversold
+                bb_oversold_cond = bb_pct_b < bb_entry_threshold
+
+                if rsi_oversold_cond or bb_oversold_cond:
+                    signals[i] = SIGNAL_LONG
+                    in_long = True
+                # Short entry with OR logic (if upper band available)
+                elif bollinger_upper is not None and not np.isnan(bollinger_upper[i]):
+                    rsi_overbought_cond = rsi[i] > rsi_overbought
+                    bb_overbought_cond = bb_pct_b > (1.0 - bb_entry_threshold)
+
+                    if rsi_overbought_cond or bb_overbought_cond:
+                        signals[i] = SIGNAL_SHORT
+                        in_short = True
+            else:
+                # Original strict AND logic
+                # Long entry: RSI < oversold AND price at/below lower Bollinger Band
+                if rsi[i] < rsi_oversold and prices[i] <= bollinger_lower[i]:
+                    signals[i] = SIGNAL_LONG
+                    in_long = True
+                # Short entry: RSI > overbought AND price at/above upper Bollinger Band
+                elif bollinger_upper is not None and not np.isnan(bollinger_upper[i]):
+                    if rsi[i] > rsi_overbought and prices[i] >= bollinger_upper[i]:
+                        signals[i] = SIGNAL_SHORT
+                        in_short = True
 
         # EXIT SIGNALS
         elif in_long:
-            # Exit long: Price returns to middle band OR RSI > 70
+            # Exit long: Price returns to middle band OR RSI > overbought
             if prices[i] >= bollinger_middle[i] or rsi[i] > rsi_overbought:
                 signals[i] = SIGNAL_EXIT_LONG
                 in_long = False
         elif in_short:
-            # Exit short: Price returns to middle band OR RSI < 30
+            # Exit short: Price returns to middle band OR RSI < oversold
             if prices[i] <= bollinger_middle[i] or rsi[i] < rsi_oversold:
                 signals[i] = SIGNAL_EXIT_SHORT
                 in_short = False

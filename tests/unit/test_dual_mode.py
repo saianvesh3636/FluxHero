@@ -164,18 +164,42 @@ def test_mean_reversion_long_exit_rsi_overbought():
     assert np.any(signals == SIGNAL_EXIT_LONG)
 
 
-def test_mean_reversion_no_entry_without_both_conditions():
-    """Test that entry requires BOTH RSI < 30 AND price at lower band."""
+def test_mean_reversion_and_logic_no_entry_without_both_conditions():
+    """Test that AND logic requires BOTH RSI oversold AND price at lower band."""
     # RSI < 30 but price not at lower band
     prices = np.array([100.0, 99.0, 98.0, 97.5])
     rsi = np.array([50.0, 35.0, 28.0, 25.0])
     bb_lower = np.array([95.0, 95.0, 95.0, 95.0])
     bb_middle = np.array([100.0, 100.0, 100.0, 100.0])
 
-    signals = generate_mean_reversion_signals(prices, rsi, bb_lower, bb_middle)
+    # With AND logic (use_or_logic=False), no entry should be generated
+    signals = generate_mean_reversion_signals(
+        prices, rsi, bb_lower, bb_middle,
+        use_or_logic=False,
+        rsi_oversold=30.0,
+    )
 
     # No entry signal should be generated
     assert not np.any(signals == SIGNAL_LONG)
+
+
+def test_mean_reversion_or_logic_entry_with_rsi_only():
+    """Test that OR logic allows entry on RSI oversold alone."""
+    # RSI < 35 but price not at lower band
+    prices = np.array([100.0, 99.0, 98.0, 97.5])
+    rsi = np.array([50.0, 40.0, 32.0, 28.0])  # Goes below 35 at index 2
+    bb_lower = np.array([90.0, 90.0, 90.0, 90.0])  # Price is well above lower band
+    bb_middle = np.array([100.0, 100.0, 100.0, 100.0])
+
+    # With OR logic (default), entry should be generated when RSI < 35
+    signals = generate_mean_reversion_signals(
+        prices, rsi, bb_lower, bb_middle,
+        use_or_logic=True,
+        rsi_oversold=35.0,
+    )
+
+    # Entry signal should be generated (RSI < 35 triggers entry)
+    assert np.any(signals == SIGNAL_LONG)
 
 
 # ============================================================================
