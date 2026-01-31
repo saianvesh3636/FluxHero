@@ -69,7 +69,6 @@ class GoldenAdaptiveStrategy:
         symbol: str = "",
         initial_capital: float = 100000.0,
         risk_per_trade: float = 0.01,      # 1% risk per trade
-        min_confidence: float = 0.5,       # Minimum confidence to trade
         max_position_pct: float = 0.20,    # Max 20% of capital per position
         # Indicator parameters
         fractal_lookback: int = 20,
@@ -96,9 +95,7 @@ class GoldenAdaptiveStrategy:
         initial_capital : float
             Starting capital
         risk_per_trade : float
-            Fraction of capital to risk per trade (default 1%)
-        min_confidence : float
-            Minimum confidence score to enter trade (0-1)
+            Fraction of capital to risk per trade
         max_position_pct : float
             Maximum position as fraction of capital
         """
@@ -107,7 +104,6 @@ class GoldenAdaptiveStrategy:
         self.initial_capital = initial_capital
         self.capital = initial_capital
         self.risk_per_trade = risk_per_trade
-        self.min_confidence = min_confidence
         self.max_position_pct = max_position_pct
 
         # Compute all indicators
@@ -128,7 +124,7 @@ class GoldenAdaptiveStrategy:
         # Pre-compute ATR for stops
         self.atr = self._calculate_atr(bars[:, 1], bars[:, 2], bars[:, 3], vol_lookback)
 
-        # Generate signals
+        # Generate signals (TRUE NO MAGIC NUMBERS - crossovers and rolling extremes)
         self.signals = generate_golden_signals(
             bars[:, 3],
             self.indicators['golden_ema'],
@@ -136,7 +132,7 @@ class GoldenAdaptiveStrategy:
             self.indicators['golden_ema_slow'],
             self.indicators['confidence'],
             self.indicators['regime'],
-            min_confidence=min_confidence
+            lookback=fractal_lookback,  # Use same lookback as indicators
         )
 
         # Warmup period
@@ -191,10 +187,8 @@ class GoldenAdaptiveStrategy:
         """
         Calculate position size based on risk and confidence.
 
-        Position size scales with confidence:
-        - High confidence (0.9) → Use full risk budget
-        - Medium confidence (0.6) → Use 60% of risk budget
-        - Low confidence (0.5) → Use 50% of risk budget
+        Position size scales with confidence.
+        No magic numbers - uses actual risk calculation.
         """
         if entry_price <= 0 or stop_price <= 0:
             return 0
@@ -202,7 +196,10 @@ class GoldenAdaptiveStrategy:
         risk_amount = self.capital * self.risk_per_trade * confidence
         risk_per_share = abs(entry_price - stop_price)
 
-        if risk_per_share < 0.01:
+        # Minimum risk per share: avoid division issues
+        # Use tiny fraction of entry price instead of magic number
+        min_risk = entry_price * 1e-6
+        if risk_per_share < min_risk:
             return 0
 
         shares = int(risk_amount / risk_per_share)
@@ -339,11 +336,11 @@ class GoldenAdaptiveStrategy:
                 should_exit = True
                 exit_reason = "regime_change"
 
-            # Signal reversal
-            if position.side == "LONG" and signal < -self.min_confidence:
+            # Signal reversal (exit when opposite signal generated)
+            if position.side == "LONG" and signal < 0:
                 should_exit = True
                 exit_reason = "signal_reversal"
-            elif position.side == "SHORT" and signal > self.min_confidence:
+            elif position.side == "SHORT" and signal > 0:
                 should_exit = True
                 exit_reason = "signal_reversal"
 
@@ -361,7 +358,8 @@ class GoldenAdaptiveStrategy:
                 return orders
 
         # Check for entry if no position
-        if position is None and abs(signal) >= self.min_confidence:
+        # Signal is already confidence-weighted, check if non-zero
+        if position is None and abs(signal) > 0:
             if np.isnan(confidence):
                 return []
 

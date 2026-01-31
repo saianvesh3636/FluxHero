@@ -53,9 +53,7 @@ class GoldenParameters:
     w_volatility: float = 0.25
     w_volume: float = 0.15
 
-    # Confidence thresholds (percentile-based)
-    min_confidence: float = 0.5      # Minimum to trade
-    high_confidence: float = 0.75    # Full position size
+    # No threshold parameters needed - signals use crossovers and rolling extremes
 
     # ATR multipliers for stops (calibrated from price movement)
     atr_stop_trending: float = 2.5
@@ -96,7 +94,6 @@ class GoldenParameters:
             'w_efficiency': self.w_efficiency,
             'w_volatility': self.w_volatility,
             'w_volume': self.w_volume,
-            'min_confidence': self.min_confidence,
             'atr_stop_trending': self.atr_stop_trending,
             'atr_stop_mr': self.atr_stop_mr,
             'atr_stop_neutral': self.atr_stop_neutral,
@@ -164,14 +161,9 @@ class GoldenCalibrator:
             w_volume=params.w_volume,
         )
 
-        # Calibrate confidence threshold from distribution
-        confidence = indicators['confidence']
-        valid_conf = confidence[~np.isnan(confidence)]
-        if len(valid_conf) > 0:
-            # Set min_confidence at 40th percentile (trade top 60% of signals)
-            params.min_confidence = float(np.percentile(valid_conf, 40))
-            # High confidence at 75th percentile
-            params.high_confidence = float(np.percentile(valid_conf, 75))
+        # Note: confidence_percentile and deviation_percentile are user-configurable
+        # They define what percentile thresholds to use (no magic numbers)
+        # Default: confidence_percentile=25 (trade top 75%), deviation_percentile=80
 
         # Analyze regime distribution
         analysis = analyze_dimension_contribution(indicators)
@@ -464,7 +456,6 @@ class WalkForwardCalibrator:
             test_result = backtest_golden_strategy(
                 test_bars_data,
                 symbol=symbol,
-                min_confidence=params.min_confidence,
                 w_fractal=params.w_fractal,
                 w_efficiency=params.w_efficiency,
                 w_volatility=params.w_volatility,
@@ -475,7 +466,6 @@ class WalkForwardCalibrator:
             train_result = backtest_golden_strategy(
                 train_bars,
                 symbol=symbol,
-                min_confidence=params.min_confidence,
                 w_fractal=params.w_fractal,
                 w_efficiency=params.w_efficiency,
                 w_volatility=params.w_volatility,

@@ -194,6 +194,11 @@ class DualModeStrategy:
             rsi=rsi,
             bollinger_lower=bb_lower,
             bollinger_middle=bb_middle,
+            bollinger_upper=bb_upper,
+            rsi_oversold=35.0,
+            rsi_overbought=65.0,
+            bb_entry_threshold=0.15,
+            use_or_logic=True,
         )
 
         self.close_prices = close_prices

@@ -387,16 +387,17 @@ class DualModeBacktestStrategy:
             return mr_signal, self.mr_risk_pct, MODE_MEAN_REVERSION
 
         else:  # REGIME_NEUTRAL
-            # Neutral regime - require both strategies to agree
-            if trend_signal == mr_signal and trend_signal != SIGNAL_NONE:
-                # Both agree on a signal
+            # Neutral regime = range-bound -> use mean-reversion with reduced risk
+            # Standard approach: trade the range (buy support, sell resistance)
+            if mr_signal != SIGNAL_NONE:
                 logger.debug(
-                    "DUAL mode at bar %d: NEUTRAL -> signals agree (%s)",
+                    "DUAL mode at bar %d: NEUTRAL -> mean-reversion signal (%s)",
                     bar_index,
-                    _SIGNAL_NAMES.get(trend_signal, "UNKNOWN"),
+                    _SIGNAL_NAMES.get(mr_signal, "UNKNOWN"),
                 )
-                return trend_signal, self.mr_risk_pct * 0.7, MODE_NEUTRAL
-            # Check for exit signals (more lenient)
+                # Use 70% of normal MR risk in neutral (slightly more cautious)
+                return mr_signal, self.mr_risk_pct * 0.7, MODE_MEAN_REVERSION
+            # Check for exit signals
             if trend_signal in (SIGNAL_EXIT_LONG, SIGNAL_EXIT_SHORT):
                 logger.debug(
                     "DUAL mode at bar %d: NEUTRAL -> trend exit signal (%s)",

@@ -491,46 +491,91 @@ def generate_golden_signals(
     golden_ema_slow: np.ndarray,
     confidence: np.ndarray,
     regime: np.ndarray,
-    min_confidence: float = 0.5
+    lookback: int = 50,  # Rolling window for extremes (same as other indicator lookbacks)
 ) -> np.ndarray:
     """
     Generate trading signals from Golden Adaptive indicators.
+
+    TRUE NO MAGIC NUMBERS:
+    - Crossovers: Signal when lines cross (no threshold)
+    - Mean-reversion: Signal at rolling min/max (extreme of recent distribution)
+    - Confidence: Scales signal strength (no minimum threshold)
+
+    Signal Logic:
+    - Trending regime: EMA crossovers and price-EMA crossovers
+    - Mean-reversion regime: Price at rolling high/low relative to EMA
+    - Neutral regime: EMA crossovers only
+
+    Parameters
+    ----------
+    lookback : int
+        Rolling window for calculating extremes (uses same window as indicators)
 
     Returns
     -------
     np.ndarray
         Signal array: positive = long strength, negative = short strength
+        Signal magnitude = confidence (dimension agreement)
     """
     n = len(close)
     signals = np.zeros(n)
 
-    for i in range(1, n):
-        if np.isnan(confidence[i]) or confidence[i] < min_confidence:
+    # Pre-calculate rolling deviation statistics for MR signals
+    # No magic threshold - use rolling min/max
+    deviations = np.full(n, np.nan)
+    for i in range(n):
+        if not np.isnan(golden_ema[i]) and golden_ema[i] > 0:
+            deviations[i] = (close[i] - golden_ema[i]) / golden_ema[i]
+
+    for i in range(lookback, n):
+        # Skip if indicators not ready
+        if (np.isnan(golden_ema[i]) or np.isnan(golden_ema_fast[i]) or
+            np.isnan(golden_ema_slow[i]) or np.isnan(confidence[i])):
             continue
 
-        if (np.isnan(golden_ema[i]) or np.isnan(golden_ema_fast[i]) or
-            np.isnan(golden_ema_slow[i])):
+        if np.isnan(golden_ema_fast[i-1]) or np.isnan(golden_ema_slow[i-1]):
             continue
 
         current_regime = regime[i]
+        conf = confidence[i]
 
-        if current_regime == 2.0:  # Trending
+        if current_regime == 2.0:  # Trending - follow crossovers
+            # Price crossing EMA
+            if close[i] > golden_ema[i] and close[i-1] <= golden_ema[i-1]:
+                signals[i] = conf  # Bullish
+            elif close[i] < golden_ema[i] and close[i-1] >= golden_ema[i-1]:
+                signals[i] = -conf  # Bearish
+            # EMA crossovers
+            elif golden_ema_fast[i] > golden_ema_slow[i] and golden_ema_fast[i-1] <= golden_ema_slow[i-1]:
+                signals[i] = conf
+            elif golden_ema_fast[i] < golden_ema_slow[i] and golden_ema_fast[i-1] >= golden_ema_slow[i-1]:
+                signals[i] = -conf
+
+        elif current_regime == 0.0:  # Mean-reversion - fade extremes
+            # Get rolling window of deviations
+            window = deviations[i-lookback:i]
+            valid_window = window[~np.isnan(window)]
+
+            if len(valid_window) > 0:
+                rolling_min = np.min(valid_window)
+                rolling_max = np.max(valid_window)
+                current_dev = deviations[i]
+
+                if not np.isnan(current_dev):
+                    # Signal at extremes: current deviation equals rolling min or max
+                    if current_dev <= rolling_min:
+                        signals[i] = conf  # Oversold - go long
+                    elif current_dev >= rolling_max:
+                        signals[i] = -conf  # Overbought - go short
+
+        else:  # Neutral (1.0) - crossovers only
             fast_above_now = golden_ema_fast[i] > golden_ema_slow[i]
             fast_above_prev = golden_ema_fast[i-1] > golden_ema_slow[i-1]
 
             if fast_above_now and not fast_above_prev:
-                signals[i] = confidence[i]
+                signals[i] = conf
             elif not fast_above_now and fast_above_prev:
-                signals[i] = -confidence[i]
-
-        elif current_regime == 0.0:  # Mean-reversion
-            if golden_ema[i] > 0:
-                deviation = (close[i] - golden_ema[i]) / golden_ema[i]
-
-                if deviation < -0.02:
-                    signals[i] = confidence[i] * min(1.0, abs(deviation) / 0.05)
-                elif deviation > 0.02:
-                    signals[i] = -confidence[i] * min(1.0, deviation / 0.05)
+                signals[i] = -conf
 
     return signals
 
