@@ -474,9 +474,9 @@ class CalibratedBacktestStrategy:
         # Handle exits
         if position is not None:
             if position.side == PositionSide.LONG and signal == SIGNAL_EXIT_LONG:
-                orders.append(self._create_exit_order(position, current_close))
+                orders.append(self._create_exit_order(position, current_close, bar_index))
             elif position.side == PositionSide.SHORT and signal == SIGNAL_EXIT_SHORT:
-                orders.append(self._create_exit_order(position, current_close))
+                orders.append(self._create_exit_order(position, current_close, bar_index))
             return orders
 
         # Handle entries
@@ -576,19 +576,22 @@ class CalibratedBacktestStrategy:
             return None
 
         return Order(
+            bar_index=bar_index,
+            symbol=self.symbol,
             side=side,
+            shares=shares,
             order_type=OrderType.MARKET,
-            quantity=shares,
-            stop_loss=stop_loss,
         )
 
-    def _create_exit_order(self, position: Position, price: float) -> Order:
+    def _create_exit_order(self, position: Position, price: float, bar_index: int = -1) -> Order:
         """Create exit order for position."""
         side = OrderSide.SELL if position.side == PositionSide.LONG else OrderSide.BUY
         return Order(
+            bar_index=bar_index,
+            symbol=self.symbol,
             side=side,
+            shares=position.shares,
             order_type=OrderType.MARKET,
-            quantity=abs(position.quantity),
         )
 
     def update_capital(self, new_capital: float) -> None:

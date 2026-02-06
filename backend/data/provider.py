@@ -321,6 +321,15 @@ def get_provider(provider_type: Optional[ProviderType] = None) -> DataProvider:
 # This is done at module level to ensure providers are registered
 def _register_builtin_providers():
     """Register built-in providers."""
+    # Try local provider first (for development/testing)
+    try:
+        from backend.data.local_provider import LocalCSVProvider  # noqa: F401
+        logger.info("Local CSV provider registered (using local test data)")
+        return  # Use local provider, skip Yahoo
+    except ImportError as e:
+        logger.debug(f"Local CSV provider not available: {e}")
+
+    # Fall back to Yahoo Finance
     try:
         from backend.data.yahoo_provider import YahooFinanceProvider  # noqa: F401
         logger.debug("Yahoo Finance provider registered")

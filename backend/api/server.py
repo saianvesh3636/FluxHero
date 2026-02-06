@@ -1214,11 +1214,21 @@ async def run_backtest(config: BacktestRequest):
     # Initialize backtest engine
     engine = BacktestEngine(config=bt_config)
 
-    # Initialize dual-mode strategy
-    from backend.strategy.backtest_strategy import DualModeBacktestStrategy
+    # Initialize strategy with calibrated parameters (adaptive thresholds)
+    from backend.calibration import PercentileCalibrator
+    from backend.strategy.calibrated_backtest_strategy import CalibratedBacktestStrategy
 
-    strategy = DualModeBacktestStrategy(
+    # Calibrate parameters from the data (percentile-based, no magic numbers)
+    calibrator = PercentileCalibrator()
+    calibrated_params = calibrator.calibrate(
+        symbol=config.symbol,
         bars=bars,
+    )
+
+    strategy = CalibratedBacktestStrategy(
+        bars=bars,
+        symbol=config.symbol,
+        calibrated_params=calibrated_params,
         initial_capital=config.initial_capital,
         strategy_mode=config.strategy_mode,
     )

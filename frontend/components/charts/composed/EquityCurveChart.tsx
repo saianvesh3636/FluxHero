@@ -51,12 +51,13 @@ export function EquityCurveChart({
   const [isLoading, setIsLoading] = useState(true);
 
   // Calculate return percentage
-  const endValue = data.equity[data.equity.length - 1];
+  const equity = data?.equity ?? [];
+  const endValue = equity.length > 0 ? equity[equity.length - 1] : 0;
   const returnPct =
-    data.totalReturnPct !== undefined
+    data?.totalReturnPct !== undefined
       ? data.totalReturnPct
       : (() => {
-          const startValue = data.equity[0];
+          const startValue = equity[0] ?? 0;
           return startValue > 0
             ? ((endValue - startValue) / startValue) * 100
             : 0;
@@ -64,7 +65,7 @@ export function EquityCurveChart({
   const isPositiveReturn = returnPct >= 0;
 
   useEffect(() => {
-    if (!containerRef.current || data.times.length === 0) return;
+    if (!containerRef.current || !data.times || data.times.length === 0) return;
 
     let isMounted = true;
 
@@ -97,11 +98,11 @@ export function EquityCurveChart({
         },
       });
 
-      equitySeries.setData(toLineData(data.times, data.equity));
+      equitySeries.setData(toLineData(data?.times ?? [], equity));
       seriesRef.current = equitySeries;
 
       // Add benchmark line if provided
-      if (showBenchmark && data.benchmark && data.benchmark.length > 0) {
+      if (showBenchmark && data?.benchmark && data.benchmark.length > 0) {
         const benchmarkSeries = chart.addSeries(LineSeries, {
           color: CHART_COLORS.text,
           lineWidth: LINE_WIDTH.thin,
@@ -111,11 +112,11 @@ export function EquityCurveChart({
             formatter: (price: number) => formatCurrency(price, 0),
           },
         });
-        benchmarkSeries.setData(toLineData(data.times, data.benchmark));
+        benchmarkSeries.setData(toLineData(data?.times ?? [], data.benchmark));
       }
 
       // Add initial capital reference line if provided
-      if (initialCapital !== undefined && data.times.length >= 2) {
+      if (initialCapital !== undefined && (data?.times?.length ?? 0) >= 2) {
         const capitalSeries = chart.addSeries(LineSeries, {
           color: CHART_COLORS.warning,
           lineWidth: LINE_WIDTH.thin,
@@ -125,8 +126,9 @@ export function EquityCurveChart({
             formatter: (price: number) => formatCurrency(price, 0),
           },
         });
+        const times = data?.times ?? [];
         capitalSeries.setData(
-          toHorizontalLine(data.times[0], data.times[data.times.length - 1], initialCapital)
+          toHorizontalLine(times[0], times[times.length - 1], initialCapital)
         );
       }
 

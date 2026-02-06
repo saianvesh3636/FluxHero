@@ -82,11 +82,11 @@ class PercentileCalibrator:
                 f"Insufficient data: {len(bars)} bars, need at least {self.config.min_bars_required}"
             )
 
-        # Extract OHLCV
-        high = bars[:, 1]
-        low = bars[:, 2]
-        close = bars[:, 3]
-        volume = bars[:, 4]
+        # Extract OHLCV (ensure contiguous arrays for Numba compatibility)
+        high = np.ascontiguousarray(bars[:, 1], dtype=np.float64)
+        low = np.ascontiguousarray(bars[:, 2], dtype=np.float64)
+        close = np.ascontiguousarray(bars[:, 3], dtype=np.float64)
+        volume = np.ascontiguousarray(bars[:, 4], dtype=np.float64)
 
         # Calculate all indicators
         rsi = calculate_rsi(close, period=14)

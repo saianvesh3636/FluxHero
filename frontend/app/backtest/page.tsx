@@ -491,49 +491,49 @@ function BacktestResultsModal({ results, onClose, onExport, backtestRunId }: Bac
             />
             <MetricCard
               label="Sharpe Ratio"
-              value={results.sharpe_ratio.toFixed(2)}
+              value={(results.sharpe_ratio ?? 0).toFixed(2)}
               valueClass={
-                results.sharpe_ratio > 0.8 ? 'text-profit-500' :
-                results.sharpe_ratio > 0.5 ? 'text-warning-500' :
+                (results.sharpe_ratio ?? 0) > 0.8 ? 'text-profit-500' :
+                (results.sharpe_ratio ?? 0) > 0.5 ? 'text-warning-500' :
                 'text-loss-500'
               }
               hint={
-                results.sharpe_ratio > 0.8 ? 'Excellent' :
-                results.sharpe_ratio > 0.5 ? 'Good' : 'Poor'
+                (results.sharpe_ratio ?? 0) > 0.8 ? 'Excellent' :
+                (results.sharpe_ratio ?? 0) > 0.5 ? 'Good' : 'Poor'
               }
             />
             <MetricCard
               label="Max Drawdown"
-              value={`${results.max_drawdown_pct.toFixed(2)}%`}
+              value={`${(results.max_drawdown_pct ?? 0).toFixed(2)}%`}
               valueClass={
-                results.max_drawdown_pct < 15 ? 'text-profit-500' :
-                results.max_drawdown_pct < 25 ? 'text-warning-500' :
+                (results.max_drawdown_pct ?? 0) < 15 ? 'text-profit-500' :
+                (results.max_drawdown_pct ?? 0) < 25 ? 'text-warning-500' :
                 'text-loss-500'
               }
               hint={
-                results.max_drawdown_pct < 15 ? 'Low Risk' :
-                results.max_drawdown_pct < 25 ? 'Moderate' : 'High Risk'
+                (results.max_drawdown_pct ?? 0) < 15 ? 'Low Risk' :
+                (results.max_drawdown_pct ?? 0) < 25 ? 'Moderate' : 'High Risk'
               }
             />
             <MetricCard
               label="Win Rate"
-              value={`${(results.win_rate * 100).toFixed(1)}%`}
+              value={`${((results.win_rate ?? 0) * 100).toFixed(1)}%`}
               valueClass={
-                results.win_rate >= 0.55 ? 'text-profit-500' :
-                results.win_rate >= 0.45 ? 'text-warning-500' :
+                (results.win_rate ?? 0) >= 0.55 ? 'text-profit-500' :
+                (results.win_rate ?? 0) >= 0.45 ? 'text-warning-500' :
                 'text-loss-500'
               }
-              hint={`${results.num_trades} trades`}
+              hint={`${results.num_trades ?? 0} trades`}
             />
             <MetricCard
               label="Win/Loss Ratio"
-              value={results.avg_win_loss_ratio.toFixed(2)}
+              value={(results.avg_win_loss_ratio ?? 0).toFixed(2)}
               valueClass={
-                results.avg_win_loss_ratio >= 2 ? 'text-profit-500' :
-                results.avg_win_loss_ratio >= 1.5 ? 'text-warning-500' :
+                (results.avg_win_loss_ratio ?? 0) >= 2 ? 'text-profit-500' :
+                (results.avg_win_loss_ratio ?? 0) >= 1.5 ? 'text-warning-500' :
                 'text-loss-500'
               }
-              hint={`Final: ${formatCurrency(results.final_equity)}`}
+              hint={`Final: ${formatCurrency(results.final_equity ?? 0)}`}
             />
           </div>
 
@@ -547,15 +547,15 @@ function BacktestResultsModal({ results, onClose, onExport, backtestRunId }: Bac
               />
               <CriteriaCheck
                 label="Sharpe > 0.8"
-                passed={results.sharpe_ratio > 0.8}
+                passed={(results.sharpe_ratio ?? 0) > 0.8}
               />
               <CriteriaCheck
                 label="Max DD < 25%"
-                passed={results.max_drawdown_pct < 25}
+                passed={(results.max_drawdown_pct ?? 0) < 25}
               />
               <CriteriaCheck
                 label="Win Rate > 45%"
-                passed={results.win_rate > 0.45}
+                passed={(results.win_rate ?? 0) > 0.45}
               />
             </div>
           </Card>
@@ -618,27 +618,27 @@ function BacktestResultsModal({ results, onClose, onExport, backtestRunId }: Bac
               <div className="bg-panel-600 rounded-xl p-4">
                 <div className="text-sm text-text-400 mb-1">Initial Capital</div>
                 <div className="text-xl font-bold text-text-900 font-mono tabular-nums">
-                  {formatCurrency(results.initial_capital)}
+                  {formatCurrency(results.initial_capital ?? 0)}
                 </div>
               </div>
               <div className="bg-panel-600 rounded-xl p-4">
                 <div className="text-sm text-text-400 mb-1">Final Equity</div>
                 <div className={`text-xl font-bold font-mono tabular-nums ${
-                  results.final_equity >= results.initial_capital ? 'text-profit-500' : 'text-loss-500'
+                  (results.final_equity ?? 0) >= (results.initial_capital ?? 0) ? 'text-profit-500' : 'text-loss-500'
                 }`}>
-                  {formatCurrency(results.final_equity)}
+                  {formatCurrency(results.final_equity ?? 0)}
                 </div>
               </div>
               <div className="bg-panel-600 rounded-xl p-4">
                 <div className="text-sm text-text-400 mb-1">Max Drawdown</div>
                 <div className="text-xl font-bold text-loss-500 font-mono tabular-nums">
-                  {formatCurrency(results.max_drawdown)}
+                  {formatCurrency(results.max_drawdown ?? 0)}
                 </div>
               </div>
               <div className="bg-panel-600 rounded-xl p-4">
                 <div className="text-sm text-text-400 mb-1">Data Points</div>
                 <div className="text-xl font-bold text-text-900 font-mono tabular-nums">
-                  {results.equity_curve.length}
+                  {results.equity_curve?.length ?? 0}
                 </div>
               </div>
             </div>
@@ -745,14 +745,14 @@ function WalkForwardResultsModal({ results, onClose, onExport, backtestRunId }: 
                   {results.passes_walk_forward_test ? 'STRATEGY PASSED' : 'STRATEGY FAILED'}
                 </div>
                 <div className="text-sm text-text-400">
-                  Pass Rate: {(results.pass_rate * 100).toFixed(1)}% (Required: &gt;{(results.pass_threshold * 100).toFixed(0)}%)
+                  Pass Rate: {((results.pass_rate ?? 0) * 100).toFixed(1)}% (Required: &gt;{((results.pass_threshold ?? 0) * 100).toFixed(0)}%)
                 </div>
               </div>
             </div>
             <div className="text-right">
               <div className="text-sm text-text-400">Windows</div>
               <div className="text-lg font-bold text-text-900">
-                {results.profitable_windows} / {results.total_windows} profitable
+                {results.profitable_windows ?? 0} / {results.total_windows ?? 0} profitable
               </div>
             </div>
           </div>
@@ -763,7 +763,7 @@ function WalkForwardResultsModal({ results, onClose, onExport, backtestRunId }: 
               label="Total Return"
               value={
                 <PLDisplay
-                  value={results.final_capital - results.initial_capital}
+                  value={(results.final_capital ?? 0) - (results.initial_capital ?? 0)}
                   percent={results.total_return_pct}
                   size="lg"
                 />
@@ -771,61 +771,61 @@ function WalkForwardResultsModal({ results, onClose, onExport, backtestRunId }: 
             />
             <MetricCard
               label="Aggregate Sharpe"
-              value={results.aggregate_sharpe.toFixed(2)}
+              value={(results.aggregate_sharpe ?? 0).toFixed(2)}
               valueClass={
-                results.aggregate_sharpe > 0.8
+                (results.aggregate_sharpe ?? 0) > 0.8
                   ? 'text-profit-500'
-                  : results.aggregate_sharpe > 0.5
+                  : (results.aggregate_sharpe ?? 0) > 0.5
                     ? 'text-warning-500'
                     : 'text-loss-500'
               }
               hint={
-                results.aggregate_sharpe > 0.8
+                (results.aggregate_sharpe ?? 0) > 0.8
                   ? 'Excellent'
-                  : results.aggregate_sharpe > 0.5
+                  : (results.aggregate_sharpe ?? 0) > 0.5
                     ? 'Good'
                     : 'Poor'
               }
             />
             <MetricCard
               label="Max Drawdown"
-              value={`${results.aggregate_max_drawdown_pct.toFixed(2)}%`}
+              value={`${(results.aggregate_max_drawdown_pct ?? 0).toFixed(2)}%`}
               valueClass={
-                results.aggregate_max_drawdown_pct < 15
+                (results.aggregate_max_drawdown_pct ?? 0) < 15
                   ? 'text-profit-500'
-                  : results.aggregate_max_drawdown_pct < 25
+                  : (results.aggregate_max_drawdown_pct ?? 0) < 25
                     ? 'text-warning-500'
                     : 'text-loss-500'
               }
               hint={
-                results.aggregate_max_drawdown_pct < 15
+                (results.aggregate_max_drawdown_pct ?? 0) < 15
                   ? 'Low Risk'
-                  : results.aggregate_max_drawdown_pct < 25
+                  : (results.aggregate_max_drawdown_pct ?? 0) < 25
                     ? 'Moderate'
                     : 'High Risk'
               }
             />
             <MetricCard
               label="Aggregate Win Rate"
-              value={`${(results.aggregate_win_rate * 100).toFixed(1)}%`}
+              value={`${((results.aggregate_win_rate ?? 0) * 100).toFixed(1)}%`}
               valueClass={
-                results.aggregate_win_rate >= 0.55
+                (results.aggregate_win_rate ?? 0) >= 0.55
                   ? 'text-profit-500'
-                  : results.aggregate_win_rate >= 0.45
+                  : (results.aggregate_win_rate ?? 0) >= 0.45
                     ? 'text-warning-500'
                     : 'text-loss-500'
               }
-              hint={`${results.total_trades} total trades`}
+              hint={`${results.total_trades ?? 0} total trades`}
             />
             <MetricCard
               label="Final Capital"
-              value={formatCurrency(results.final_capital)}
+              value={formatCurrency(results.final_capital ?? 0)}
               valueClass={
-                results.final_capital >= results.initial_capital
+                (results.final_capital ?? 0) >= (results.initial_capital ?? 0)
                   ? 'text-profit-500'
                   : 'text-loss-500'
               }
-              hint={`From ${formatCurrency(results.initial_capital)}`}
+              hint={`From ${formatCurrency(results.initial_capital ?? 0)}`}
             />
           </div>
 
